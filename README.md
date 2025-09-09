@@ -38,7 +38,7 @@ RoadPulse provides a community-driven traffic monitoring and navigation system t
 | Nabiel Rasyiqi                            | Alamgir Ghazanfar Ali                     |
 | Danny Yan                                 | Jadon                                     |
 | Wong Xin Thung                            | Tang Ming Ze                              |
-| Guan Yi Lian                              | Zi You                                    |
+| Guan Yi Lian                              | Zi You Lim                                |
 
 ---
 
@@ -58,12 +58,12 @@ RoadPulse provides a community-driven traffic monitoring and navigation system t
 - Guan Yi Lian
 - Jadon
 - Danny Yan
-- Zi You
+- Zi You Lim
 
 ---
 
 ## License
 
-[Specify license here.]
+[Click here](LICENSE)
 
 ---
