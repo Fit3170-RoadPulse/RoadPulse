@@ -59,7 +59,7 @@ DATABASES = {
         "NAME": os.getenv("POSTGRES_DB", "roadpulse"),
         "USER": os.getenv("POSTGRES_USER", "roadpulse"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", "roadpulse"),
-        "HOST": os.getenv("POSTGRES_HOST", "127.0.0.1"),  # 'db' if backend runs in Docker
+        "HOST": os.getenv("POSTGRES_HOST", "db"),  # 'db' if backend runs in Docker
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
     }
 }
