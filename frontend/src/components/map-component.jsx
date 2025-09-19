@@ -11,10 +11,9 @@ export default function MapComponent({ API_KEY }) {
 
     window.initMap = initMap;
     return (
-        <div class="mapholder" style={{ width: '100%', height: '500px'}}>
+        <div class="mapholder" style={{ width: '100%', height: '100%' }}>
             <script src = "https://polyfill.io/v3/polyfill.min.js?features=default"></script>
-            <div>MAP</div>
-            <div id="map" style={{ height: '100%' }}></div>
+            <div id="map" style={{width: '100%', height: '100%' }}></div>
             <script
                 async 
                 src={`https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap`}
