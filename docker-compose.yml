@@ -46,7 +46,7 @@ services:
     volumes:
       - ./frontend:/usr/src/app
       - /usr/src/app/node_modules   # <-- important
-    command: [ "npm", "run", "dev", "--", "--host" ]
+    command: sh -c "npm install && npm run dev -- --host"
 
 volumes:
   dbdata:
