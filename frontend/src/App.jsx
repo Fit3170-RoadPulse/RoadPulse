@@ -6,13 +6,12 @@ export default function App() {
   const [countdown, setCountdown] = useState(5)
   const [timer, setTimer] = useState(null)
 
-  // Replace with your actual emergency number or fetch it from backend
-  const emergencyNumber = "123456789"
+  const emergencyNumber = "+60143839566"
 
   useEffect(() => {
     const base = import.meta.env.VITE_API_URL || ""
-    axios.get(`${base}/api/health/`).then(r => setHealth(r.data))
-    axios.get(`${base}/api/samples/`).then(r => setSamples(r.data))
+    axios.get(`${base}/api/health/`).then(r => console.log(r.data))
+    axios.get(`${base}/api/samples/`).then(r => console.log(r.data))
   }, [])
 
   const startCountdown = () => {
@@ -23,7 +22,6 @@ export default function App() {
       setCountdown(prev => {
         if (prev === 1) {
           clearInterval(interval)
-          handleCall()
           return 0
         }
         return prev - 1
@@ -33,17 +31,7 @@ export default function App() {
     setTimer(interval)
   }
 
-  const handleCall = () => {
-    // Opens dialer on mobile devices
-    // window.location.href = `tel:${emergencyNumber}`
-    setShowPopup(false)
-  }
-
   const cancelCall = () => {
-    cleanup()
-  }
-
-  const cleanup = () => {
     if (timer) clearInterval(timer)
     setShowPopup(false)
     setCountdown(5)
@@ -59,38 +47,33 @@ export default function App() {
         minHeight: "100vh",
         width: "100vw",
         paddingTop: "60px"
-        }}
+      }}
     >
       {/* Emergency Call Button */}
-        <button
-          style={{
-            width: "250px",
-            height: "250px",
-            borderRadius: "50%",
-            backgroundColor: "red",
-            color: "white",
-            fontSize: "25px",
-            fontWeight: "bold",
-            border: "none",
-            cursor: "pointer",
-          }}
-          onClick={startCountdown}
-          className="px-6 py-3 text-xl font-bold text-white bg-red-600 rounded-lg shadow-lg hover:bg-red-700"
-        >
-          <h3>{showPopup && countdown > 0
+      <button
+        style={{
+          width: "250px",
+          height: "250px",
+          borderRadius: "50%",
+          backgroundColor: "red",
+          color: "white",
+          fontSize: "25px",
+          fontWeight: "bold",
+          border: "none",
+          cursor: "pointer",
+        }}
+        onClick={startCountdown}
+      >
+        {showPopup && countdown > 0
           ? `⚠️ ${countdown} seconds`
-          : "🚨 Emergency\nPress for help"}</h3>
-        </button>
+          : "🚨 Emergency\nPress for help"}
+      </button>
 
       {/* Confirmation Popup */}
       {showPopup && (
         <div
           style={{
-            position: "flex",
-            top: "50%",
-            left: "70%",
-            justifyContent: "flex-start",
-            transform: "translate(-2%,10%)",
+            marginTop: "20px",
             backgroundColor: "white",
             padding: "20px",
             borderRadius: "12px",
@@ -100,28 +83,67 @@ export default function App() {
           }}
         >
           <h3 style={{ margin: 0, color: "red" }}>⚠️ Emergency Alert</h3>
-          <p style={{ margin: "10px 0" }}>
-            Calling your emergency contact in{" "}
-            <span style={{ color: "red", fontWeight: "bold" }}>
-              {countdown} Seconds
-            </span>
-          </p>
-          <button
-            style={{
-              backgroundColor: "black",
-              color: "white",
-              padding: "10px 20px",
-              borderRadius: "50px",
-              border: "none",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
-            onClick={cancelCall}
-          >
-            Cancel
-          </button>
-          </div>
-        )}
+
+          {countdown > 0 ? (
+            <>
+              <p>
+                Calling your emergency contact in{" "}
+                <span style={{ color: "red", fontWeight: "bold" }}>
+                  {countdown} seconds
+                </span>
+              </p>
+              <button
+                style={{
+                  backgroundColor: "black",
+                  color: "white",
+                  padding: "10px 20px",
+                  borderRadius: "50px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                }}
+                onClick={cancelCall}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <p>Time is up! Press below to call now:</p>
+              <a href={`tel:${emergencyNumber}`}>
+                <button
+                  style={{
+                    backgroundColor: "red",
+                    color: "white",
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                  }}
+                >
+                  📞 Call Now
+                </button>
+              </a>
+              <br />
+              <button
+                style={{
+                  marginTop: "10px",
+                  backgroundColor: "black",
+                  color: "white",
+                  padding: "8px 20px",
+                  borderRadius: "8px",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+                onClick={cancelCall}
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
