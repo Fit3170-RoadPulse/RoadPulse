@@ -7,6 +7,9 @@ export default function MapComponent({ API_KEY }) {
             zoom: 8,
             center: center,
         });
+
+        const trafficLayer = new google.maps.TrafficLayer();
+        trafficLayer.setMap(map);
     }
 
     window.initMap = initMap;
