@@ -12,7 +12,7 @@ class AppUserAdmin(admin.ModelAdmin):
 class ContactAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'name', 'phone_number', 'is_emergency')
     search_fields = ('name', 'phone_number')
-    list_filter = ('is_emergency')
+    list_filter = ('is_emergency',)
 
 @admin.register(OfficialEmergencyNumber)
 class OfficialEmergencyNumberAdmin(admin.ModelAdmin):
