@@ -5,9 +5,13 @@ export default function MapComponent({ API_KEY }) {
     let directionsRenderer = null;
 
 
-    function initMap() {
+    async function initMap() {
+
+        const { Map } = await google.maps.importLibrary("maps");
+        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+
         const center = { lat: -34.397, lng: 150.644 };
-        map = new google.maps.Map(document.getElementById("map"), {
+        map = new Map(document.getElementById("map"), {
             zoom: 8,
             center: center,
         });
@@ -22,14 +26,14 @@ export default function MapComponent({ API_KEY }) {
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
 
             if (!originMarker){
-                originMarker = new google.maps.marker.AdvancedMarkerElement({
+                originMarker = new AdvancedMarkerElement({
                     map: map,
                     position: clicked,
                     title:"A",
                 });
-                directionsRenderer.set("directions",null);
+                directionsRenderer.setDirections(null);
             }else if (!destinationMarker){
-                destinationMarker = new google.maps.marker.AdvancedMarkerElement({
+                destinationMarker = new AdvancedMarkerElement({
                     map: map,
                     position: clicked,
                     title:"B",
@@ -38,9 +42,9 @@ export default function MapComponent({ API_KEY }) {
         } else{
             originMarker.map = null;
             destinationMarker.map =null;
-            directionsRenderer.set("directions",null);
+            directionsRenderer.setDirections(null);
 
-            originMarker = new google.maps.marker.AdvancedMarkerElement({
+            originMarker = new AdvancedMarkerElement({
                     map: map,
                     position: clicked,
                     title:"A",
@@ -72,10 +76,10 @@ export default function MapComponent({ API_KEY }) {
     return (
         <div className="mapholder" style={{ width: '100%', height: '100%' }}>
             <script src = "https://polyfill.io/v3/polyfill.min.js?features=default"></script>
-            <div id="map" style={{width: '100%', height: '100%' }}></div>
+            <div id="map" style={{width: '100%', height: '100%', minHeight: '400px' }}></div>
             <script
                 async 
-                src={`https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap&libraries=maps,marker`}
+                src={`https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap&v=weekly`}
             ></script>
         </div>
     );
