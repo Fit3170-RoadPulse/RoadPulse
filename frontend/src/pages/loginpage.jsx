@@ -72,14 +72,6 @@ export default function LoginPage({ onLogin, onCancel, onForgotPassword }) {
         </button>
       </div>
 
-      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <input
-          type="checkbox"
-          checked={remember}
-          onChange={(e) => setRemember(e.target.checked)}
-        />
-        <span>Remember me</span>
-      </label>
 
       <div style={styles.buttons}>
         <button onClick={handleLogin} style={styles.primaryBtn}>
