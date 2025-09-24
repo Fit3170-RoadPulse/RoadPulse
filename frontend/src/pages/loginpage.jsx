@@ -1,32 +1,45 @@
-// src/pages/SettingsDisplay.jsx
+// src/pages/LoginPage.jsx
 import React from "react";
 
 /**
- * Pure presentational Settings component.
- * - Props:
- *   - onSave(values)  optional callback when Save clicked
- *   - onCancel()      optional callback when Cancel clicked
- * Usage: <SettingsDisplay onSave={(v)=>...} onCancel={()=>...} />
+ * Presentational login component.
+ * Props:
+ *  - onLogin(credentials)         optional, called when Login pressed
+ *  - onCancel()                   optional, called when Cancel pressed
+ *  - onForgotPassword(email)      optional, called when Forgot password pressed
  */
-export default function LoginPage({ onSave, onCancel }) {
-  // Local UI state only for the visual demo
+export default function LoginPage({ onLogin, onCancel, onForgotPassword }) {
   const [username, setUsername] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [darkMode, setDarkMode] = React.useState(false);
+  const [password, setPassword] = React.useState("");
+  const [remember, setRemember] = React.useState(false);
 
-  function handleSave() {
-    const values = { username, email, darkMode };
-    if (typeof onSave === "function") onSave(values);
-    else alert("Save pressed — values: " + JSON.stringify(values, null, 2));
+  function handleLogin() {
+    const values = { username, password, remember };
+    if (typeof onLogin === "function") onLogin(values);
+    else alert("Login pressed — values: " + JSON.stringify(values, null, 2));
   }
 
   function handleCancel() {
     if (typeof onCancel === "function") onCancel();
     else {
-      // reset UI only (presentation-only behavior)
       setUsername("");
-      setEmail("");
-      setDarkMode(false);
+      setPassword("");
+      setRemember(false);
+    }
+  }
+
+  function handleForgotPassword() {
+    // prefer using the username/email if available
+    const identifier = username || "";
+    if (typeof onForgotPassword === "function") {
+      onForgotPassword(identifier);
+    } else {
+      // demo behaviour
+      alert(
+        identifier
+          ? `Forgot password clicked — will send reset to account: ${identifier}`
+          : "Forgot password clicked — no username/email provided."
+      );
     }
   }
 
@@ -49,28 +62,27 @@ export default function LoginPage({ onSave, onCancel }) {
         <label style={styles.label}>Password</label>
         <input
           style={styles.input}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter your passsword"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter your password"
+          type="password"
         />
+        <button onClick={handleForgotPassword} style={styles.linkBtn}>
+          Forgot password?
+        </button>
       </div>
 
-      {/* <div style={{ ...styles.field, ...styles.row }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <input
-          id="darkToggle"
           type="checkbox"
-          checked={darkMode}
-          onChange={(e) => setDarkMode(e.target.checked)}
-          style={{ marginRight: 10 }}
+          checked={remember}
+          onChange={(e) => setRemember(e.target.checked)}
         />
-        <div>
-          <div style={{ fontWeight: 600 }}>Enable dark mode</div>
-          <div style={styles.muted}>Visual toggle only (presentation)</div>
-        </div>
-      </div> */}
+        <span>Remember me</span>
+      </label>
 
       <div style={styles.buttons}>
-        <button onClick={handleSave} style={styles.primaryBtn}>
+        <button onClick={handleLogin} style={styles.primaryBtn}>
           Login
         </button>
       </div>
@@ -78,12 +90,13 @@ export default function LoginPage({ onSave, onCancel }) {
   );
 }
 
-/* Inline styles for the demo */
+/* styles copied/adjusted from your version */
 const styles = {
   root: {
     padding: 24,
     maxWidth: 720,
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial",
+    fontFamily:
+      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial",
   },
   h1: { margin: 0, marginBottom: 6 },
   hint: { marginTop: 0, color: "#666", marginBottom: 18 },
@@ -113,5 +126,15 @@ const styles = {
     border: "1px solid #ddd",
     background: "white",
     cursor: "pointer",
+  },
+  linkBtn: {
+    marginTop: 6,
+    padding: 0,
+    border: "none",
+    background: "none",
+    color: "#666",
+    // textDecoration: "underline",
+    cursor: "pointer",
+    fontSize: 14,
   },
 };
