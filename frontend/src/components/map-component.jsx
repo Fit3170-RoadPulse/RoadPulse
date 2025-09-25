@@ -14,6 +14,7 @@ export default function MapComponent({ API_KEY }) {
         map = new Map(document.getElementById("map"), {
             zoom: 8,
             center: center,
+            mapId: "9f96fc85ced76649d1bf190d"
         });
 
         const trafficLayer = new google.maps.TrafficLayer();
