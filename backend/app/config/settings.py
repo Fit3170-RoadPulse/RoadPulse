@@ -70,7 +70,7 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 GOOGLE_MAPS_API_KEY="AIzaSyBdbRFLLwPTNe7RR9zahjksLOHovFjGM-M"
-
+GOOGLE_MAPS_ID = "9f96fc85ced76649d1bf190d"
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

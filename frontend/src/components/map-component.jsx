@@ -1,9 +1,8 @@
-export default function MapComponent({ API_KEY }) {
+export default function MapComponent({ API_KEY , MAP_ID}) {
     let map;
     let originMarker = null;
     let destinationMarker = null;
     let directionsRenderer = null;
-
 
     async function initMap() {
 
@@ -14,7 +13,7 @@ export default function MapComponent({ API_KEY }) {
         map = new Map(document.getElementById("map"), {
             zoom: 8,
             center: center,
-            mapId: "9f96fc85ced76649d1bf190d"
+            mapId: MAP_ID
         });
 
         const trafficLayer = new google.maps.TrafficLayer();
