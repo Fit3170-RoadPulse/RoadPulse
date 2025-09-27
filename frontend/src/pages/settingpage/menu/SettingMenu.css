@@ -1,0 +1,213 @@
+/* Setting.css — 整合版（替换你原来的文件） */
+
+/* === 基本重置 === */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
+
+/* === 页面总体布局：左 rail + left nav + content ===
+   grid-columns: 48px (rail) | 260px (left-nav) | 1fr (content)
+*/
+.settings-page {
+  display: grid;
+  grid-template-columns: 48px 260px 1fr;
+  gap: 0;
+  min-height: 100vh;
+  background: #111; /* page background behind panels */
+  color: #111;
+}
+
+/* === 左侧竖条 rail（图标列） === */
+.app-left-rail {
+  background: #222;
+  color: #9aa;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 16px;
+  padding-left: 8px;
+}
+
+/* 小图标容器 */
+.rail-icons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 16px;
+}
+
+/* 单个 icon */
+.sidebar-icon {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2ecc71;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform .12s ease, background .12s ease;
+}
+.sidebar-icon:hover { transform: translateY(-2px); background: rgba(255,255,255,0.03); }
+
+/* === 左侧主导航 === */
+.settings-left-nav {
+  background: #f5f5f6;
+  padding: 18px;
+  border-right: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* Header badge */
+.settings-header { display:flex; align-items:center; gap:12px; }
+.settings-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f06d5a;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+}
+.settings-badge svg { opacity: 0.95; }
+
+/* 左侧菜单列表（可滚动）*/
+.settings-menu {
+  list-style: none;
+  padding: 14px 0 0 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+}
+
+/* 单个菜单项（左右两端对齐，箭头占右侧） */
+.menu-item {
+  padding: 12px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #111;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background .12s ease, transform .08s ease;
+}
+.menu-item:hover { background: #f0f0f1; transform: translateY(-1px); }
+
+/* 下一项间距（已用 gap 控制，此行可保留作兼容） */
+.menu-item + .menu-item { margin-top: 0; }
+
+/* active 状态 */
+.menu-item.active {
+  background: linear-gradient(180deg, #ffffff 0%, #f3f3f4 100%);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
+  border-left: 3px solid #0b74de;
+  padding-left: 10px; /* 视觉上留空间给左侧的蓝线 */
+}
+
+/* 右侧箭头小样式（如果需要） */
+.menu-item > .menu-arrow {
+  opacity: 0.6;
+  transform: translateX(2px);
+}
+
+/* logout 显示 */
+.settings-logout {
+  color: #666;
+  padding: 12px 0;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.settings-logout:hover { color: #111; }
+
+/* === 内容区（第三列） === */
+.settings-content {
+  background: #fafafa;
+  padding: 40px 60px;
+  min-height: 100vh;
+  overflow: auto;
+}
+
+/* 内容区 - 标题 */
+.settings-content h2 {
+  margin-top: 6px;
+  margin-bottom: 16px;
+  font-size: 20px;
+}
+
+/* 快速容器（把 form 区域换成通用 container） */
+.settings-panel {
+  max-width: 960px;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+}
+
+/* 表单通用行 */
+.form-row {
+  margin-bottom: 18px;
+}
+.form-label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #111;
+}
+
+/* 输入与按钮的基础样式（保留以便将来使用） */
+.input-with-action { display: flex; align-items: center; gap: 12px; }
+.form-input {
+  flex: 1 1 auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e6e6e6;
+  font-size: 14px;
+  background: #fff;
+}
+.icon-btn {
+  border: 1px solid #e6e6e6;
+  background: #fff;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* 表单底部按钮 */
+.form-actions { display:flex; gap: 12px; margin-top: 8px; }
+.btn { padding: 10px 16px; border-radius: 8px; font-weight:700; cursor:pointer; border: none; }
+.btn.primary { background:#0b74de; color:#fff; }
+.btn.outline { background:transparent; border:1px solid #ddd; color:#111; }
+
+/* 小屏（响应式） */
+@media (max-width: 900px) {
+  .settings-page { grid-template-columns: 48px 1fr; }
+  .settings-left-nav { display: none; } /* 可改为可折叠面板，如果你想保留导航请告知 */
+  .settings-content { padding: 20px; }
+}
+
+/* 进一步小屏调整：把左 rail 隐藏并在 content 显示顶部导航（可按需启用） */
+@media (max-width: 540px) {
+  .app-left-rail { display: none; }
+  .settings-page { grid-template-columns: 1fr; }
+  .settings-content { padding: 16px; }
+}
+
+.settings-menu .menu-item > a {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
