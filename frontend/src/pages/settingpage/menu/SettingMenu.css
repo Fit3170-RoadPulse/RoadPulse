@@ -1,33 +1,56 @@
-/* Setting.css — 整合版（替换你原来的文件） */
+Setting.css — 纯 CSS 响应式方案（替换原文件）
+
+/* === 变量（方便微调） === */
+:root{
+  --left-rail-w: 48px;        /* 左侧小图标列固定宽 */
+  --left-nav-w: 260px;        /* 默认左导航宽度（可被 clamp 限制） */
+  --left-nav-min: 180px;      /* 左导航最小宽度 */
+  --left-nav-max: 420px;      /* 左导航最大宽度 */
+  --bg-page: #111218;
+  --rail-bg: #222;
+  --rail-ico: #2ecc71;
+  --nav-bg: #f5f5f6;
+  --panel-bg: #fafafa;
+  --accent: #0b74de;
+  --muted: #666;
+  --radius: 10px;
+}
 
 /* === 基本重置 === */
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
-body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
+body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; background: var(--bg-page); }
 
-/* === 页面总体布局：左 rail + left nav + content ===
-   grid-columns: 48px (rail) | 260px (left-nav) | 1fr (content)
-*/
+/* === 页面总体布局：rail | left-nav | content（响应式） === */
+/* grid 使用 CSS 函数：中间列会在 min..preferred..max 范围内伸缩 */
 .settings-page {
   display: grid;
-  grid-template-columns: 48px 260px 1fr;
+  grid-template-columns:
+    var(--left-rail-w)
+    minmax(var(--left-nav-min), clamp(var(--left-nav-min), var(--left-nav-w), var(--left-nav-max)))
+    1fr;
   gap: 0;
   min-height: 100vh;
-  background: #111; /* page background behind panels */
-  color: #111;
+  align-items: start;
+  transition: grid-template-columns .18s ease;
+}
+
+/* 小屏时允许更紧凑的默认：通过媒体查询覆盖变量 */
+@media (max-width: 900px) {
+  :root { --left-nav-w: 220px; --left-nav-min: 160px; }
 }
 
 /* === 左侧竖条 rail（图标列） === */
 .app-left-rail {
-  background: #222;
+  background: var(--rail-bg);
   color: #9aa;
-  display: flex;
-  align-items: flex-start;
   padding-top: 16px;
   padding-left: 8px;
+  display: flex;
+  align-items: flex-start;
+  z-index: 40;
 }
 
-/* 小图标容器 */
 .rail-icons {
   display: flex;
   flex-direction: column;
@@ -37,14 +60,12 @@ body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
   padding-bottom: 16px;
 }
 
-/* 单个 icon */
 .sidebar-icon {
   width: 34px;
   height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #2ecc71;
+  display: inline-grid;
+  place-items: center;
+  color: var(--rail-ico);
   border-radius: 8px;
   cursor: pointer;
   transition: transform .12s ease, background .12s ease;
@@ -53,13 +74,15 @@ body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
 
 /* === 左侧主导航 === */
 .settings-left-nav {
-  background: #f5f5f6;
+  background: var(--nav-bg);
   padding: 18px;
   border-right: 1px solid rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 6px;
+  width: 100%; /* 充满网格列 */
+  box-sizing: border-box;
 }
 
 /* Header badge */
@@ -70,14 +93,11 @@ body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
   gap: 8px;
   background: #f06d5a;
   color: white;
-  border: none;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   font-weight: 700;
-  cursor: pointer;
   font-size: 14px;
 }
-.settings-badge svg { opacity: 0.95; }
 
 /* 左侧菜单列表（可滚动）*/
 .settings-menu {
@@ -88,11 +108,12 @@ body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
   flex-direction: column;
   gap: 8px;
   overflow: auto;
+  max-height: calc(100vh - 200px);
 }
 
-/* 单个菜单项（左右两端对齐，箭头占右侧） */
+/* 单个菜单项 */
 .menu-item {
-  padding: 12px 12px;
+  padding: 12px;
   border-radius: 8px;
   cursor: pointer;
   color: #111;
@@ -103,27 +124,19 @@ body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
   transition: background .12s ease, transform .08s ease;
 }
 .menu-item:hover { background: #f0f0f1; transform: translateY(-1px); }
-
-/* 下一项间距（已用 gap 控制，此行可保留作兼容） */
-.menu-item + .menu-item { margin-top: 0; }
+.settings-menu .menu-item > a { display:block; width:100%; height:100%; text-decoration:none; color:inherit; }
 
 /* active 状态 */
 .menu-item.active {
   background: linear-gradient(180deg, #ffffff 0%, #f3f3f4 100%);
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
-  border-left: 3px solid #0b74de;
-  padding-left: 10px; /* 视觉上留空间给左侧的蓝线 */
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
 }
 
-/* 右侧箭头小样式（如果需要） */
-.menu-item > .menu-arrow {
-  opacity: 0.6;
-  transform: translateX(2px);
-}
-
-/* logout 显示 */
+/* logout */
 .settings-logout {
-  color: #666;
+  color: var(--muted);
   padding: 12px 0;
   font-weight: 600;
   cursor: pointer;
@@ -133,20 +146,16 @@ body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
 
 /* === 内容区（第三列） === */
 .settings-content {
-  background: #fafafa;
+  background: var(--panel-bg);
   padding: 40px 60px;
   min-height: 100vh;
   overflow: auto;
+  min-width: 0; /* 关键：允许内容列在窄屏下正确缩小而不撑破布局 */
 }
 
-/* 内容区 - 标题 */
-.settings-content h2 {
-  margin-top: 6px;
-  margin-bottom: 16px;
-  font-size: 20px;
-}
+.settings-content h2 { margin-top: 6px; margin-bottom: 16px; font-size: 20px; }
 
-/* 快速容器（把 form 区域换成通用 container） */
+/* 快速容器（面板） */
 .settings-panel {
   max-width: 960px;
   background: white;
@@ -155,19 +164,10 @@ body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
   box-shadow: 0 6px 18px rgba(16,24,40,0.06);
 }
 
-/* 表单通用行 */
-.form-row {
-  margin-bottom: 18px;
-}
-.form-label {
-  display: block;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: #111;
-}
-
-/* 输入与按钮的基础样式（保留以便将来使用） */
-.input-with-action { display: flex; align-items: center; gap: 12px; }
+/* 表单通用样式（保留） */
+.form-row { margin-bottom: 18px; }
+.form-label { display:block; font-weight:700; margin-bottom:8px; color:#111; }
+.input-with-action { display:flex; align-items:center; gap:12px; }
 .form-input {
   flex: 1 1 auto;
   padding: 10px 12px;
@@ -176,38 +176,49 @@ body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
   font-size: 14px;
   background: #fff;
 }
-.icon-btn {
-  border: 1px solid #e6e6e6;
-  background: #fff;
-  padding: 8px;
-  border-radius: 8px;
-  cursor: pointer;
-}
+.icon-btn { border:1px solid #e6e6e6; background:#fff; padding:8px; border-radius:8px; cursor:pointer; }
 
-/* 表单底部按钮 */
-.form-actions { display:flex; gap: 12px; margin-top: 8px; }
-.btn { padding: 10px 16px; border-radius: 8px; font-weight:700; cursor:pointer; border: none; }
-.btn.primary { background:#0b74de; color:#fff; }
+/* 表单按钮 */
+.form-actions { display:flex; gap:12px; margin-top:8px; }
+.btn { padding:10px 16px; border-radius:8px; font-weight:700; cursor:pointer; border:none; }
+.btn.primary { background: var(--accent); color:#fff; }
 .btn.outline { background:transparent; border:1px solid #ddd; color:#111; }
 
-/* 小屏（响应式） */
+/* === 窄屏行为：把左导航隐藏，改为 overlay（无需 JS 的话直接隐藏） === */
 @media (max-width: 900px) {
-  .settings-page { grid-template-columns: 48px 1fr; }
-  .settings-left-nav { display: none; } /* 可改为可折叠面板，如果你想保留导航请告知 */
+  /* 把中间列合并为 1fr，使内容占更多空间 */
+  .settings-page {
+    grid-template-columns: var(--left-rail-w) 1fr;
+  }
+
+  /* 隐藏左导航以节省空间（如果需要 overlay 效果可另加实现） */
+  .settings-left-nav {
+    display: none;
+  }
+
   .settings-content { padding: 20px; }
 }
 
-/* 进一步小屏调整：把左 rail 隐藏并在 content 显示顶部导航（可按需启用） */
+/* 更小屏再隐藏左 rail（图标列）并把页面改为单列 */
 @media (max-width: 540px) {
   .app-left-rail { display: none; }
   .settings-page { grid-template-columns: 1fr; }
   .settings-content { padding: 16px; }
 }
 
-.settings-menu .menu-item > a {
-  display: block;
-  width: 100%;
-  height: 100%;
-  color: inherit;
-  text-decoration: none;
+/* 滚动条细化（可选） */
+.settings-left-nav::-webkit-scrollbar,
+.settings-menu::-webkit-scrollbar,
+.settings-content::-webkit-scrollbar {
+  width: 8px; height: 8px;
+}
+.settings-left-nav::-webkit-scrollbar-thumb,
+.settings-menu::-webkit-scrollbar-thumb,
+.settings-content::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.06); border-radius: 8px;
+}
+
+/* 焦点可访问性 */
+.menu-item:focus-within, .menu-item:focus {
+  box-shadow: 0 0 0 3px rgba(11,116,222,0.12); border-radius:8px;
 }
