@@ -6,18 +6,15 @@ export default function SettingMenu() {
   return (
     <div className="settings-page">
       <nav className="settings-left-nav" aria-label="Settings navigation">
-
         <ul className="settings-menu">
-          <li className="menu-item"><Link to="/change-password">Change Password</Link></li>
-          <li className="menu-item"><Link to="/preferences">Preferences</Link></li>
-          <li className="menu-item"><Link to="/display">Display</Link></li>
-          <li className="menu-item"><Link to="/saved-places">My Saved Places</Link></li>
-          <li className="menu-item"><Link to="/help">Help and Service</Link></li>
+          <li><Link className="settings-block" to="/change-password">Change Password</Link></li>
+          <li><Link className="settings-block" to="/preferences">Preferences</Link></li>
+          <li><Link className="settings-block" to="/display">Display</Link></li>
+          <li><Link className="settings-block" to="/saved-places">My Saved Places</Link></li>
+          <li><Link className="settings-block" to="/help">Help and Service</Link></li>
         </ul>
-
-        <div className="settings-logout">Log Out</div>
+        <Link className="settings-block settings-logout" to="/logout">Log Out</Link>
       </nav>
     </div>
   );
 }
-
