@@ -25,19 +25,50 @@ export default function App() {
       <hr style={{ margin: "24px 0" }} />
 
       <button
-  onClick={() => (window.location.href = "/login-page")}
-  style={{
-    marginBottom: 20,
-    padding: "8px 14px",
-    borderRadius: 8,
-    background: "#0b74de",
-    color: "white",
-    border: "none",
-    cursor: "pointer",
-  }}
->
-  Go to Login
-</button>
+        onClick={() => (window.location.href = "/login-page")}
+        style={{
+          marginBottom: 20,
+          padding: "8px 14px",
+          borderRadius: 8,
+          background: "#0b74de",
+          color: "white",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        Go to Login
+      </button>
+
+
+      <button
+        onClick={() => (window.location.href = "/setting-menu-page")}
+        style={{
+          marginBottom: 20,
+          padding: "8px 14px",
+          borderRadius: 8,
+          background: "#0b74de",
+          color: "white",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        Go to Setting
+      </button>
+
+      <button
+        onClick={() => (window.location.href = "/map-page")}
+        style={{
+          marginBottom: 20,
+          padding: "8px 14px",
+          borderRadius: 8,
+          background: "#0b74de",
+          color: "white",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        Go to Map
+      </button>
     </div>
   );
 }
