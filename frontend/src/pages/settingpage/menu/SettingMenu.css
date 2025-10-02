@@ -1,0 +1,36 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+.settings-left-nav {
+  width: 250px;
+  height: 100vh;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.settings-block {
+  display: block;
+  padding: 10px 15px;
+  margin: 20px;
+  color: black;
+  background: none;
+  cursor: pointer;
+}
+
+.settings-menu {
+  list-style: none;
+}
+
+.settings-block:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: black;
+  border-radius: 8px;
+}
+
+.settings-logout {
+  margin-top: auto;
+}
