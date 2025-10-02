@@ -67,6 +67,21 @@ export default function App() {
           cursor: "pointer",
         }}
       >
+        Go to Map-Page
+      </button>
+
+      <button
+        onClick={() => (window.location.href = "/map")}
+        style={{
+          marginBottom: 20,
+          padding: "8px 14px",
+          borderRadius: 8,
+          background: "#0b74de",
+          color: "white",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
         Go to Map
       </button>
     </div>
