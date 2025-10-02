@@ -1,3 +1,11 @@
+/* Make the full-screen overlay non-blocking by default */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;          /* above the map visuals */
+  pointer-events: none; /* let clicks pass through */
+}
+
 .map-page {
     display: flex;
     height: 100vh;
@@ -31,36 +39,6 @@
     width: 30px;
     height: 30px;
     margin-bottom: 1px;
-}
-
-.bottom-right-buttons {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.compass-icon, .plus-icon, .minus-icon {
-    border: none;
-    background: white;
-    cursor: pointer;
-}
-
-.compass-icon img {
-    width: 30px;
-    height: 30px;
-}
-
-.plus-icon img {
-    width: 15px;
-    height: 15px;
-}
-
-.minus-icon img {
-    width: 13px;
-    height: 13px;
 }
 
 .search-bar {
