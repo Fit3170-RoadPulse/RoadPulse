@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom"; // <-- added useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import "./ChangePassword.css";
+import "../../components/close.png";
 
 function SidebarIcon({ children }) {
   return <div className="sidebar-icon">{children}</div>;
@@ -11,7 +12,7 @@ export default function ChangePassword() {
   const [show, setShow] = useState({ current: false, newPass: false, repeat: false });
   const [msg, setMsg] = useState(null);
 
-  const navigate = useNavigate(); // <-- must import this!
+  const navigate = useNavigate();
 
   const handleChange = (e) => setValues({ ...values, [e.target.name]: e.target.value });
   const toggle = (field) => setShow((s) => ({ ...s, [field]: !s[field] }));
@@ -32,7 +33,6 @@ export default function ChangePassword() {
       return;
     }
 
-    // TODO: call API to change password here (axios/fetch)
     setMsg({ type: "success", text: "New password has been updated." });
     setValues({ current: "", newPass: "", repeat: "" });
   };
@@ -46,10 +46,6 @@ export default function ChangePassword() {
         onClick={() => navigate("/setting-menu-page")}
         title="Back to settings"
       >
-        {/* simple SVG X icon */}
-        {/* <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-          <path d="M6 6L18 18M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg> */}
       X
       </button>
 
