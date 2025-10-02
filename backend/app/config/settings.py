@@ -65,6 +65,7 @@ DATABASES = {
 }
 
 AUTH_PASSWORD_VALIDATORS = []
+AUTH_USER_MODEL = 'rp_core.AppUser'
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
