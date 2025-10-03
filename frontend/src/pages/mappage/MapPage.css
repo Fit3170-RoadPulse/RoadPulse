@@ -3,7 +3,8 @@
   position: absolute;
   inset: 0;
   z-index: 2;          /* above the map visuals */
-  pointer-events: none; /* let clicks pass through */
+  /* pointer-events: none; let clicks pass through*/
+  /* Removed this line because it will stop us from clicking on the buttons in the UI*/
 }
 
 .map-page {

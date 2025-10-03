@@ -9,13 +9,14 @@ import ChangePassword from "./pages/settingpage/changepassword/ChangePassword.js
 import MapPage from './pages/mappage/MapPage.jsx';
 import Map from "./pages/Map"
 import NotFound from "./pages/NotFound"
-
+import Emergency from './pages/Emergency.jsx';
 
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
+        {/* If you want to navigate to a page via filepath, I think you must include the route here */}
         <Route path="/" element={<App />} />
         <Route path="/login-page" element={<LoginPage />} />
         <Route path="/setting-menu-page" element={<SettingMenu />} />
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/map-page" element={<MapPage />} />
         <Route path="/map" element={<Map />} />
         <Route path="*" element={<NotFound />} />
+        <Route path="/Emergency" element={<Emergency />} /> 
       </Routes>
     </BrowserRouter>
   </StrictMode>,

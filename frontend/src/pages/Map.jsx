@@ -15,16 +15,26 @@ function Map() {
 
   return (
         <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 0, left: '100px', right: 0, bottom: 0, zIndex: 1 }}>
+            <div style={{ 
+                position: 'absolute', 
+                top: 0, 
+                left: '100px', 
+                right: 0, 
+                bottom: 0, 
+                zIndex: 1 
+                }}>
                 <MapComponent API_KEY={mapData?.GMAPS_KEY} />
             </div>
 
             {/* Overlay UI */}
-            <div className="overlay-ui">
+            <div className="overlay-ui" 
+            style={{
+            pointerEvents: "auto"
+            }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
                 <MapPage onSearch={() => console.log("Search triggered!")} />
             </div>
         </div>
-    );
+    ); 
 }
 
 export default Map;
