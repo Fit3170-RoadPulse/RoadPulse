@@ -193,6 +193,26 @@ function Emergency() {
         position: "relative",
       }}
     >
+    {/* Copied Back button */}
+        <button
+            onClick={() => (window.location.href = "/map")}
+            style={{
+                position: "absolute",        // makes it float on the screen
+                top: "20px",                 // distance from top
+                left: "20px",               // distance from right
+                backgroundColor: "beige",    // beige background
+                border: "2px solid grey",    // grey border
+                color: "black",              // text color
+                padding: "8px 16px",
+                borderRadius: "20px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                zIndex: 1000                 // ensure it stays above the map
+            }}
+            >
+            ← Back
+        </button>
+
       {/* Emergency Call Button */}
       <button
         style={{
