@@ -21,7 +21,8 @@ function Map() {
                 left: '100px', 
                 right: 0, 
                 bottom: 0, 
-                zIndex: 1 
+                zIndex: 1,
+                pointerEvents: "auto"
                 }}>
                 <MapComponent API_KEY={mapData?.GMAPS_KEY} />
             </div>
@@ -29,7 +30,7 @@ function Map() {
             {/* Overlay UI */}
             <div className="overlay-ui" 
             style={{
-            pointerEvents: "auto"
+            pointerEvents: "none"
             }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
                 <MapPage onSearch={() => console.log("Search triggered!")} />
             </div>

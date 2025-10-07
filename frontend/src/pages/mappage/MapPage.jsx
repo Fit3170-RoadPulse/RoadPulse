@@ -29,8 +29,13 @@ export default function MapPage({ onSearch }) {
           </button>
 
           
-          <button className="sidebar-button"  onClick={() => (window.location.href = "/Emergency")} > 
-            {/* Now you can click this to go to the Emergency button screen */}
+          <button className="sidebar-button"  
+            onClick={() => (window.location.href = "/Emergency")}  
+            // Now you can click this to go to the Emergency button screen
+            style={{
+              pointerEvents: "auto", // allow this button to receive clicks
+            }} >
+            
             <img src={PhoneCallIcon} alt="Emergency" />
             <span>
             Emergency</span>
