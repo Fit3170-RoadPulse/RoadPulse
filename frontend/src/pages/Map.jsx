@@ -25,6 +25,7 @@ function Map() {
                 pointerEvents: "auto"
                 }}>
                 <MapComponent API_KEY={mapData?.GMAPS_KEY} />
+                <MapComponent MAP_ID={mapData?.GMAPS_ID}/>
             </div>
 
             {/* Overlay UI */}

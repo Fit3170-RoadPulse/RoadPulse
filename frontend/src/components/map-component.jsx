@@ -1,36 +1,86 @@
-export default function MapComponent({ API_KEY }) {
-  function initMap() {
-    const center = { lat: -34.397, lng: 150.644 };
-    const map = new google.maps.Map(document.getElementById("map"), {
-      zoom: 8,
-      center: center,
+export default function MapComponent({ API_KEY , MAP_ID}) {
+    let map;
+    let originMarker = null;
+    let destinationMarker = null;
+    let directionsRenderer = null;
 
-      // enable map/satellite toggle and put it bottom-right
-      mapTypeControl: true,
-      mapTypeControlOptions: {
-        position: google.maps.ControlPosition.RIGHT_BOTTOM,
-      },
+    async function initMap() {
 
-      // street view button → bottom-left (example)
-      streetViewControl: true,
-      streetViewControlOptions: {
-        position: google.maps.ControlPosition.RIGHT_BOTTOM,
-      },
+        const { Map } = await google.maps.importLibrary("maps");
+        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+
+        const center = { lat: -34.397, lng: 150.644 };
+        map = new Map(document.getElementById("map"), {
+            zoom: 8,
+            center: center,
+            mapId: MAP_ID
+        });
+
+        const trafficLayer = new google.maps.TrafficLayer();
+        trafficLayer.setMap(map);
+
+        directionsRenderer = new google.maps.DirectionsRenderer();
+        directionsRenderer.setMap(map);
+
+        map.addListener("click", (e) =>{
+            const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+
+            if (!originMarker){
+                originMarker = new AdvancedMarkerElement({
+                    map: map,
+                    position: clicked,
+                    title:"A",
+                });
+                directionsRenderer.setDirections(null);
+            }else if (!destinationMarker){
+                destinationMarker = new AdvancedMarkerElement({
+                    map: map,
+                    position: clicked,
+                    title:"B",
+                });
+                buildRoute(originMarker.position,destinationMarker.position);
+        } else{
+            originMarker.map = null;
+            destinationMarker.map =null;
+            directionsRenderer.setDirections(null);
+
+            originMarker = new AdvancedMarkerElement({
+                    map: map,
+                    position: clicked,
+                    title:"A",
+                });
+                destinationMarker = null;
+        }
     });
+    }
 
-    const trafficLayer = new google.maps.TrafficLayer();
-    trafficLayer.setMap(map);
-  }
+    function buildRoute(origin,destination){
+        const directionsService = new google.maps.DirectionsService();
+        directionsService.route(
+            {
+                origin,
+                destination,
+                travelMode: google.maps.TravelMode.DRIVING,
+            },
+            (result, status) =>{
+                if (status === "OK"){
+                    directionsRenderer.setDirections(result) 
+                } else{
+                    console.error("Direction request failed:" + status)
+                }
+            }
+        )
+    }
 
-  window.initMap = initMap;
-
-  return (
-    <div className="mapholder" style={{ width: "100%", height: "100%" }}>
-      <div id="map" style={{ width: "100%", height: "100%" }}></div>
-      <script
-        async
-        src={`https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap`}
-      ></script>
-    </div>
-  );
+    window.initMap = initMap;
+    return (
+        <div className="mapholder" style={{ width: '100%', height: '100%' }}>
+            <script src = "https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+            <div id="map" style={{width: '100%', height: '100%', minHeight: '400px' }}></div>
+            <script
+                async 
+                src={`https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap&v=weekly`}
+            ></script>
+        </div>
+    );
 }
