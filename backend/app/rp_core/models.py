@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
@@ -73,6 +74,19 @@ class IncidentReport(models.Model):
             models.CheckConstraint(name="lng_range", check=Q(longitude__gte=-180) & Q(longitude__lte=180)),
             models.CheckConstraint(name="expiry_after_created", check=Q(expires_at__isnull=True) | Q(expires_at__gte=F("created_at"))),
         ]
+
+    def save(self, *args, **kwargs):
+        creating = self._state.adding
+        # First save: let Django set created_at
+        if creating and self.expires_at is None:
+            super().save(*args, **kwargs)
+            # Now created_at is set; compute expiry
+            self.expires_at = self.created_at + timedelta(minutes=1)
+            # Persist just the expiry to avoid recursion and extra writes
+            super().save(update_fields=["expires_at"])
+            return
+        # Normal path (updates, or expires_at provided explicitly)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         who = self.reporter.username if self.reporter_id else "anonymous"
