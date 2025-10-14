@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import AppUser, Contact, OfficialEmergencyNumber, IncidentReport
+from .models import (
+    AppUser,
+    Contact,
+    ExchangeItem,
+    IncidentReport,
+    OfficialEmergencyNumber,
+    RewardRedemption,
+)
 
 
 @admin.register(AppUser)
@@ -31,3 +38,20 @@ class IncidentReportAdmin(admin.ModelAdmin):
     @admin.display(boolean=True, description="Active", ordering="expires_at")
     def active_flag(self, obj):
         return obj.is_active
+
+
+@admin.register(ExchangeItem)
+class ExchangeItemAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'points_cost', 'stock', 'is_active', 'updated_at')
+    list_filter = ('is_active',)
+    search_fields = ('name',)
+    list_editable = ('is_active',)
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(RewardRedemption)
+class RewardRedemptionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'item', 'quantity', 'points_spent', 'created_at')
+    search_fields = ('user__username', 'item__name')
+    list_filter = ('created_at',)
+    autocomplete_fields = ('user', 'item')
