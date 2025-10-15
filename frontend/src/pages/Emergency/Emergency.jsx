@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
+import "./Emergency.css"
 
 function Emergency() {
   const [showContactsPage, setShowContactsPage] = useState(false)

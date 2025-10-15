@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import MapComponent from "../components/map-component";
-import MapPage from "../pages/mappage/MapPage";
-import "../pages/mappage/MapPage.css"; // reuse styles
+import MapComponent from "../../components/MapComponent/MapComponent";
+import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
+// import "../components/side-bar-component/MapPage.css"; // reuse styles
+import "./Map.css"
 
 function Map() {
   const [mapData, setMapData] = useState(null);
@@ -24,8 +25,7 @@ function Map() {
                 zIndex: 1,
                 pointerEvents: "auto"
                 }}>
-                <MapComponent API_KEY={mapData?.GMAPS_KEY} />
-                <MapComponent MAP_ID={mapData?.GMAPS_ID}/>
+                <MapComponent API_KEY={mapData?.GMAPS_KEY} MAP_ID={mapData?.GMAPS_ID} />
             </div>
 
             {/* Overlay UI */}

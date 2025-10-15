@@ -1,11 +1,11 @@
 import React from "react";
-import "./MapPage.css";
-import MapIcon from "../../components/map.png";
-import PhoneCallIcon from "../../components/phone-call.png";
-import RouteIcon from "../../components/route.png";
-import ReportIcon from "../../components/report.png";
-import SearchIcon from "../../components/search.png";
-import GoIcon from "../../components/go.png";
+import "./MapSideBarComponent.css";
+import MapIcon from "../../assets/map.png";
+import PhoneCallIcon from "../../assets/phone-call.png";
+import RouteIcon from "../../assets/route.png";
+import ReportIcon from "../../assets/report.png";
+import SearchIcon from "../../assets/search.png";
+import GoIcon from "../../assets/go.png";
 
 import { useNavigate } from "react-router";
 

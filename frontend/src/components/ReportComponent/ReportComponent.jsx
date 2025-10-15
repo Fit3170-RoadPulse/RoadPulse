@@ -1,5 +1,7 @@
-export default function FormComponent() {
-    async function initForm() {
+import "./ReportComponent.css"
+
+export default function ReportComponent() {
+    async function initReport() {
     }
 
     return (

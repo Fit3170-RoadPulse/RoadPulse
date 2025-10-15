@@ -1,3 +1,5 @@
+import "./MapComponent.css"
+
 export default function MapComponent({ API_KEY , MAP_ID}) {
     let map;
     let originMarker = null;
