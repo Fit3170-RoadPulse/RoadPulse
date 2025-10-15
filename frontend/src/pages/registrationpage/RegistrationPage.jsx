@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import "./RegistrationPage.css";
-import LoginPage from "../loginpage/login";
+import LoginPage from "../loginpage/Login";
 
 export default function RegisterPage({ onRegister, onLogin }) {
     const [username, setUsername] = React.useState("");
@@ -25,7 +25,7 @@ export default function RegisterPage({ onRegister, onLogin }) {
     return (
         <div className="register-container">
             <h1 className="register-title">Sign up!</h1>
-            <p className="register-hint">Enter your username and password to login.</p>
+            <p className="register-hint">Create your account.</p>
 
             <div className="register-field">
                 <label className="register-label">Username:</label>
@@ -71,7 +71,7 @@ export default function RegisterPage({ onRegister, onLogin }) {
             Already have an account? 
             <Link to="/login-page" className="login-linkBtn">
                     Login
-                </Link>
+            </Link>
             </p>
         </div>
     );
