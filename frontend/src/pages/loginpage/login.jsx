@@ -60,9 +60,10 @@ export default function LoginPage({ onLogin, onCancel, onForgotPassword }) {
         
 
       <div className="login-buttons">
-        <button onClick={handleLogin} className="login-primaryBtn">
-          Login
-        </button>
+
+        <Link to="/map" className="login-primaryBtn">
+            Login
+        </Link>
         
       </div>
     </div>

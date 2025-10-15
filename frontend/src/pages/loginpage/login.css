@@ -27,12 +27,6 @@
     margin-top: 15px;
 }
 
-.login-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-}
-
 .login-input{
     /* width: 100%;
     padding: 14px 16 px;
