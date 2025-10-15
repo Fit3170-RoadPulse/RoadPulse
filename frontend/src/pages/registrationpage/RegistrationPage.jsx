@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./RegistrationPage.css";
 import LoginPage from "../loginpage/Login";
 
@@ -8,6 +8,8 @@ export default function RegisterPage({ onRegister, onLogin }) {
     const [password, setPassword] = React.useState("");
     const [confirmPassword, setConfirmPassword] = React.useState("");
 
+    const navigate = useNavigate();
+
     function handleRegister() {
         if (password !== confirmPassword) {
             alert("Passwords do not match!");
@@ -15,10 +17,17 @@ export default function RegisterPage({ onRegister, onLogin }) {
         }
 
         const values = { username, password };
-        if (typeof onRegister === "function") {
-            onRegister(values);
-        } else {
-            alert("Register pressed — values: " + JSON.stringify(values, null, 2));
+
+        const isRegistrationSuccessful = true;
+        
+        if (isRegistrationSuccessful){
+            if (typeof onRegister === "function"){
+                onRegister(value);
+            }
+
+            navigate("/email-verification");
+        }else{
+            alert("Registration failed. Please try again")
         }
     }
 

@@ -11,6 +11,7 @@ import Map from "./pages/Map"
 import NotFound from "./pages/NotFound"
 import Emergency from './pages/Emergency.jsx';
 import RegistrationPage from './pages/registrationpage/RegistrationPage';
+import EmailVerification from './pages/emailverificationpage/EmailVerification';
 
 
 createRoot(document.getElementById('root')).render(
@@ -27,6 +28,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/map" element={<Map />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/Emergency" element={<Emergency />} /> 
+        <Route path="/email-verification" element={<EmailVerification />} /> 
       </Routes>
     </BrowserRouter>
   </StrictMode>,
