@@ -1,4 +1,10 @@
 /* Make the full-screen overlay non-blocking by default */
+/* * {
+    margin: 0;
+    padding: 0;
+} */
+
+
 .overlay {
   position: absolute;
   inset: 0;
