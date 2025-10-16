@@ -10,6 +10,7 @@ import MapPage from './pages/mappage/MapPage.jsx';
 import Map from "./pages/Map"
 import NotFound from "./pages/NotFound"
 import Emergency from './pages/Emergency.jsx';
+import Demo from './components/point-widget-component';
 
 
 createRoot(document.getElementById('root')).render(
@@ -25,6 +26,10 @@ createRoot(document.getElementById('root')).render(
         <Route path="/map" element={<Map />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/Emergency" element={<Emergency />} /> 
+        
+        {/* Below route for testing. Remove once not needed */}
+        <Route path="/demo" element={<Demo />} />
+
       </Routes>
     </BrowserRouter>
   </StrictMode>,
