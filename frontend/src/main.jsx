@@ -10,6 +10,7 @@ import MapPage from './pages/mappage/MapPage.jsx';
 import Map from "./pages/Map"
 import NotFound from "./pages/NotFound"
 import Emergency from './pages/Emergency.jsx';
+import RewardsPage from './pages/rewardspage/RewardsPage';
 
 
 createRoot(document.getElementById('root')).render(
@@ -25,6 +26,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/map" element={<Map />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/Emergency" element={<Emergency />} /> 
+        <Route path="/rewards-page" element={<RewardsPage />} /> 
       </Routes>
     </BrowserRouter>
   </StrictMode>,
