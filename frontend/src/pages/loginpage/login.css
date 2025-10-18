@@ -1,14 +1,4 @@
-
-.login-container{
-    /* min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 24px;
-    max-width: 400px;
-    margin: 0 auto;
-    font-family: "Helvetica"; */
+.login-container {
     align-self: center;
     margin: 0 auto;
     padding: 80px 50px;
@@ -21,18 +11,49 @@
 }
 
 .login-field {
+    position: relative;
     width: 100%;
     max-width: 500px;
     margin: 0 auto;
     margin-top: 15px;
 }
 
-.login-input{
-    /* width: 100%;
-    padding: 14px 16 px;
-    border-radius: 3px;
-    border: 0.3px solid #ddd;
-    font-size: 14px; */
+
+.login-input {
+    width: 100%;
+    padding: 14px 50px 14px 16px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    box-sizing: border-box;
+    display: block;
+}
+
+.login-icon-btn {
+    position: absolute;
+    top: 70%;
+    right: 18px;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #666;
+    outline: none;
+    padding: 0;
+}
+
+.login-icon-btn:hover {
+    color: #333;
+}
+
+.login-icon-btn:focus {
+    outline: none;
+    box-shadow: none;
+    border: none;
+}
+
+.login-input {
     width: 100%;
     padding: 14px 16px;
     border-radius: 20px;
@@ -42,17 +63,13 @@
 }
 
 .login-label {
-    /* display: block;
-    margin-top: 10px;
-    font-weight: 600;
-    font-size: 18px; */
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
     font-size: 16px;
 }
 
-.login-title{
+.login-title {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -63,7 +80,7 @@
     font-size: 48px;
 }
 
-.login-hint{
+.login-hint {
     margin-top: 0;
     padding-bottom: 20px;
     color: #666;
@@ -72,20 +89,14 @@
     font-size: 16px;
 }
 
-.login-buttons{
+.login-buttons {
     margin-top: 50px;
     display: flex;
     justify-content: center;
     gap: 10px;
 }
 
-.login-primaryBtn{
-    /* padding: 8px 14px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    background: #FFB20F;
-    color: black; */
+.login-primaryBtn {
     width: 100px;
     padding: 12px 30px;
     border-radius: 30px;
@@ -95,10 +106,9 @@
     text-align: center;
     transition: background-color 0.2s;
     border: none;
-    background: #FFB20F;
+    background: #ffb20f;
     color: black;
 }
-
 
 .forgot-password-link-container {
     display: flex;
@@ -107,7 +117,6 @@
     margin-top: 10px;
 }
 
-/* Correct the typo in your original CSS */
 .forgot-password-link {
     background: none;
     border: none;
