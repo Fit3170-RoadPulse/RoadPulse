@@ -1,10 +1,22 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./SettingMenu.css";
 
 export default function SettingMenu() {
+  const navigate = useNavigate();
+  
   return (
     <div className="settings-page">
+
+      <button
+        className="settings-close-btn"
+        aria-label="Close settings"
+        onClick={() => navigate("/")}
+        title="Back to app"
+      >
+        ✕
+      </button>
+
       <nav className="settings-left-nav" aria-label="Settings navigation">
         <ul className="settings-menu">
           <li><Link className="settings-block" to="/change-password">Change Password</Link></li>
