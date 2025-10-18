@@ -107,16 +107,11 @@
     margin-left: 5px;
 }
 
-.input-wrapper {
-    position: relative;
-    width: 100%;
-    display: block;
-}
 
-.icon-btn {
-    position: absolute !important;
-    top: 70% !important;
-    right: 10px !important;
+.register-icon-btn {
+    position: absolute;
+    top: 70% ;
+    right: 18px ;
     padding: 6px;
     z-index: 2;
     transform: translateY(-50%);
@@ -130,14 +125,14 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-button.icon-btn:focus,
-button.icon-btn:active {
+.register-icon-btn:focus,
+.register-icon-btn:active {
     outline: none !important;
     box-shadow: none !important;
     border: none !important;
 }
 
-.icon-btn:hover {
+.register-icon-btn:hover {
     color: #333;
     border-color: transparent;
 }

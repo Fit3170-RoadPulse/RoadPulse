@@ -137,7 +137,7 @@ export default function RegisterPage({ onRegister, navigateTo }) {
                 />
                 <button
                     type="button"
-                    className="icon-btn"
+                    className="register-icon-btn"
                     onClick={() => toggle("current")}
                     aria-label="Toggle new password visibility"
                 >
