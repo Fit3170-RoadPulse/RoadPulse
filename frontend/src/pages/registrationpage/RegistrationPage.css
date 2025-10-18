@@ -31,8 +31,11 @@
 }
 
 .register-field {
+    position: relative;
     width: 100%;
-    margin-bottom: 15px;
+    max-width: 500px;
+    margin: 0 auto;
+    margin-top: 15px;
 }
 
 .register-label {
@@ -102,4 +105,39 @@
 
 .login-link-text .login-linkBtn {
     margin-left: 5px;
+}
+
+.input-wrapper {
+    position: relative;
+    width: 100%;
+    display: block;
+}
+
+.icon-btn {
+    position: absolute !important;
+    top: 70% !important;
+    right: 10px !important;
+    padding: 6px;
+    z-index: 2;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none !important;
+    cursor: pointer;
+    font-size: 18px;
+    color: #666;
+    padding: 0;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+button.icon-btn:focus,
+button.icon-btn:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.icon-btn:hover {
+    color: #333;
+    border-color: transparent;
 }

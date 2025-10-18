@@ -1,33 +1,102 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./RegistrationPage.css";
-import LoginPage from "../loginpage/Login";
 
-export default function RegisterPage({ onRegister, onLogin }) {
-    const [username, setUsername] = React.useState("");
-    const [password, setPassword] = React.useState("");
-    const [confirmPassword, setConfirmPassword] = React.useState("");
+const validatePassword = (password) => {
+    if (password.length < 8) {
+        return "Password must be at least 8 characters long.";
+    }
 
+    // check for at least on letter
+    if (!/[a-zA-Z]/.test(password)) {
+        return "Password must include at least one letter.";
+    }
+
+    // check for at least one number
+    if (!/\d/.test(password)) {
+        return "Password must include at least one number (0-9).";
+    }
+
+    // check for at least one special character
+    if (!/[^a-zA-Z0-9]/.test(password)) {
+        return "Password must include at least one special character";
+    }
+
+    return null; // validation passed
+};
+
+const validateEmail = (email) => {
+    // Basic regex check for email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return "Please enter a valid email address.";
+    }
+    return null;
+};
+
+const validateUsername = (username) => {
+    if (username.length < 3) {
+        return "Username must be at least 3 characters long.";
+    }
+    return null;
+};
+
+export default function RegisterPage({ onRegister, navigateTo }) {
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
+    const [isRegistered, setIsRegistered] = useState(false);
     const navigate = useNavigate();
+    const [show, setShow] = useState({ current: false });
+    const toggle = (field) => setShow((s) => ({ ...s, [field]: !s[field] }));
 
     function handleRegister() {
-        if (password !== confirmPassword) {
-            alert("Passwords do not match!");
+        setErrorMessage(""); // clear previous errors
+
+        // validate username
+        let error = validateUsername(username);
+        // if (error) return setErrorMessage(error);
+        if (error) {
+            alert(error);
             return;
         }
 
-        const values = { username, password };
+        // validate email
+        error = validateEmail(email);
+        // if (error) return setErrorMessage(error);
+        if (error) {
+            alert(error);
+            return;
+        }
+
+        // validate password
+        error = validatePassword(password);
+        // if (error) return setErrorMessage(error);
+        if (error) {
+            alert(error);
+            return;
+        }
+
+        // if (password !== confirmPassword) {
+        //     alert("Passwords do not match!");
+        //     return;
+        // }
+
+        const values = { username, email, password };
 
         const isRegistrationSuccessful = true;
-        
-        if (isRegistrationSuccessful){
-            if (typeof onRegister === "function"){
-                onRegister(value);
+
+        if (isRegistrationSuccessful) {
+            if (typeof onRegister === "function") {
+                onRegister(values); // passing all values including email
             }
 
-            navigate("/email-verification");
-        }else{
-            alert("Registration failed. Please try again")
+            setIsRegistered(true);
+
+            navigate("/email-verification"); // navigate to verification page
+        } else {
+            alert("Registration failed. Please try again");
         }
     }
 
@@ -50,37 +119,43 @@ export default function RegisterPage({ onRegister, onLogin }) {
                 <label className="register-label">Email:</label>
                 <input
                     className="register-input"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
-                    type="password"
                 />
             </div>
 
             <div className="register-field">
                 <label className="register-label">Password:</label>
+                
                 <input
                     className="register-input"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create a password"
-                    type="password"
+                    type={show.current ? "text" : "password"}
                 />
+                <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => toggle("current")}
+                    aria-label="Toggle new password visibility"
+                >
+                    {show.current ? "👁️" : "🙈"}
+                </button>
             </div>
 
             <div className="register-buttons">
                 <button onClick={handleRegister} className="register-primaryBtn">
-                Register
+                    Register
                 </button>
             </div>
-            
-
 
             <p className="login-link-text">
-            Already have an account? 
-            <Link to="/login-page" className="login-linkBtn">
+                Already have an account?
+                <Link to="/login-page" className="login-linkBtn">
                     Login
-            </Link>
+                </Link>
             </p>
         </div>
     );
