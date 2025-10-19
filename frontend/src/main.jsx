@@ -9,7 +9,7 @@ import ChangePassword from "./pages/SettingPage/changepassword/ChangePassword.js
 import Map from "./pages/Map/Map.jsx"
 import NotFound from "./pages/NotFound/NotFound.jsx"
 import Emergency from './pages/Emergency/Emergency.jsx';
-
+import Report from './pages/Report/Report.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -20,6 +20,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/login-page" element={<LoginPage />} />
         <Route path="/setting-menu-page" element={<SettingMenu />} />
         <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/report" element={<Report />} />
         <Route path="/map" element={<Map />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/Emergency" element={<Emergency />} /> 

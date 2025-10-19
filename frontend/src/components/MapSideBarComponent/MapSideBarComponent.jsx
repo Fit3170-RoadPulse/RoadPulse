@@ -19,11 +19,22 @@ export default function MapPage({ onSearch }) {
         <div className="sidebar">
           <span style={{ fontSize: "40px" }}>🚦</span>
 
-          <button className="sidebar-button">
+        <button className="sidebar-button"  
+            onClick={() => (window.location.href = "/map")}  
+            // Now you can click this to go to the Emergency button screen
+            style={{
+              pointerEvents: "auto", // allow this button to receive clicks
+            }} >
             <img src={MapIcon} alt="Map" />
             <span>Map</span>
           </button>
-          <button className="sidebar-button">
+
+            <button className="sidebar-button"  
+            onClick={() => (window.location.href = "/navigate")}  
+            // Now you can click this to go to the Emergency button screen
+            style={{
+              pointerEvents: "auto", // allow this button to receive clicks
+            }} >
             <img src={RouteIcon} alt="Navigate" />
             <span>Navigate</span>
           </button>
@@ -42,7 +53,12 @@ export default function MapPage({ onSearch }) {
             
           </button>
 
-          <button className="sidebar-button">
+        <button className="sidebar-button"  
+            onClick={() => (window.location.href = "/report")}  
+            // Now you can click this to go to the Emergency button screen
+            style={{
+              pointerEvents: "auto", // allow this button to receive clicks
+            }} >
             <img src={ReportIcon} alt="Reports" />
             <span>Reports</span>
           </button>
