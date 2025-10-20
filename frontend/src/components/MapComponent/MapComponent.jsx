@@ -3,6 +3,7 @@ import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import "./MapComponent.css";
 
 export default function MapComponent({ API_KEY, MAP_ID, map_function }) {
+    if (!API_KEY || !MAP_ID) return;
     setOptions({
         key: API_KEY,
         mapIds: [MAP_ID],

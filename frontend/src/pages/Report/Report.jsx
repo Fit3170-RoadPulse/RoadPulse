@@ -5,15 +5,15 @@ import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 
 export default function Report(){
-    let mapData;
+    let [mapData, setMapData] = useState(null);
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/`).then((r) => {
-            mapData = r.data;
-            console.log(r.data);
-            console.log(mapData);
+            setMapData(r.data)
         });
     }, []);
+    console.log(mapData);
+
     async function ReportLocation(map){
         let originMarker = null;
         const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
