@@ -5,14 +5,15 @@ import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import "./Map.css"
 
-function Map() {
-    const [mapData, setMapData] = useState(null);
-
+export default function Map() {
+    let mapData;
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/`).then((r) => {
-            setMapData(r.data)
             console.log(r.data);
+            mapData = r.data;
+            console.log(r.data);
+            console.log(mapData);
         });
     }, []);
 
@@ -52,11 +53,11 @@ function Map() {
                 directionsRenderer.setDirections(null);
 
                 originMarker = new AdvancedMarkerElement({
-                        map: map,
-                        position: clicked,
-                        title:"A",
-                    });
-                    destinationMarker = null;
+                    map: map,
+                    position: clicked,
+                    title:"A",
+                });
+                destinationMarker = null;
             }
         });
     }
@@ -103,5 +104,3 @@ function Map() {
         </div>
     ); 
 }
-
-export default Map;

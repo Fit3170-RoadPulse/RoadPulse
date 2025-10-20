@@ -5,23 +5,21 @@ import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 
 export default function Report(){
-
-    const [mapData, setMapData] = useState(null);
-    
+    let mapData;
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/`).then((r) => {
-            setMapData(r.data)
+            mapData = r.data;
             console.log(r.data);
+            console.log(mapData);
         });
     }, []);
-
     async function ReportLocation(map){
         let originMarker = null;
         const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
 
         map.addListener("click", (e) =>{
-            const position = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+            const centerPos= { lat: e.latLng.lat(), lng: e.latLng.lng() };
 
             // Remove previous marker if it exist
             if (originMarker){
@@ -31,12 +29,12 @@ export default function Report(){
             // Add marker at location
             originMarker = new AdvancedMarkerElement({
                 map: map,
-                position: position,
+                position: centerPos,
                 title:"A",
             });
 
             // Center position and zoom
-            map.setCenter(position);
+            map.setCenter(centerPos);
             map.setZoom(10);
         });
 
