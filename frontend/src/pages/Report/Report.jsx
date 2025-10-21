@@ -78,20 +78,13 @@ export default function Report(){
                     width:"100%",
                     height:"100%"
                 }}>
-                    <div style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        height: "50vh",
-                        width: "100%"
-                    }}>  
-                        {(()=>{
-                            if (isClicked){
-                                return (
-                                    <ReportComponent></ReportComponent>
-                                );
-                            }
-                        })()} 
-                    </div> 
+                    {(()=>{
+                        if (isClicked){
+                            return (
+                                <ReportComponent></ReportComponent>
+                            );
+                        }
+                    })()} 
                 </div>              
             </div>
 
