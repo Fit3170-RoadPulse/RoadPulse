@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
+import ReportComponent from "@/components/ReportComponent/ReportComponent";
 
 export default function Report(){
+    let [isClicked, setIsClicked] = useState(null);
     let [mapData, setMapData] = useState(null);
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -19,6 +21,7 @@ export default function Report(){
         const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
 
         map.addListener("click", (e) =>{
+            setIsClicked(true);
             const centerPos= { lat: e.latLng.lat(), lng: e.latLng.lng() };
 
             // Remove previous marker if it exist
@@ -35,9 +38,13 @@ export default function Report(){
 
             // Center position and zoom
             map.setCenter(centerPos);
-            map.setZoom(10);
-        });
+            map.setZoom(14);
 
+            map.addListener("center_changed", (e) => {
+                setIsClicked(false);
+                google.maps.event.clearListeners(map, 'center_changed');
+            });
+        });
     };
 
     return(
@@ -53,6 +60,39 @@ export default function Report(){
                 pointerEvents: "auto"
                 }}>
                 <MapComponent API_KEY={mapData?.GMAPS_KEY} MAP_ID={mapData?.GMAPS_ID} map_function={ReportLocation}/>
+            </div>
+            <div style = {{
+                zIndex: isClicked? 10: 0, 
+                position: "absolute", 
+                top: 0, 
+                left: "60vw", 
+                width: "35vw", 
+                height: "100vh", 
+                display: "flex",
+                justifyContent: "center",
+                }}> 
+                <div style = {{
+                    display: "flex",
+                    justifyContent:"center",
+                    flexDirection: "column",
+                    width:"100%",
+                    height:"100%"
+                }}>
+                    <div style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        height: "50vh",
+                        width: "100%"
+                    }}>  
+                        {(()=>{
+                            if (isClicked){
+                                return (
+                                    <ReportComponent></ReportComponent>
+                                );
+                            }
+                        })()} 
+                    </div> 
+                </div>              
             </div>
 
             {/* Overlay UI */}

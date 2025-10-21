@@ -5,13 +5,15 @@ export default function ReportComponent() {
     }
 
     return (
-        <div className="mapholder" style={{ width: '100%', height: '100%' }}>
-            <script src = "https://polyfill.io/v3/polyfill.min.js?features=default"></script>
-            <div id="map" style={{width: '100%', height: '100%', minHeight: '400px' }}></div>
-            <script
-                async 
-                src={`https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap&v=weekly`}
-            ></script>
+        <div className="mapholder" style={{ 
+            width: '100%', 
+            height: '100%', 
+            backgroundColor: "white",
+            borderRadius: "2rem",
+            display: "flex",
+            justifyContent: "center",
+            }}>
+            <h1>HI HELLO HERER</h1>
         </div>
     );
 }
