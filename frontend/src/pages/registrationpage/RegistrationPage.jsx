@@ -51,7 +51,8 @@ export default function RegisterPage({ onRegister, navigateTo }) {
     const [show, setShow] = useState({ current: false });
     const toggle = (field) => setShow((s) => ({ ...s, [field]: !s[field] }));
 
-    function handleRegister() {
+    async function handleRegister() {
+    
         setErrorMessage(""); // clear previous errors
 
         // validate username
@@ -82,22 +83,38 @@ export default function RegisterPage({ onRegister, navigateTo }) {
         //     alert("Passwords do not match!");
         //     return;
         // }
+        try {
+        const res = await fetch("http://localhost:8000/api/register/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, email, password }),
+        });
 
-        const values = { username, email, password };
-
-        const isRegistrationSuccessful = true;
-
-        if (isRegistrationSuccessful) {
-            if (typeof onRegister === "function") {
-                onRegister(values); // passing all values including email
-            }
-
-            setIsRegistered(true);
-
-            navigate("/email-verification"); // navigate to verification page
-        } else {
-            alert("Registration failed. Please try again");
+        const text = await res.text(); // get raw response
+        let data;
+        try {
+            data = JSON.parse(text); // try parsing JSON
+        } catch {
+            console.error("Non-JSON response:", text);
+            alert("Server error occurred. Check console.");
+            return;
         }
+
+        if (res.ok) {
+            // successful registration
+            setIsRegistered(true);
+            if (typeof onRegister === "function") onRegister({ username, email, password });
+            navigate("/email-verification");
+        } else {
+            // backend returned error JSON
+            alert(JSON.stringify(data));
+        }
+    } catch (err) {
+        console.error("Network or fetch error:", err);
+        alert("Network error. Check backend server.");
+    }
+
+        
     }
 
     return (

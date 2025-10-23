@@ -53,8 +53,9 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
     setShowPassword((s) => !s);
   }
 
-  function handleLogin() {
+  async function handleLogin() {
     setErrorMessage(""); // clear previous errors
+
 
     // validate username
     let error = validateUsername(username);
@@ -80,19 +81,37 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
       return;
     }
 
-    const values = { username, password };
+    try {
+    const res = await fetch("http://localhost:8000/api/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
 
-    const isLoginSuccessful = true;
-
-    if (isLoginSuccessful) {
-      if (typeof onLogin === "function") {
-        onLogin(values);
-      }
-
-      navigate("/map"); // navigate to verification page
-    } else {
-      alert("Registration failed. Please try again");
+    const text = await res.text(); // get raw response
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error("Non-JSON response:", text);
+      alert("Server error occurred. Check console.");
+      return;
     }
+
+    if (res.ok) {
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("refresh", data.refresh);
+
+      if (typeof onLogin === "function") onLogin({ username, password });
+
+      navigate("/map"); // navigate on successful login
+    } else {
+      alert(data.detail || JSON.stringify(data) || "Login failed");
+    }
+  } catch (err) {
+    console.error("Network or fetch error:", err);
+    alert("Network error. Check backend server.");
+  }
   }
 
   function handleForgotPassword() {
