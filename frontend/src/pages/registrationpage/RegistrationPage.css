@@ -1,0 +1,138 @@
+.register-container {
+    align-self: center;
+    margin: 0 auto;
+    padding: 50px;
+    max-width: 700px;
+    width: 450px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 30px;
+    background-color: white;
+    box-sizing: border-box;
+}
+
+.register-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 10px;
+    gap: 9px;
+    font-weight: 700;
+    padding-bottom: 10px;
+    font-size: 48px;
+}
+
+.register-hint {
+    margin-top: 0;
+    padding-bottom: 20px;
+    color: #666;
+    margin-bottom: 18px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.register-field {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    margin-top: 15px;
+}
+
+.register-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.register-input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.register-buttons {
+    margin-top: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.register-primaryBtn {
+    width: 150px;
+    padding: 12px 30px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    transition: background-color 0.2s;
+    border: none;
+    background: #FFB20F;
+    color: black;
+}
+
+.register-primaryBtn:hover {
+    background: #FFB20F;
+}
+
+.login-link-text {
+    text-align: center;
+    color: #666;
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.login-linkBtn {
+    background: none;
+    border: none;
+    color: #0b74de;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    font-size: inherit;
+    text-decoration: underline;
+}
+
+.login-linkBtn:hover {
+    color: #0a63bf;
+    text-decoration: none;
+}
+
+.login-link-text .login-linkBtn {
+    margin-left: 5px;
+}
+
+
+.register-icon-btn {
+    position: absolute;
+    top: 70% ;
+    right: 18px ;
+    padding: 6px;
+    z-index: 2;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none !important;
+    cursor: pointer;
+    font-size: 18px;
+    color: #666;
+    padding: 0;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.register-icon-btn:focus,
+.register-icon-btn:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.register-icon-btn:hover {
+    color: #333;
+    border-color: transparent;
+}
