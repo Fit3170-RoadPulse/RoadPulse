@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import SettingMenu from "../menu/SettingMenu";
-import CloseIcon from "../../../components/close.png";
+import CloseIcon from "../../../assets/close.png";
 import "./ChangePassword.css";
 
 export default function ChangePassword() {
