@@ -3,6 +3,14 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import './index.css'
 import App from './App.jsx'
+import LoginPage from "./pages/LoginPage/Login.jsx";
+import SettingMenu from './pages/SettingPage/menu/SettingMenu.jsx';
+import ChangePassword from "./pages/SettingPage/changepassword/ChangePassword.jsx";
+import Map from "./pages/Map/Map.jsx"
+import NotFound from "./pages/NotFound/NotFound.jsx"
+import Emergency from './pages/Emergency/Emergency.jsx';
+import Report from './pages/Report/Report.jsx';import RegistrationPage from './pages/registrationpage/RegistrationPage';
+import EmailVerification from './pages/emailverificationpage/EmailVerification';
 import LoginPage from "./pages/loginpage/Login.jsx";
 import SettingMenu from './pages/settingpage/menu/SettingMenu.jsx';
 import ChangePassword from "./pages/settingpage/changepassword/ChangePassword.jsx";
@@ -24,12 +32,14 @@ createRoot(document.getElementById('root')).render(
         <Route path="/" element={<App />} />
         <Route path="/login-page" element={<LoginPage />} />
         <Route path="/registration-page" element={<RegistrationPage />} />
+        <Route path="/registration-page" element={<RegistrationPage />} />
         <Route path="/setting-menu-page" element={<SettingMenu />} />
         <Route path="/change-password" element={<ChangePassword />} />
-        <Route path="/map-page" element={<MapPage />} />
+        <Route path="/report" element={<Report />} />
         <Route path="/map" element={<Map />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/Emergency" element={<Emergency />} /> 
+        <Route path="/email-verification" element={<EmailVerification />} /> 
         <Route path="/email-verification" element={<EmailVerification />} /> 
         <Route path="/rewards-page" element={<RewardsPage />} /> 
         
