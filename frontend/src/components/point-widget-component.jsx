@@ -69,7 +69,7 @@ function PointsWidget({ userId = "demo-user" }) {
           <h2 className="text-lg font-semibold">Points History</h2>
           <button
             onClick={() => setShowHistory(false)}
-            className="px-3 py-1.5 bg-gray-200 text-sm rounded-xl hover:bg-gray-300"
+            className="px-3 py-1.5 bg-gray-200 text-white rounded-xl hover:bg-gray-300"
           >
             ← Back
           </button>
@@ -115,14 +115,14 @@ function PointsWidget({ userId = "demo-user" }) {
           {/* Show history*/}
           <button
             onClick={() => setShowHistory(true)}
-            className="px-3 py-1.5 text-black rounded-xl border hover:bg-gray-50 active:scale-[0.99]"
+            className="px-3 py-1.5 text-white rounded-xl border hover:bg-gray-50 active:scale-[0.99]"
           >
           View History
           </button>
 
           <button
             onClick={load}
-            className="px-3 py-1.5 text-black rounded-xl border hover:bg-gray-50 active:scale-[0.99]"
+            className="px-3 py-1.5 text-white rounded-xl border hover:bg-gray-50 active:scale-[0.99]"
             aria-label="Refresh points"
           >
             Refresh
