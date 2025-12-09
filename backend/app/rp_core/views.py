@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from config import settings
 from .models import AppUser, ExchangeItem, RewardRedemption
+from rp_core.services.points import deduct_points
 
 
 def health(_req):
@@ -132,8 +133,10 @@ def redeem_reward(request):
             )
 
         # Deduct points and stock, create redemption record
-        user.reward_points -= total_cost
-        user.save(update_fields=["reward_points"])
+        try:
+            deduct_points(user, total_cost, reason="redeem_reward", ref=f"Redeem: Item {item.id} with quantity of {quantity}")
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Deduct stock if not unlimited
         if item.stock is not None:

@@ -175,3 +175,41 @@ class IncidentReport(models.Model):
     @property
     def is_active(self):
         return self.expires_at is None or self.expires_at > timezone.now()
+
+
+class PointTransaction(models.Model):
+    class Kind(models.TextChoices):
+        EARN = "EARN", "Earn"
+        SPEND = "SPEND", "Spend"
+         # admin/manual or corrections
+        ADJUST = "ADJUST", "Adjust" 
+
+    user = models.ForeignKey(
+        AppUser, on_delete=models.CASCADE, related_name="point_transactions"
+    )
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    amount = models.PositiveIntegerField(help_text="Always positive; sign implied by kind")
+    # e.g. "redeem_reward", "daily_login"
+    reason = models.CharField(max_length=120)   
+    reference = models.CharField(
+        max_length=120, blank=True, null=True,
+        help_text="Idempotency key to avoid double-charging (optional)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "created_at"]),
+            models.Index(fields=["user", "reference"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                name="pt_amount_gt_zero",
+                check=Q(amount__gt=0),
+            ),
+        ]
+
+    def __str__(self):
+        sign = "-" if self.kind == self.Kind.SPEND else "+"
+        return f"{self.user} {sign}{self.amount} ({self.reason})"

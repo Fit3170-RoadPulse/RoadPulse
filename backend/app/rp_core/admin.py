@@ -6,12 +6,13 @@ from .models import (
     IncidentReport,
     OfficialEmergencyNumber,
     RewardRedemption,
+    PointTransaction
 )
 
 
 @admin.register(AppUser)
 class AppUserAdmin(admin.ModelAdmin):
-    list_display = ('id', 'username', 'email', 'is_staff', 'is_active')
+    list_display = ('id', 'username', 'email', 'reward_points', 'is_staff', 'is_active')
     search_fields = ('username', 'email')
 
 
@@ -55,3 +56,10 @@ class RewardRedemptionAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'item__name')
     list_filter = ('created_at',)
     autocomplete_fields = ('user', 'item')
+
+
+@admin.register(PointTransaction)
+class PointTransactionAdmin(admin.ModelAdmin):
+    list_display = ("user", "kind", "amount", "reason", "reference", "created_at")
+    list_filter = ("kind", "created_at")
+    search_fields = ("user__username", "reason", "reference")
