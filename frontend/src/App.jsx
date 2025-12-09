@@ -24,7 +24,7 @@ export default function App() {
 
       <hr style={{ margin: "24px 0" }} />
 
-      <button
+      {/* <button
         onClick={() => (window.location.href = "/login-page")}
         style={{
           marginBottom: 20,
@@ -37,6 +37,21 @@ export default function App() {
         }}
       >
         Go to Login
+      </button> */}
+
+      <button
+        onClick={() => (window.location.href = "/registration-page")}
+        style={{
+          marginBottom: 20,
+          padding: "8px 14px",
+          borderRadius: 8,
+          background: "#0b74de",
+          color: "white",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        Register Page
       </button>
 
 

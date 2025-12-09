@@ -10,6 +10,8 @@ import MapPage from './pages/mappage/MapPage.jsx';
 import Map from "./pages/Map"
 import NotFound from "./pages/NotFound"
 import Emergency from './pages/Emergency.jsx';
+import RegistrationPage from './pages/registrationpage/RegistrationPage';
+import EmailVerification from './pages/emailverificationpage/EmailVerification';
 import RewardsPage from './pages/rewardspage/RewardsPage';
 import Demo from './components/point-widget-component';
 
@@ -21,12 +23,14 @@ createRoot(document.getElementById('root')).render(
         {/* If you want to navigate to a page via filepath, I think you must include the route here */}
         <Route path="/" element={<App />} />
         <Route path="/login-page" element={<LoginPage />} />
+        <Route path="/registration-page" element={<RegistrationPage />} />
         <Route path="/setting-menu-page" element={<SettingMenu />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/map-page" element={<MapPage />} />
         <Route path="/map" element={<Map />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/Emergency" element={<Emergency />} /> 
+        <Route path="/email-verification" element={<EmailVerification />} /> 
         <Route path="/rewards-page" element={<RewardsPage />} /> 
         
         {/* Below route for testing. Remove once not needed */}

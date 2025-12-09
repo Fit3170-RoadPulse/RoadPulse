@@ -1,15 +1,117 @@
-import React from "react";
-import "./login.css";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import "./Login.css";
 
-export default function LoginPage({ onLogin, onCancel, onForgotPassword }) {
-  const [username, setUsername] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [remember, setRemember] = React.useState(false);
+// check with database
+const validatePassword = (password) => {
+  if (password.length < 8) {
+    return "Password must be at least 8 characters long.";
+  }
+  // check for at least on letter
+  if (!/[a-zA-Z]/.test(password)) {
+    return "Password must include at least one letter.";
+  }
 
-  function handleLogin() {
-    const values = { username, password, remember };
-    if (typeof onLogin === "function") onLogin(values);
-    else alert("Login pressed — values: " + JSON.stringify(values, null, 2));
+  // check for at least one number
+  if (!/\d/.test(password)) {
+    return "Password must include at least one number (0-9).";
+  }
+
+  // check for at least one special character
+  if (!/[^a-zA-Z0-9]/.test(password)) {
+    return "Password must include at least one special character";
+  }
+  return null;
+};
+
+// const validateEmail = (email) => {
+//   // Basic regex check for email format
+//   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+//     return "Please enter a valid email address.";
+//   }
+//   return null;
+// };
+
+const validateUsername = (username) => {
+  if (username.length < 3) {
+    return "Username must be at least 3 characters long.";
+  }
+  return null;
+};
+
+export default function LoginPage({ onLogin, onForgotPassword }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  // const [showPassword, setShowPassword] = useState(false)
+  const navigate = useNavigate();
+  const [show, setShow] = useState({ current: false });
+  const toggle = (field) => setShow((s) => ({ ...s, [field]: !s[field] }));
+
+  function toggleShowPassword() {
+    setShowPassword((s) => !s);
+  }
+
+  async function handleLogin() {
+    setErrorMessage(""); // clear previous errors
+
+
+    // validate username
+    let error = validateUsername(username);
+    // if (error) return setErrorMessage(error);
+    if (error) {
+      alert(error);
+      return;
+    }
+
+    // // validate email
+    // error = validateEmail(email);
+    // // if (error) return setErrorMessage(error);
+    // if (error) {
+    //   alert(error);
+    //   return;
+    // }
+
+    // validate password
+    error = validatePassword(password);
+    // if (error) return setErrorMessage(error);
+    if (error) {
+      alert(error);
+      return;
+    }
+
+    try {
+    const res = await fetch("http://localhost:8000/api/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const text = await res.text(); // get raw response
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error("Non-JSON response:", text);
+      alert("Server error occurred. Check console.");
+      return;
+    }
+
+    if (res.ok) {
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("refresh", data.refresh);
+
+      if (typeof onLogin === "function") onLogin({ username, password });
+
+      navigate("/map"); // navigate on successful login
+    } else {
+      alert(data.detail || JSON.stringify(data) || "Login failed");
+    }
+  } catch (err) {
+    console.error("Network or fetch error:", err);
+    alert("Network error. Check backend server.");
+  }
   }
 
   function handleForgotPassword() {
@@ -26,40 +128,62 @@ export default function LoginPage({ onLogin, onCancel, onForgotPassword }) {
   }
 
   return (
-    <div className="login-root">
+    <div className="login-container">
       <h1 className="login-title">Welcome Back!</h1>
       <p className="login-hint">Enter your username and password to login.</p>
 
       <div className="login-field">
-        <label className="login-label">Username</label> 
+        <label className="login-label">Username:</label>
         <input
           className="login-input"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Enter your username"
         />
-        </div>
+      </div>
 
-        <div className="login-field">
-        <label className="login-label">Password</label>
+      <div className="login-field">
+        <label className="login-label">Password:</label>
         <input
           className="login-input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter your password"
-          type="password"
+          type={show.current ? "text" : "password"}
         />
-        <button onClick={handleForgotPassword} className="login-linkBtn">
+
+        <button
+          type="button"
+          className="login-icon-btn"
+          onClick={() => toggle("current")}
+          aria-label="Toggle new password visibility"
+        >
+          {show.current ? "👁️" : "🙈"}
+        </button>
+      </div>
+
+      <div className="forgot-password-link-container">
+        <button
+          onClick={handleForgotPassword}
+          className="forgot-password-link"
+          type="button"
+        >
           Forgot password?
         </button>
       </div>
 
       <div className="login-buttons">
-        <button onClick={handleLogin} className="login-primaryBtn">
+        {/* <Link handleLogin className="login-primaryBtn">
+          Login
+        </Link> */}
+        <button
+          onClick={handleLogin}
+          className="login-primaryBtn"
+          type="button"
+        >
           Login
         </button>
       </div>
     </div>
   );
 }
-

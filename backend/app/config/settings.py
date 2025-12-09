@@ -64,6 +64,13 @@ DATABASES = {
     }
 }
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+}
+
+
 AUTH_PASSWORD_VALIDATORS = []
 AUTH_USER_MODEL = 'rp_core.AppUser'
 LANGUAGE_CODE = "en-us"
