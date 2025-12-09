@@ -3,7 +3,10 @@ from . import views
 
 
 urlpatterns = [
-    path("map/", views.map_config),
-    path("health/", views.health),
-    path("samples/", views.samples),
+    path("health/", views.health, name="health"),
+    path("samples/", views.samples, name="samples"),
+    path("map/", views.map_config, name="map-config"),
+    path("rewards/account/", views.reward_account, name="reward-account"),
+    path("rewards/items/", views.list_exchange_items, name="exchange-items"),
+    path("rewards/redeem/", views.redeem_reward, name="redeem-reward"),
 ]
