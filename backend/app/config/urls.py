@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from rp_core.views import health, samples, map, RegisterView, LoginView
+from rp_core.views import health, samples, map_config, RegisterView, LoginView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
