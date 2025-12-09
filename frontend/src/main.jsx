@@ -3,23 +3,15 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import './index.css'
 import App from './App.jsx'
-import LoginPage from "./pages/LoginPage/Login.jsx";
-import SettingMenu from './pages/SettingPage/menu/SettingMenu.jsx';
-import ChangePassword from "./pages/SettingPage/changepassword/ChangePassword.jsx";
+import SettingMenu from './pages/settingpage/menu/SettingMenu.jsx';
+import ChangePassword from "./pages/settingpage/changepassword/ChangePassword.jsx";
 import Map from "./pages/Map/Map.jsx"
 import NotFound from "./pages/NotFound/NotFound.jsx"
 import Emergency from './pages/Emergency/Emergency.jsx';
-import Report from './pages/Report/Report.jsx';import RegistrationPage from './pages/registrationpage/RegistrationPage';
-import EmailVerification from './pages/emailverificationpage/EmailVerification';
-import LoginPage from "./pages/loginpage/Login.jsx";
-import SettingMenu from './pages/settingpage/menu/SettingMenu.jsx';
-import ChangePassword from "./pages/settingpage/changepassword/ChangePassword.jsx";
-import MapPage from './pages/mappage/MapPage.jsx';
-import Map from "./pages/Map"
-import NotFound from "./pages/NotFound"
-import Emergency from './pages/Emergency.jsx';
-import RegistrationPage from './pages/registrationpage/RegistrationPage';
-import EmailVerification from './pages/emailverificationpage/EmailVerification';
+import Report from './pages/Report/Report.jsx';
+import RegistrationPage from './pages/registrationpage/RegistrationPage.jsx';
+import EmailVerification from './pages/emailverificationpage/EmailVerification.jsx';
+import LoginPage from "./pages/loginpage/login.jsx";
 import RewardsPage from './pages/rewardspage/RewardsPage';
 import Demo from './components/point-widget-component';
 

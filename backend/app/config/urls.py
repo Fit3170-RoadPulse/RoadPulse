@@ -10,8 +10,7 @@ urlpatterns = [
     path("api/health/", health),
     path("api/samples/", samples),
     path("api/register/", RegisterView.as_view(), name="register"),
-    path("api/login/", LoginView.as_view(), name="login")
+    path("api/login/", LoginView.as_view(), name="login"),
     path("api/", include("rp_core.urls")),
     path("api/register/", RegisterView.as_view(), name="register"),
-    path("api/login/", LoginView.as_view(), name="login")
 ]
