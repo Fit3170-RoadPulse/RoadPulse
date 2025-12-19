@@ -3,20 +3,24 @@ import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import "./MapComponent.css";
 
 export default function MapComponent({ API_KEY, MAP_ID, map_function }) {
-    if (!API_KEY || !MAP_ID) return;
-    setOptions({
-        key: API_KEY,
-        mapIds: [MAP_ID],
-    });
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
 
     useEffect(() => {
         let isMounted = true;
 
-        importLibrary("maps").then(() => {
+        if (!API_KEY || !MAP_ID) return () => { isMounted = false; };
+
+        setOptions({
+            key: API_KEY,
+            mapIds: [MAP_ID],
+        });
+
+        importLibrary("maps").then((lib) => {
             if (!isMounted || !mapRef.current || mapInstance.current) return;
-            const map = new google.maps.Map(mapRef.current, {
+            const MapCtor = lib?.Map || window.google?.maps?.Map;
+            if (!MapCtor) return;
+            const map = new MapCtor(mapRef.current, {
                 center: { lat: -34.397, lng: 150.644 },
                 zoom: 8,
                 mapId: MAP_ID,

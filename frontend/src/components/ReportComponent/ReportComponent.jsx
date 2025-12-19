@@ -1,11 +1,13 @@
 import "./ReportComponent.css"
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function ReportComponent({ location, onClose, onSubmitted }) {
     const [reportType, setReportType] = useState("");
     const [description, setDescription] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formMessage, setFormMessage] = useState(null);
+    const [locationAddress, setLocationAddress] = useState(null);
+    const geocodeCacheRef = useRef(new Map()); // "lat,lng" -> address string
 
     function getAccessToken() {
         const raw = (localStorage.getItem("access") || "").trim();
@@ -50,6 +52,32 @@ export default function ReportComponent({ location, onClose, onSubmitted }) {
     const canSubmit = useMemo(() => {
         return Boolean(location && reportType && description.trim() && !isSubmitting);
     }, [location, reportType, description, isSubmitting]);
+
+    useEffect(() => {
+        setLocationAddress(null);
+        if (!location) return;
+
+        const lat = Number(location.lat);
+        const lng = Number(location.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+        const cacheKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+        const cached = geocodeCacheRef.current.get(cacheKey);
+        if (cached) {
+            setLocationAddress(cached);
+            return;
+        }
+
+        if (typeof google === "undefined" || !google.maps?.Geocoder) return;
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            if (status !== "OK" || !results?.length) return;
+            const address = results[0]?.formatted_address;
+            if (!address) return;
+            geocodeCacheRef.current.set(cacheKey, address);
+            setLocationAddress(address);
+        });
+    }, [location]);
 
     async function submitReport() {
         setFormMessage(null);
@@ -163,13 +191,36 @@ export default function ReportComponent({ location, onClose, onSubmitted }) {
             fontWeight:"light",
             color:"#1E1E1E",
             }}>
-            <div>
+            <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h1 style={{
                     fontWeight:"bold",
                     fontSize:"2rem",
                     color:"black",
                     marginBottom:"1rem"
                 }}>New Incident Report</h1>
+                <button
+                    type="button"
+                    onClick={() => typeof onClose === "function" && onClose()}
+                    aria-label="Close report form"
+                    style={{
+                        width: "34px",
+                        height: "34px",
+                        borderRadius: "10px",
+                        border: "1px solid #E5E7EB",
+                        background: "#FFFFFF",
+                        cursor: "pointer",
+                        color: "#111827",
+                        fontSize: "18px",
+                        lineHeight: "1",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 2px 8px rgba(17, 24, 39, 0.10)",
+                        marginBottom: "1rem",
+                    }}
+                >
+                    ×
+                </button>
             </div>
             {formMessage ? (
                 <div
@@ -188,17 +239,10 @@ export default function ReportComponent({ location, onClose, onSubmitted }) {
                     {formMessage.message}
                 </div>
             ) : null}
-            <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
                 <div style={{ fontSize: "0.9rem", color: "#333" }}>
-                    Location: {location ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : "Click the map"}
+                    Address: {!location ? "Click the map" : (locationAddress || "Looking up…")}
                 </div>
-                <button
-                    type="button"
-                    onClick={() => typeof onClose === "function" && onClose()}
-                    style={{ background: "transparent", border: "none", cursor: "pointer", color: "#111" }}
-                >
-                    Close
-                </button>
             </div>
             <div style={{
                 display: "flex",

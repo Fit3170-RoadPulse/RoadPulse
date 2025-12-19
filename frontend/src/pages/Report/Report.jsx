@@ -4,6 +4,7 @@ import axios from "axios";
 import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import ReportComponent from "@/components/ReportComponent/ReportComponent";
+import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 
 export default function Report(){
     let [isClicked, setIsClicked] = useState(null);
@@ -12,14 +13,12 @@ export default function Report(){
     const [toast, setToast] = useState(null);
     const [reports, setReports] = useState([]);
     const [selectedReport, setSelectedReport] = useState(null);
-    const [selectedReportAddress, setSelectedReportAddress] = useState(null);
     const selectedReportRef = useRef(null);
     const [mapReady, setMapReady] = useState(false);
     const mapInstanceRef = useRef(null);
     const reportMarkersRef = useRef(new Map()); // id -> AdvancedMarkerElement
     const reportsByIdRef = useRef(new Map()); // id -> report
     const draftMarkerRef = useRef(null);
-    const geocodeCacheRef = useRef(new Map()); // "lat,lng" -> address string
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -49,33 +48,6 @@ export default function Report(){
 
     useEffect(() => {
         selectedReportRef.current = selectedReport;
-    }, [selectedReport]);
-
-    useEffect(() => {
-        setSelectedReportAddress(null);
-        if (!selectedReport) return;
-
-        const lat = Number(selectedReport.latitude);
-        const lng = Number(selectedReport.longitude);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
-        const cacheKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-        const cached = geocodeCacheRef.current.get(cacheKey);
-        if (cached) {
-            setSelectedReportAddress(cached);
-            return;
-        }
-
-        if (typeof google === "undefined" || !google.maps?.Geocoder) return;
-        const geocoder = new google.maps.Geocoder();
-
-        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-            if (status !== "OK" || !results?.length) return;
-            const address = results[0]?.formatted_address;
-            if (!address) return;
-            geocodeCacheRef.current.set(cacheKey, address);
-            setSelectedReportAddress(address);
-        });
     }, [selectedReport]);
 
     useEffect(() => {
@@ -329,120 +301,7 @@ export default function Report(){
                     height:"100%"
                 }}>
                     {selectedReport ? (
-                        <div
-                            className="mapholder"
-                            style={{
-                                width: "100%",
-                                height: "52vh",
-                                backgroundColor: "#FFFFFF",
-                                border: `1px solid ${(reportTypeTheme[selectedReport.report_type] || reportTypeTheme.OTHER).border}`,
-                                borderLeft: `8px solid ${(reportTypeTheme[selectedReport.report_type] || reportTypeTheme.OTHER).border}`,
-                                borderRadius: "18px",
-                                boxShadow: "0 10px 30px rgba(17, 24, 39, 0.12)",
-                                display: "flex",
-                                justifyContent: "flex-start",
-                                flexDirection: "column",
-                                alignItems: "stretch",
-                                padding: "18px 18px 16px 18px",
-                                fontSize: "1rem",
-                                color: "#1E1E1E",
-                                gap: "14px",
-                            }}
-                        >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                                        <h1 style={{ fontWeight: 700, fontSize: "1.4rem", color: "#111827", margin: 0 }}>
-                                            Incident details
-                                        </h1>
-                                        <span
-                                            style={{
-                                                background: (reportTypeTheme[selectedReport.report_type] || reportTypeTheme.OTHER).badgeBg,
-                                                color: (reportTypeTheme[selectedReport.report_type] || reportTypeTheme.OTHER).badgeText,
-                                                border: `1px solid ${(reportTypeTheme[selectedReport.report_type] || reportTypeTheme.OTHER).border}`,
-                                                padding: "4px 10px",
-                                                borderRadius: "999px",
-                                                fontSize: "0.85rem",
-                                                fontWeight: 600,
-                                            }}
-                                        >
-                                            {reportTypeLabel[selectedReport.report_type] || selectedReport.report_type}
-                                        </span>
-                                    </div>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedReport(null)}
-                                    aria-label="Close incident details"
-                                    style={{
-                                        width: "36px",
-                                        height: "36px",
-                                        borderRadius: "10px",
-                                        border: "1px solid #E5E7EB",
-                                        background: "#FFFFFF",
-                                        cursor: "pointer",
-                                        color: "#111827",
-                                        fontSize: "18px",
-                                        lineHeight: "1",
-                                    }}
-                                >
-                                    ×
-                                </button>
-                            </div>
-
-                            <div
-                                style={{
-                                    background: "#F9FAFB",
-                                    border: "1px solid #E5E7EB",
-                                    borderRadius: "12px",
-                                    padding: "12px 12px",
-                                    color: "#111827",
-                                }}
-                            >
-                                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                                    Description
-                                </div>
-                                <div style={{ fontSize: "0.95rem", color: "#111827", whiteSpace: "pre-wrap" }}>
-                                    {selectedReport.description || "-"}
-                                </div>
-                            </div>
-
-                            <div
-                                style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "1fr 1fr",
-                                    gap: "10px 14px",
-                                    fontSize: "0.95rem",
-                                }}
-                            >
-                                <div style={{ color: "#374151" }}>
-                                    <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#6B7280" }}>Reported by</div>
-                                    <div style={{ fontWeight: 600, color: "#111827" }}>
-                                        {selectedReport.reporter?.username || "Anonymous"}
-                                    </div>
-                                </div>
-                                <div style={{ color: "#374151" }}>
-                                    <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#6B7280" }}>Reported (Australia time)</div>
-                                    <div style={{ fontWeight: 600, color: "#111827" }}>
-                                        {formatAustraliaDateTime(selectedReport.created_at)}
-                                    </div>
-                                </div>
-                                <div style={{ color: "#374151" }}>
-                                    <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#6B7280" }}>Address</div>
-                                    <div style={{ fontWeight: 600, color: "#111827" }}>
-                                        {selectedReportAddress || "Looking up..."}
-                                    </div>
-                                </div>
-                                <div style={{ color: "#374151" }}>
-                                    <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#6B7280" }}>Coordinates</div>
-                                    <div style={{ fontWeight: 600, color: "#111827" }}>
-                                        {Number.isFinite(Number(selectedReport.latitude)) && Number.isFinite(Number(selectedReport.longitude))
-                                            ? `${Number(selectedReport.latitude).toFixed(6)}, ${Number(selectedReport.longitude).toFixed(6)}`
-                                            : "-"}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <IncidentDetailsCard report={selectedReport} onClose={() => setSelectedReport(null)} />
                     ) : isClicked ? (
                         <ReportComponent
                             location={selectedLocation}
