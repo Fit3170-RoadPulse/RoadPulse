@@ -15,6 +15,7 @@ export default function Map() {
     const navigate = useNavigate();
     const [selectedReport, setSelectedReport] = useState(null);
     const [reports, setReports] = useState([]);
+    const [mapReady, setMapReady] = useState(false);
     const mapReadyRef = useRef(false);
     const mapInstanceRef = useRef(null);
     const reportMarkersRef = useRef(new globalThis.Map()); // id -> AdvancedMarkerElement
@@ -36,6 +37,17 @@ export default function Map() {
         fetchReports();
         const t = setInterval(fetchReports, 15000);
         return () => clearInterval(t);
+    }, []);
+    useEffect(() => {
+        const base = import.meta.env.VITE_API_URL || "";
+        const fetchReports = () =>
+            axios
+                .get(`${base}/api/incident-reports/`)
+                .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
+                .catch(() => {});
+        const onAuthChanged = () => fetchReports();
+        window.addEventListener("rp:auth-changed", onAuthChanged);
+        return () => window.removeEventListener("rp:auth-changed", onAuthChanged);
     }, []);
     console.log(mapData);
 
@@ -138,6 +150,7 @@ export default function Map() {
         if (mapReadyRef.current) return;
         mapReadyRef.current = true;
         mapInstanceRef.current = map;
+        setMapReady(true);
 
         let originMarker = null;
         let directionsRenderer = null;
@@ -152,10 +165,6 @@ export default function Map() {
 
         directionsRenderer = new g.maps.DirectionsRenderer();
         directionsRenderer.setMap(map);
-
-        map.addListener("click", () => {
-            setSelectedReport(null);
-        });
 
         map.addListener("click", () => {
             setSelectedReport(null);
@@ -195,7 +204,7 @@ export default function Map() {
 
     useEffect(() => {
         const map = mapInstanceRef.current;
-        if (!mapReadyRef.current || !map) return;
+        if (!mapReady || !map) return;
 
         let cancelled = false;
         (async () => {
@@ -234,7 +243,7 @@ export default function Map() {
         return () => {
             cancelled = true;
         };
-    }, [createIncidentPinContent, reports]);
+    }, [createIncidentPinContent, mapReady, reports]);
 
     useEffect(() => {
         if (!selectedReport) return;

@@ -20,6 +20,24 @@ export default function Report(){
     const reportsByIdRef = useRef(new Map()); // id -> report
     const draftMarkerRef = useRef(null);
 
+    function getAccessToken() {
+        const raw = (localStorage.getItem("access") || "").trim();
+        return raw.replace(/^Bearer\s+/i, "").replace(/^"+|"+$/g, "").trim();
+    }
+
+    function getAuthConfig() {
+        const token = getAccessToken();
+        return token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+    }
+
+    const fetchReports = useCallback(() => {
+        const base = import.meta.env.VITE_API_URL || "";
+        return axios
+            .get(`${base}/api/incident-reports/`, getAuthConfig())
+            .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
+            .catch(() => setReports([]));
+    }, []);
+
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/`).then((r) => {
@@ -27,22 +45,17 @@ export default function Report(){
         });
     }, []);
     useEffect(() => {
-        const base = import.meta.env.VITE_API_URL || "";
-        axios
-            .get(`${base}/api/incident-reports/`)
-            .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
-            .catch(() => setReports([]));
+        fetchReports();
     }, []);
     useEffect(() => {
-        const base = import.meta.env.VITE_API_URL || "";
-        const t = setInterval(() => {
-            axios
-                .get(`${base}/api/incident-reports/`)
-                .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
-                .catch(() => {});
-        }, 15000);
+        const t = setInterval(fetchReports, 15000);
         return () => clearInterval(t);
     }, []);
+    useEffect(() => {
+        const onAuthChanged = () => fetchReports();
+        window.addEventListener("rp:auth-changed", onAuthChanged);
+        return () => window.removeEventListener("rp:auth-changed", onAuthChanged);
+    }, [fetchReports]);
     useEffect(() => {
         if (!toast) return;
         const t = setTimeout(() => setToast(null), 3000);
