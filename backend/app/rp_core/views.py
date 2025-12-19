@@ -1,10 +1,5 @@
 from django.db import transaction
 from django.http import JsonResponse
-from .serializers import RegisterSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
-from rest_framework import status, views
-from rest_framework.decorators import api_view
 from django.contrib.auth import authenticate
 from rest_framework import status, views
 from rest_framework.decorators import api_view, permission_classes
@@ -12,8 +7,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from config import settings
-from .serializers import RegisterSerializer
-from .models import AppUser, ExchangeItem, RewardRedemption
+from .incidentReport import (
+    IncidentReportCreateSerializer,
+    IncidentReportSerializer,
+    RegisterSerializerIncidentReport,
+)
+from .models import AppUser, ExchangeItem, IncidentReport, RewardRedemption
 from rp_core.services.points import deduct_points
 
 
@@ -57,11 +56,29 @@ def reward_account(request):
 # List available exchange items
 @api_view(["GET"])
 def map(_req):
-    return JsonResponse({"status": "ok", "GMAPS_KEY": settings.GOOGLE_MAPS_API_KEY,"GMAPS_ID": settings.GOOGLE_MAPS_ID})
+    return JsonResponse({
+        "status": "ok",
+        "GMAPS_KEY": settings.GOOGLE_MAPS_API_KEY,
+        "GMAPS_ID": settings.GOOGLE_MAPS_ID,
+    })
+
+@api_view(["GET", "POST"])
+def incident_reports(request):
+    if request.method == "GET":
+        reports = IncidentReport.objects.active()[:500]
+        return Response(IncidentReportSerializer(reports, many=True).data)
+
+    if not request.user or not request.user.is_authenticated:
+        return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    serializer = IncidentReportCreateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    report = serializer.save(reporter=request.user)
+    return Response(IncidentReportSerializer(report).data, status=status.HTTP_201_CREATED)
 
 class RegisterView(views.APIView):
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        serializer = RegisterSerializerIncidentReport(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({"success":True, "message": "User registered"}, status=status.HTTP_201_CREATED)
@@ -83,6 +100,8 @@ class LoginView(views.APIView):
             "username": user.username,
             "email": user.email
         })
+    
+@api_view(["GET"])
 def list_exchange_items(_req):
     items = ExchangeItem.objects.filter(is_active=True).order_by("name")
     data = [{
@@ -200,7 +219,7 @@ def redeem_reward(request):
 
 class RegisterView(views.APIView):
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        serializer = RegisterSerializerIncidentReport(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({"success":True, "message": "User registered"}, status=status.HTTP_201_CREATED)

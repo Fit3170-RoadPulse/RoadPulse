@@ -82,7 +82,8 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
     }
 
     try {
-    const res = await fetch("http://localhost:8000/api/login/", {
+    const base = import.meta.env.VITE_API_URL || "";
+    const res = await fetch(`${base}/api/login/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -99,8 +100,16 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
     }
 
     if (res.ok) {
-      localStorage.setItem("access", data.access);
-      localStorage.setItem("refresh", data.refresh);
+      const access = String(data.access || "")
+        .trim()
+        .replace(/^Bearer\s+/i, "")
+        .replace(/^\"+|\"+$/g, "");
+      const refresh = String(data.refresh || "")
+        .trim()
+        .replace(/^Bearer\s+/i, "")
+        .replace(/^\"+|\"+$/g, "");
+      localStorage.setItem("access", access);
+      localStorage.setItem("refresh", refresh);
 
       if (typeof onLogin === "function") onLogin({ username, password });
 
