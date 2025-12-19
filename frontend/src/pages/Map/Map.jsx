@@ -14,7 +14,9 @@ export default function Map() {
     const [points] = useState(1000); // Replace with actual user points
     const navigate = useNavigate();
     const [selectedReport, setSelectedReport] = useState(null);
+    const [reports, setReports] = useState([]);
     const mapReadyRef = useRef(false);
+    const mapInstanceRef = useRef(null);
     const reportMarkersRef = useRef(new globalThis.Map()); // id -> AdvancedMarkerElement
 
     useEffect(() => {
@@ -22,6 +24,18 @@ export default function Map() {
         axios.get(`${base}/api/map/`).then((r) => {
             setMapData(r.data)
         });
+    }, []);
+    useEffect(() => {
+        const base = import.meta.env.VITE_API_URL || "";
+        const fetchReports = () =>
+            axios
+                .get(`${base}/api/incident-reports/`)
+                .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
+                .catch(() => {});
+
+        fetchReports();
+        const t = setInterval(fetchReports, 15000);
+        return () => clearInterval(t);
     }, []);
     console.log(mapData);
 
@@ -123,6 +137,7 @@ export default function Map() {
     const setMarker = useCallback(async (map) => {
         if (mapReadyRef.current) return;
         mapReadyRef.current = true;
+        mapInstanceRef.current = map;
 
         let originMarker = null;
         let directionsRenderer = null;
@@ -142,36 +157,9 @@ export default function Map() {
             setSelectedReport(null);
         });
 
-        // Load incident reports and display markers
-        try {
-            const base = import.meta.env.VITE_API_URL || "";
-            const resp = await axios.get(`${base}/api/incident-reports/`);
-            const reports = Array.isArray(resp.data) ? resp.data : [];
-
-            const markers = reportMarkersRef.current;
-
-            for (const report of reports) {
-                const lat = Number(report.latitude);
-                const lng = Number(report.longitude);
-                if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-                if (markers.has(report.id)) continue;
-
-                const marker = new AdvancedMarkerElement({
-                    map,
-                    position: { lat, lng },
-                    title: report.report_type,
-                    content: createIncidentPinContent(report.report_type),
-                });
-
-                marker.addListener("gmp-click", () => {
-                    setSelectedReport(report);
-                });
-
-                markers.set(report.id, marker);
-            }
-        } catch (err) {
-            console.error("Failed to load incident reports:", err);
-        }
+        map.addListener("click", () => {
+            setSelectedReport(null);
+        });
 
         map.addListener("click", (e) =>{
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
@@ -204,6 +192,56 @@ export default function Map() {
             }
         });
     }, [createIncidentPinContent, reportTypeLabel]);
+
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!mapReadyRef.current || !map) return;
+
+        let cancelled = false;
+        (async () => {
+            const g = window.google;
+            if (!g?.maps?.importLibrary) return;
+            const { AdvancedMarkerElement } = await g.maps.importLibrary("marker");
+            if (cancelled) return;
+
+            const markers = reportMarkersRef.current;
+            const nextIds = new Set(reports.map((r) => r.id));
+
+            for (const [id, marker] of markers.entries()) {
+                if (!nextIds.has(id)) {
+                    marker.map = null;
+                    markers.delete(id);
+                }
+            }
+
+            for (const report of reports) {
+                if (markers.has(report.id)) continue;
+                const lat = Number(report.latitude);
+                const lng = Number(report.longitude);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+                const marker = new AdvancedMarkerElement({
+                    map,
+                    position: { lat, lng },
+                    title: report.report_type,
+                    content: createIncidentPinContent(report.report_type),
+                });
+                marker.addListener("gmp-click", () => setSelectedReport(report));
+                markers.set(report.id, marker);
+            }
+        })().catch((err) => console.error("Failed to render incident report markers:", err));
+
+        return () => {
+            cancelled = true;
+        };
+    }, [createIncidentPinContent, reports]);
+
+    useEffect(() => {
+        if (!selectedReport) return;
+        if (!reports.some((r) => r.id === selectedReport.id)) {
+            setSelectedReport(null);
+        }
+    }, [reports, selectedReport]);
 
     function buildRoute(origin,destination,directionsRenderer){
         const g = window.google;

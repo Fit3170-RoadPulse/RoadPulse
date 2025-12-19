@@ -30,8 +30,18 @@ export default function Report(){
         const base = import.meta.env.VITE_API_URL || "";
         axios
             .get(`${base}/api/incident-reports/`)
-            .then((r) => setReports(Array.isArray(r.data) ? r.data : []))
+            .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
             .catch(() => setReports([]));
+    }, []);
+    useEffect(() => {
+        const base = import.meta.env.VITE_API_URL || "";
+        const t = setInterval(() => {
+            axios
+                .get(`${base}/api/incident-reports/`)
+                .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
+                .catch(() => {});
+        }, 15000);
+        return () => clearInterval(t);
     }, []);
     useEffect(() => {
         if (!toast) return;
@@ -45,6 +55,12 @@ export default function Report(){
         for (const report of reports) byId.set(report.id, report);
         reportsByIdRef.current = byId;
     }, [reports]);
+    useEffect(() => {
+        if (!selectedReport) return;
+        if (!reportsByIdRef.current.has(selectedReport.id)) {
+            setSelectedReport(null);
+        }
+    }, [reports, selectedReport]);
 
     useEffect(() => {
         selectedReportRef.current = selectedReport;
@@ -200,7 +216,7 @@ export default function Report(){
     }
 
     function formatAustraliaDateTime(isoString) {
-        if (!isoString) return "—";
+        if (!isoString) return "-";
         const date = new Date(isoString);
         if (Number.isNaN(date.getTime())) return String(isoString);
         try {
