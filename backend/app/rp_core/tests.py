@@ -1,12 +1,13 @@
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from .models import AppUser, ExchangeItem, RewardRedemption, PointTransaction
+from .models import AppUser, ExchangeItem, IncidentReport, RewardRedemption, PointTransaction
 from datetime import timedelta
 from django.test import TestCase
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.test.utils import override_settings
 from .services.points import get_balance, add_points, deduct_points
 
 
@@ -334,3 +335,233 @@ class PointsServiceTests(TestCase):
             user=self.user, kind=PointTransaction.Kind.EARN, amount=1, reason="manual", reference="X"
         )
         self.assertEqual(PointTransaction.objects.filter(user=self.user, reference="X").count(), 2)
+
+
+@override_settings(
+    INCIDENT_REPORT_REQUIRED_VOTES=5,
+    INCIDENT_REPORT_NO_STREAK_LIMIT=3,
+    INCIDENT_REPORT_EXPIRE_MINUTES_HAZARD=15,
+    INCIDENT_REPORT_EXPIRE_MINUTES_ACCIDENT=10,
+    INCIDENT_REPORT_EXPIRE_MINUTES_WEATHER=30,
+    INCIDENT_REPORT_EXPIRE_MINUTES_CRIME=10,
+    INCIDENT_REPORT_EXPIRE_MINUTES_OTHER=20,
+)
+class IncidentReportVotingTests(APITestCase):
+    def setUp(self):
+        self.reporter = AppUser.objects.create_user(
+            username="reporter",
+            password="pass12345",
+            email="reporter@example.com",
+            reward_points=0,
+        )
+        self.v1 = AppUser.objects.create_user(
+            username="v1",
+            password="pass12345",
+            email="v1@example.com",
+            reward_points=0,
+        )
+        self.v2 = AppUser.objects.create_user(
+            username="v2",
+            password="pass12345",
+            email="v2@example.com",
+            reward_points=0,
+        )
+        self.v3 = AppUser.objects.create_user(
+            username="v3",
+            password="pass12345",
+            email="v3@example.com",
+            reward_points=0,
+        )
+
+    def test_report_creation_grants_provisional_point(self):
+        self.client.force_authenticate(user=self.reporter)
+        res = self.client.post(
+            reverse("incident-reports"),
+            {
+                "report_type": "HAZARD",
+                "description": "Pothole",
+                "latitude": "-37.810000",
+                "longitude": "144.960000",
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.reporter.refresh_from_db(fields=["reward_points"])
+        self.assertEqual(self.reporter.reward_points, 0)
+        self.reporter.refresh_from_db(fields=["provisional_points"])
+        self.assertEqual(self.reporter.provisional_points, 1)
+
+    def test_non_hazard_report_no_provisional_and_no_voting(self):
+        self.client.force_authenticate(user=self.reporter)
+        res = self.client.post(
+            reverse("incident-reports"),
+            {
+                "report_type": "ACCIDENT",
+                "description": "Minor crash",
+                "latitude": "-37.810000",
+                "longitude": "144.960000",
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.reporter.refresh_from_db(fields=["reward_points", "provisional_points"])
+        self.assertEqual(self.reporter.reward_points, 0)
+        self.assertEqual(self.reporter.provisional_points, 0)
+
+        report_id = res.data["id"]
+        self.client.force_authenticate(user=self.v1)
+        vr = self.client.post(
+            reverse("incident-report-vote", kwargs={"report_id": report_id}),
+            {"choice": "YES"},
+            format="json",
+        )
+        self.assertEqual(vr.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_non_hazard_reports_expire_for_active(self):
+        # The DB has a constraint `expires_at >= created_at`, so to simulate an
+        # past-expired report we backdate created_at and expires_at via an
+        # update after insert.
+        report = IncidentReport.objects.create(
+            report_type=IncidentReport.ReportType.ACCIDENT,
+            description="Old accident",
+            latitude="-37.810000",
+            longitude="144.960000",
+            reporter=self.reporter,
+            expires_at=timezone.now() + timedelta(days=1),
+        )
+        IncidentReport.objects.filter(pk=report.pk).update(
+            created_at=timezone.now() - timedelta(days=2),
+            expires_at=timezone.now() - timedelta(days=1),
+        )
+        report.refresh_from_db()
+        self.assertFalse(report.is_active)
+        self.assertFalse(IncidentReport.objects.active().filter(pk=report.pk).exists())
+
+    def test_three_consecutive_no_closes_and_rejects(self):
+        self.client.force_authenticate(user=self.reporter)
+        r = self.client.post(
+            reverse("incident-reports"),
+            {
+                "report_type": "HAZARD",
+                "description": "Debris",
+                "latitude": "-37.810000",
+                "longitude": "144.960000",
+            },
+            format="json",
+        ).data
+        report_id = r["id"]
+
+        # 3 NO votes -> should close
+        for voter in [self.v1, self.v2, self.v3]:
+            self.client.force_authenticate(user=voter)
+            vr = self.client.post(
+                reverse("incident-report-vote", kwargs={"report_id": report_id}),
+                {"choice": "NO"},
+                format="json",
+            )
+            self.assertEqual(vr.status_code, status.HTTP_200_OK)
+
+        report = IncidentReport.objects.get(pk=report_id)
+        self.assertEqual(report.status, IncidentReport.Status.REJECTED)
+        self.assertIsNotNone(report.ended_at)
+        self.assertIsNotNone(report.settled_at)
+
+        # report is rejected quickly; provisional is settled into reward then penalty applies
+        self.reporter.refresh_from_db(fields=["reward_points", "provisional_points"])
+        self.assertEqual(self.reporter.provisional_points, 0)
+        self.assertEqual(self.reporter.reward_points, 0)
+
+        # each voter got +1 provisional, settled into reward at close
+        for voter in [self.v1, self.v2, self.v3]:
+            voter.refresh_from_db(fields=["reward_points", "provisional_points"])
+            self.assertEqual(voter.provisional_points, 0)
+            self.assertEqual(voter.reward_points, 1)
+
+    @override_settings(INCIDENT_REPORT_FAST_REJECT_MINUTES=5)
+    def test_fast_reject_applies_minus_3_when_reporter_has_points(self):
+        # Give reporter enough points so we can observe the full -3 deduction.
+        self.reporter.reward_points = 10
+        self.reporter.save(update_fields=["reward_points"])
+
+        self.client.force_authenticate(user=self.reporter)
+        report_id = self.client.post(
+            reverse("incident-reports"),
+            {
+                "report_type": "HAZARD",
+                "description": "Debris",
+                "latitude": "-37.810000",
+                "longitude": "144.960000",
+            },
+            format="json",
+        ).data["id"]
+
+        for voter in [self.v1, self.v2, self.v3]:
+            self.client.force_authenticate(user=voter)
+            self.client.post(
+                reverse("incident-report-vote", kwargs={"report_id": report_id}),
+                {"choice": "NO"},
+                format="json",
+            )
+
+        # Provisional settles (+1) then -3 penalty => 10 + 1 - 3 = 8
+        self.reporter.refresh_from_db(fields=["reward_points", "provisional_points"])
+        self.assertEqual(self.reporter.provisional_points, 0)
+        self.assertEqual(self.reporter.reward_points, 8)
+
+    @override_settings(INCIDENT_REPORT_REQUIRED_VOTES=5)
+    def test_confirmed_rewards_and_penalties(self):
+        self.client.force_authenticate(user=self.reporter)
+        r = self.client.post(
+            reverse("incident-reports"),
+            {
+                "report_type": "HAZARD",
+                "description": "Flooded road",
+                "latitude": "-37.810000",
+                "longitude": "144.960000",
+            },
+            format="json",
+        ).data
+        report_id = r["id"]
+
+        yes_voters = [self.v1, self.v2, self.v3]
+        no_voters = []
+
+        for voter in yes_voters:
+            self.client.force_authenticate(user=voter)
+            self.client.post(
+                reverse("incident-report-vote", kwargs={"report_id": report_id}),
+                {"choice": "YES"},
+                format="json",
+            )
+
+        # Add 2 NO voters to reach 5 total votes -> close
+        v4 = AppUser.objects.create_user(username="v4", email="v4@example.com", password="pass12345", reward_points=1)
+        v5 = AppUser.objects.create_user(username="v5", email="v5@example.com", password="pass12345", reward_points=1)
+        no_voters = [v4, v5]
+        for voter in no_voters:
+            self.client.force_authenticate(user=voter)
+            self.client.post(
+                reverse("incident-report-vote", kwargs={"report_id": report_id}),
+                {"choice": "NO"},
+                format="json",
+            )
+
+        report = IncidentReport.objects.get(pk=report_id)
+        self.assertEqual(report.status, IncidentReport.Status.CONFIRMED)
+
+        # reporter: provisional settles (+1) then +2 confirmed bonus = 3
+        self.reporter.refresh_from_db(fields=["reward_points", "provisional_points"])
+        self.assertEqual(self.reporter.provisional_points, 0)
+        self.assertEqual(self.reporter.reward_points, 3)
+
+        # YES voters: provisional settles into reward (+1)
+        for voter in yes_voters:
+            voter.refresh_from_db(fields=["reward_points", "provisional_points"])
+            self.assertEqual(voter.provisional_points, 0)
+            self.assertEqual(voter.reward_points, 1)
+
+        # NO voters: provisional settles into reward (+1), no penalties
+        for voter in no_voters:
+            voter.refresh_from_db(fields=["reward_points", "provisional_points"])
+            self.assertEqual(voter.provisional_points, 0)
+            self.assertEqual(voter.reward_points, 2)
