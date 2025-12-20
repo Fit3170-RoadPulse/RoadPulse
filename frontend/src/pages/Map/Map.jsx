@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef} from "react";
 import axios from "axios";
 import { User, Award, Settings, LogOut } from "lucide-react";
 import MapComponent from "../../components/MapComponent/MapComponent";
@@ -13,12 +13,73 @@ export default function Map() {
     const [points] = useState(1000); // Replace with actual user points
     const navigate = useNavigate();
 
+    const [location, setLocation] = useState(null);
+    let locationPollingData = useRef(null);
+    let lastUpdateTimeRef = useRef(0);
+
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/`).then((r) => {
             setMapData(r.data)
         });
+
+        axios.get(`${base}/api/map/location/`).then((r) => {
+            locationPollingData.current = r.data;
+            console.log("Location Polling Data Ref:", locationPollingData);
+
+            if (!navigator.geolocation) {
+                console.log('Geolocation is not supported by your browser');
+                return;
+            }
+
+            // Success handler: updates the state with the new position
+            const successHandler = (position) => {
+                const now = Date.now();
+                // Only update if the specified interval has passed since the last update
+                if (now - lastUpdateTimeRef.current >= locationPollingData.current?.pollingInterval) {
+                    setLocation({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        timestamp: position.timestamp,
+                    });
+                    lastUpdateTimeRef.current = now;
+                }
+            };
+
+            // Error handler: updates the error state
+            const errorHandler = (err) => {
+                console.error("Geolocation error:", {
+                    code: err.code,
+                    message: err.message,
+                });
+            };
+
+            // Options object for watchPosition (optional)
+            const options = {
+                enableHighAccuracy: locationPollingData.current?.enableHighAccuracy,
+                timeout: locationPollingData.current?.timeout ?? 10000,
+                maximumAge: locationPollingData.current?.maximumAge ?? 0,
+            };
+
+            // Start watching the position and store the watch ID
+            const id = navigator.geolocation.watchPosition(
+                successHandler,
+                errorHandler,
+                options
+            );
+
+            // Cleanup function: stops watching the position when the component unmounts
+            return () => {
+                if (id) {
+                    navigator.geolocation.clearWatch(id);
+                }
+            };
+        });
+
     }, []);
+    
+    console.log("Location updated:", location);
     console.log(mapData);
 
     const handleRewardsClick = () => {
