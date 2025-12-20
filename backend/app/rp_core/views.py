@@ -1,19 +1,26 @@
 from django.db import transaction
 from django.http import JsonResponse
 from django.contrib.auth import authenticate
+from django.conf import settings
+from django.utils import timezone
 from rest_framework import status, views
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from config import settings
 from .incidentReport import (
     IncidentReportCreateSerializer,
     IncidentReportSerializer,
+    IncidentReportVoteCreateSerializer,
     RegisterSerializerIncidentReport,
 )
-from .models import AppUser, ExchangeItem, IncidentReport, RewardRedemption
+from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption
 from rp_core.services.points import deduct_points
+from rp_core.services.incident_reporting import (
+    close_and_settle_report,
+    grant_report_provisional_point,
+    grant_vote_provisional_point,
+)
 
 
 def health(_req):
@@ -50,6 +57,7 @@ def reward_account(request):
         "id": user.id,
         "username": user.get_username(),
         "reward_points": user.reward_points,
+        "provisional_points": getattr(user, "provisional_points", 0),
     })
 
 
@@ -65,6 +73,16 @@ def map(_req):
 @api_view(["GET", "POST"])
 def incident_reports(request):
     if request.method == "GET":
+        # Close & settle any expired open reports (time limit reached)
+        now = timezone.now()
+        expired_open = IncidentReport.objects.filter(
+            status=IncidentReport.Status.OPEN,
+            expires_at__isnull=False,
+            expires_at__lte=now,
+        ).values_list("id", flat=True)[:200]
+        for rid in expired_open:
+            close_and_settle_report(rid)
+
         reports = IncidentReport.objects.active()[:500]
         return Response(IncidentReportSerializer(reports, many=True).data)
 
@@ -74,7 +92,83 @@ def incident_reports(request):
     serializer = IncidentReportCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     report = serializer.save(reporter=request.user)
+    if report.report_type == IncidentReport.ReportType.HAZARD:
+        # set vote thresholds from settings
+        required = getattr(settings, "INCIDENT_REPORT_REQUIRED_VOTES", 7)
+        try:
+            required = int(required)
+        except (TypeError, ValueError):
+            required = 7
+        if required < 1:
+            required = 1
+        report.required_votes = required
+        report.save(update_fields=["required_votes"])
+
+        grant_report_provisional_point(report)
     return Response(IncidentReportSerializer(report).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def incident_report_vote(request, report_id: int):
+    serializer = IncidentReportVoteCreateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    choice = serializer.validated_data["choice"]
+
+    with transaction.atomic():
+        report = IncidentReport.objects.select_for_update().get(pk=report_id)
+
+        if report.report_type != IncidentReport.ReportType.HAZARD:
+            return Response({"detail": "Voting is only supported for HAZARD reports."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # If expired, close & settle first
+        if report.status == IncidentReport.Status.OPEN and report.expires_at and report.expires_at <= timezone.now():
+            close_and_settle_report(report.id)
+            report.refresh_from_db()
+
+        if report.status != IncidentReport.Status.OPEN or not report.is_active:
+            return Response({"detail": "This report is closed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if report.reporter_id and report.reporter_id == request.user.id:
+            return Response({"detail": "Reporter cannot vote on their own report."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Prevent duplicate votes
+        if IncidentReportVote.objects.filter(report=report, voter=request.user).exists():
+            return Response({"detail": "You have already voted on this report."}, status=status.HTTP_400_BAD_REQUEST)
+
+        vote = IncidentReportVote.objects.create(report=report, voter=request.user, choice=choice)
+        grant_vote_provisional_point(request.user, report, vote)
+
+        # Update counters & termination conditions
+        if choice == IncidentReportVote.Choice.YES:
+            report.yes_votes += 1
+            report.consecutive_no_votes = 0
+        else:
+            report.no_votes += 1
+            report.consecutive_no_votes += 1
+        report.total_votes += 1
+        report.save(update_fields=["yes_votes", "no_votes", "total_votes", "consecutive_no_votes"])
+
+        no_streak_limit = getattr(settings, "INCIDENT_REPORT_NO_STREAK_LIMIT", 3)
+        try:
+            no_streak_limit = int(no_streak_limit)
+        except (TypeError, ValueError):
+            no_streak_limit = 3
+
+        should_close = False
+        if report.consecutive_no_votes >= max(1, no_streak_limit):
+            should_close = True
+        if report.total_votes >= max(1, report.required_votes):
+            should_close = True
+        if report.expires_at and report.expires_at <= timezone.now():
+            should_close = True
+
+    if should_close:
+        report = close_and_settle_report(report.id)
+    else:
+        report.refresh_from_db()
+
+    return Response(IncidentReportSerializer(report).data, status=status.HTTP_200_OK)
 
 class RegisterView(views.APIView):
     def post(self, request):

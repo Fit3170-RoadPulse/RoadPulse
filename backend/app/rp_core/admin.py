@@ -4,6 +4,7 @@ from .models import (
     Contact,
     ExchangeItem,
     IncidentReport,
+    IncidentReportVote,
     OfficialEmergencyNumber,
     RewardRedemption,
     PointTransaction
@@ -31,14 +32,22 @@ class OfficialEmergencyNumberAdmin(admin.ModelAdmin):
 
 @admin.register(IncidentReport)
 class IncidentReportAdmin(admin.ModelAdmin):
-    list_display  = ('id', 'report_type', 'latitude', 'longitude', 'reporter', 'created_at', 'expires_at', 'active_flag')
-    list_filter   = ('report_type', 'created_at', 'expires_at')
+    list_display  = ('id', 'report_type', 'latitude', 'longitude', 'reporter', 'status', 'yes_votes', 'no_votes', 'total_votes', 'created_at', 'expires_at', 'active_flag')
+    list_filter   = ('report_type', 'status', 'created_at', 'expires_at')
     search_fields = ('description', 'reporter__username')
     readonly_fields = ('created_at',)
 
     @admin.display(boolean=True, description="Active", ordering="expires_at")
     def active_flag(self, obj):
         return obj.is_active
+
+
+@admin.register(IncidentReportVote)
+class IncidentReportVoteAdmin(admin.ModelAdmin):
+    list_display = ("id", "report", "voter", "choice", "created_at")
+    list_filter = ("choice", "created_at")
+    search_fields = ("report__description", "voter__username")
+    autocomplete_fields = ("report", "voter")
 
 
 @admin.register(ExchangeItem)

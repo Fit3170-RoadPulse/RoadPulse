@@ -10,4 +10,5 @@ urlpatterns = [
     path("rewards/items/", views.list_exchange_items, name="exchange-items"),
     path("rewards/redeem/", views.redeem_reward, name="redeem-reward"),
     path("incident-reports/", views.incident_reports, name="incident-reports"),
+    path("incident-reports/<int:report_id>/vote/", views.incident_report_vote, name="incident-report-vote"),
 ]
