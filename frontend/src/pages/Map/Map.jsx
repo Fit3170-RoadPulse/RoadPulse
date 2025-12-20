@@ -17,6 +17,14 @@ export default function Map() {
     let locationPollingData = useRef(null);
     let lastUpdateTimeRef = useRef(0);
 
+    // Fallback mock location (used if real geolocation fails)
+    const mockLocation = {
+        latitude: -37.813904798147796, 
+        longitude: 144.98810008133233,
+        accuracy: 50,
+        timestamp: Date.now(),
+    };
+
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/`).then((r) => {
@@ -28,6 +36,7 @@ export default function Map() {
             console.log("Location Polling Data Ref:", locationPollingData);
 
             if (!navigator.geolocation) {
+                setLocation(mockLocation);
                 console.log('Geolocation is not supported by your browser');
                 return;
             }
@@ -37,13 +46,15 @@ export default function Map() {
                 const now = Date.now();
                 // Only update if the specified interval has passed since the last update
                 if (now - lastUpdateTimeRef.current >= locationPollingData.current?.pollingInterval) {
-                    setLocation({
+                    let newLocation = {
                         latitude: position.coords.latitude,
                         longitude: position.coords.longitude,
                         accuracy: position.coords.accuracy,
                         timestamp: position.timestamp,
-                    });
+                    };
+                    setLocation(newLocation);
                     lastUpdateTimeRef.current = now;
+                    console.log("Location updated:", newLocation);
                 }
             };
 
@@ -53,6 +64,8 @@ export default function Map() {
                     code: err.code,
                     message: err.message,
                 });
+                setLocation(mockLocation);
+                console.log("Location updated:", mockLocation);
             };
 
             // Options object for watchPosition (optional)
@@ -76,11 +89,7 @@ export default function Map() {
                 }
             };
         });
-
     }, []);
-    
-    console.log("Location updated:", location);
-    console.log(mapData);
 
     const handleRewardsClick = () => {
         setShowDropdown(false);
