@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import IncidentReport
+from .models import IncidentReport, IncidentReportVote
 
 User = get_user_model()
 
@@ -39,8 +39,14 @@ class IncidentReportSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             "reporter",
+            "status",
+            "yes_votes",
+            "no_votes",
+            "total_votes",
+            "required_votes",
             "created_at",
             "expires_at",
+            "ended_at",
             "is_active",
         ]
         read_only_fields = fields
@@ -49,3 +55,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
         if not obj.reporter_id:
             return None
         return {"id": obj.reporter_id, "username": obj.reporter.get_username()}
+
+
+class IncidentReportVoteCreateSerializer(serializers.Serializer):
+    choice = serializers.ChoiceField(choices=IncidentReportVote.Choice.choices)
