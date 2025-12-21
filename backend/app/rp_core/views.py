@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.contrib.auth import authenticate
 from django.conf import settings
 from django.utils import timezone
+from math import asin, cos, radians, sin, sqrt
 from rest_framework import status, views
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -114,6 +115,15 @@ def incident_report_vote(request, report_id: int):
     serializer = IncidentReportVoteCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     choice = serializer.validated_data["choice"]
+    voter_lat = serializer.validated_data.get("latitude")
+    voter_lng = serializer.validated_data.get("longitude")
+
+    def location_restrction_vote(lat1, lng1, lat2, lng2) -> float:
+        r = 6371000.0 #from google
+        data_latitude = radians(float(lat2) - float(lat1))
+        data_longtitude = radians(float(lng2) - float(lng1))
+        a = sin(data_latitude / 2) ** 2 + cos(radians(float(lat1))) * cos(radians(float(lat2))) * sin(data_longtitude / 2) ** 2
+        return 2 * r * asin(sqrt(a))
 
     with transaction.atomic():
         report = IncidentReport.objects.select_for_update().get(pk=report_id)
@@ -128,6 +138,21 @@ def incident_report_vote(request, report_id: int):
 
         if report.status != IncidentReport.Status.OPEN or not report.is_active:
             return Response({"detail": "This report is closed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # only users within a radius can vote.
+        if voter_lat is None or voter_lng is None:
+            return Response(
+                {"detail": "Your current location is required to vote on hazard reports."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        radius_m = int(getattr(settings, "INCIDENT_REPORT_VOTE_RADIUS_METERS", 500))
+        radius_m = max(1, radius_m)
+        distance_m = location_restrction_vote(report.latitude, report.longitude, voter_lat, voter_lng)
+        if distance_m > radius_m:
+            return Response(
+                {"detail": f"You must be within {radius_m}m of the hazard location to vote."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         if report.reporter_id and report.reporter_id == request.user.id:
             return Response({"detail": "Reporter cannot vote on their own report."}, status=status.HTTP_400_BAD_REQUEST)
