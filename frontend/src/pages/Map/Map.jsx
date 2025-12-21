@@ -15,6 +15,7 @@ export default function Map() {
     const navigate = useNavigate();
     const [selectedReport, setSelectedReport] = useState(null);
     const [reports, setReports] = useState([]);
+    const [userLocation, setUserLocation] = useState(null);
     const [mapReady, setMapReady] = useState(false);
     const mapReadyRef = useRef(false);
     const mapInstanceRef = useRef(null);
@@ -283,7 +284,13 @@ export default function Map() {
                     zIndex: 1,
                     pointerEvents: "auto"
                     }}>
-                    <MapComponent API_KEY={mapData?.GMAPS_KEY} MAP_ID={mapData?.GMAPS_ID} map_function={setMarker}/>
+                    <MapComponent
+                        API_KEY={mapData?.GMAPS_KEY}
+                        MAP_ID={mapData?.GMAPS_ID}
+                        map_function={setMarker}
+                        showUserLocation
+                        onUserLocation={setUserLocation}
+                    />
                 </div>
 
                 {/* Incident details panel (same UI as Report tab) */}
@@ -310,6 +317,7 @@ export default function Map() {
                             <IncidentDetailsCard
                                 report={selectedReport}
                                 onClose={() => setSelectedReport(null)}
+                                userLocation={userLocation}
                                 onReportUpdated={(updated) => {
                                     if (!updated?.id) return;
                                     setSelectedReport(updated);

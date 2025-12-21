@@ -16,6 +16,7 @@ export default function Report(){
     const selectedReportRef = useRef(null);
     const [mapReady, setMapReady] = useState(false);
     const mapInstanceRef = useRef(null);
+    const [userLocation, setUserLocation] = useState(null);
     const reportMarkersRef = useRef(new Map()); // id -> AdvancedMarkerElement
     const reportsByIdRef = useRef(new Map()); // id -> report
     const draftMarkerRef = useRef(null);
@@ -310,8 +311,14 @@ export default function Report(){
                 zIndex: 1,
                 pointerEvents: "auto"
                 }}>
-                <MapComponent API_KEY={mapData?.GMAPS_KEY} MAP_ID={mapData?.GMAPS_ID} map_function={ReportLocation}/>
-            </div>
+                    <MapComponent
+                        API_KEY={mapData?.GMAPS_KEY}
+                        MAP_ID={mapData?.GMAPS_ID}
+                        map_function={ReportLocation}
+                        showUserLocation
+                        onUserLocation={setUserLocation}
+                    />
+                </div>
             <div style = {{
                 zIndex: (isClicked || selectedReport) ? 10: 0,
                 position: "absolute", 
@@ -333,6 +340,7 @@ export default function Report(){
                         <IncidentDetailsCard
                             report={selectedReport}
                             onClose={() => setSelectedReport(null)}
+                            userLocation={userLocation}
                             onReportUpdated={(updated) => {
                                 if (!updated?.id) return;
                                 setSelectedReport(updated);

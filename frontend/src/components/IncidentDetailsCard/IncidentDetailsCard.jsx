@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export default function IncidentDetailsCard({ report, onClose, onReportUpdated }) {
+let lastKnownLocation = null; // { lat, lng, accuracyMeters }
+let lastKnownLocationAtMs = 0;
+
+export default function IncidentDetailsCard({ report, onClose, onReportUpdated, userLocation }) {
   const [address, setAddress] = useState(null);
   const geocodeCacheRef = useRef(new Map()); // "lat,lng" -> address string
   const [voteMessage, setVoteMessage] = useState(null);
@@ -9,6 +12,7 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
   const [currentUserId, setCurrentUserId] = useState(null);
   const [viewerLocation, setViewerLocation] = useState(null); // { lat, lng }
   const [locationStatus, setLocationStatus] = useState("unknown"); // unknown | ok | denied | error
+  const geoWatchIdRef = useRef(null);
 
   const reportTypeLabel = useMemo(() => {
     return {
@@ -97,7 +101,7 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
   const voteRadiusMeters = useMemo(() => {
     const raw = import.meta.env.VITE_INCIDENT_REPORT_VOTE_RADIUS_METERS;
     const parsed = Number(raw);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 500;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 150;
   }, []);
 
   function distanceMeters(lat1, lng1, lat2, lng2) {
@@ -112,20 +116,45 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
   }
 
   useEffect(() => {
-    if (!report || report.report_type !== "HAZARD") return;
+    if (!report) return;
     if (!navigator?.geolocation) {
       setLocationStatus("error");
       return;
     }
     setLocationStatus("unknown");
-    navigator.geolocation.getCurrentPosition(
+
+    // Optional: pages that already track user location (e.g. MapComponent) can pass it in
+    // so distance shows instantly when opening a report.
+    if (userLocation?.lat != null && userLocation?.lng != null) {
+      const lat = Number(userLocation.lat);
+      const lng = Number(userLocation.lng);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        lastKnownLocation = { lat, lng, accuracyMeters: Number(userLocation.accuracyMeters) };
+        lastKnownLocationAtMs = Date.now();
+        setViewerLocation({ lat, lng });
+        setLocationStatus("ok");
+      }
+    }
+
+    // Use a recent cached fix immediately (reduces flicker on reopen).
+    const nowMs = Date.now();
+    if (lastKnownLocation && nowMs - lastKnownLocationAtMs < 30_000) {
+      setViewerLocation({ lat: lastKnownLocation.lat, lng: lastKnownLocation.lng });
+      setLocationStatus("ok");
+    }
+
+    // Start watching for a fresh fix while the card is open.
+    geoWatchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const lat = Number(pos?.coords?.latitude);
         const lng = Number(pos?.coords?.longitude);
+        const accuracyMeters = Number(pos?.coords?.accuracy);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
           setLocationStatus("error");
           return;
         }
+        lastKnownLocation = { lat, lng, accuracyMeters };
+        lastKnownLocationAtMs = Date.now();
         setViewerLocation({ lat, lng });
         setLocationStatus("ok");
       },
@@ -133,9 +162,16 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
         if (err?.code === 1) setLocationStatus("denied");
         else setLocationStatus("error");
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 }
+      { enableHighAccuracy: true, maximumAge: 15_000, timeout: 8_000 }
     );
-  }, [report?.id, report?.report_type]);
+
+    return () => {
+      if (geoWatchIdRef.current != null && navigator?.geolocation) {
+        navigator.geolocation.clearWatch(geoWatchIdRef.current);
+        geoWatchIdRef.current = null;
+      }
+    };
+  }, [report?.id, userLocation?.lat, userLocation?.lng, userLocation?.accuracyMeters]);
 
   function formatAustraliaDateTime(isoString) {
     if (!isoString) return "-";
@@ -192,6 +228,21 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
   const reporterId = report.reporter?.id ? Number(report.reporter.id) : null;
   const isReporter = reporterId && currentUserId && reporterId === currentUserId;
   const isLoggedIn = Boolean(getAccessToken());
+
+  const distanceToReportMeters = useMemo(() => {
+    if (!viewerLocation) return null;
+    const lat = Number(report.latitude);
+    const lng = Number(report.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return distanceMeters(lat, lng, viewerLocation.lat, viewerLocation.lng);
+  }, [report.latitude, report.longitude, viewerLocation]);
+
+  const distanceToReportLabel = useMemo(() => {
+    const d = distanceToReportMeters;
+    if (!Number.isFinite(d)) return null;
+    if (d < 1000) return `${Math.round(d)} m away`;
+    return `${(d / 1000).toFixed(2)} km away`;
+  }, [distanceToReportMeters]);
 
   const canViewAndVoteByDistance = useMemo(() => {
     if (!isHazard) return false;
@@ -476,6 +527,15 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
         </div>
         <div style={{ marginTop: "6px", fontSize: "0.95rem", color: "#111827", fontWeight: 650 }}>
           {address || "Looking up address..."}
+        </div>
+        <div style={{ marginTop: "8px", fontSize: "0.85rem", color: "#6B7280" }}>
+          {distanceToReportLabel
+            ? `Distance from you: ${distanceToReportLabel}`
+            : locationStatus === "denied"
+              ? "Distance from you: enable location to calculate"
+              : locationStatus === "error"
+                ? "Distance from you: location unavailable"
+                : "Distance from you: locating..."}
         </div>
       </div>
 
