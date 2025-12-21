@@ -12,6 +12,7 @@ export default function Map() {
     const [showDropdown, setShowDropdown] = useState(false);
     const [points] = useState(1000); // Replace with actual user points
     const navigate = useNavigate();
+    const [routeInfo, setRouteInfo] = useState(null)
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -34,16 +35,16 @@ export default function Map() {
 
     async function setMarker(map){
         let originMarker = null;
-        let directionsRenderer = null;
+        //let directionsRenderer = null;
         let trafficLayer = null;
         let destinationMarker = null;
+        
         const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-
         trafficLayer = new google.maps.TrafficLayer();
         trafficLayer.setMap(map);
 
-        directionsRenderer = new google.maps.DirectionsRenderer();
-        directionsRenderer.setMap(map);
+        //directionsRenderer = new google.maps.DirectionsRenderer();
+        //directionsRenderer.setMap(map);
 
         map.addListener("click", (e) =>{
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
@@ -54,18 +55,17 @@ export default function Map() {
                     position: clicked,
                     title:"A",
                 });
-                directionsRenderer.setDirections(null);
+                
             }else if (!destinationMarker){
                 destinationMarker = new AdvancedMarkerElement({
                     map: map,
                     position: clicked,
                     title:"B",
                 });
-                buildRoute(originMarker.position,destinationMarker.position, directionsRenderer);
+                fetchRoute(originMarker.position,destinationMarker.position,map)
             } else{
                 originMarker.map = null;
                 destinationMarker.map =null;
-                directionsRenderer.setDirections(null);
 
                 originMarker = new AdvancedMarkerElement({
                     map: map,
@@ -77,22 +77,51 @@ export default function Map() {
         });
     }
 
-    function buildRoute(origin,destination,directionsRenderer){
-        const directionsService = new google.maps.DirectionsService();
-        directionsService.route(
-            {
-                origin,
-                destination,
-                travelMode: google.maps.TravelMode.DRIVING,
-            },
-            (result, status) =>{
-                if (status === "OK"){
-                    directionsRenderer.setDirections(result) 
-                } else{
-                    console.error("Direction request failed:" + status)
-                }
-            }
-        )
+    async function fetchRoute(origin,destination,map){
+        const base = import.meta.env.VITE_API_URL;
+        const response = await axios.post(`${base}/api/map/compute-route/`,{
+            origin:{latitude:origin.lat,longitude:origin.lng},
+            destination:{latitude:destination.lat,longitude:destination.lng},
+        });
+
+        drawPolyLine(map,response.data.polyline);
+        
+        const distanceKm = formatDistance(response.data.distance_meters);
+        const eta = formatDuration(response.data.duration);
+
+        setRouteInfo({ distanceKm, eta });
+
+        
+
+    }
+
+    async function drawPolyLine(map,encodedPolyline){
+        const maps = await google.maps.importLibrary("geometry");
+        const decodedPath = google.maps.geometry.encoding.decodePath(encodedPolyline);
+
+        new google.maps.Polyline({
+        path:decodedPath,
+        geodesic: true,
+        strokeColor: "#2563eb",
+        strokeOpacity: 0.9,
+        strokeWeight: 5,
+        map,
+        });
+    }
+
+    function formatDuration(seconds) {
+        if (!seconds || isNaN(seconds)) return "N/A";
+
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.round((seconds % 3600) / 60);
+
+        if (hrs > 0) return `${hrs} hr ${mins} min`;
+        return `${mins} min`;
+    }
+
+    function formatDistance(meters) {
+        if (!meters || isNaN(meters)) return "N/A";
+        return (meters / 1000).toFixed(1); 
     }
 
     return (
@@ -116,6 +145,26 @@ export default function Map() {
                 }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
                     <MapPage onSearch={() => console.log("Search triggered!")} />
                 </div>
+
+                 {/* Route info display */}
+                {routeInfo && (
+                <div
+                    style={{
+                    position: 'absolute',
+                    top: '120px',
+                    left: '120px',
+                    backgroundColor: 'white',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                    zIndex: 1001,
+                    pointerEvents: 'auto',
+                    }}
+                >
+                    <p style={{ margin: 0, fontWeight: 500 }}>Distance: {routeInfo.distanceKm} km</p>
+                    <p style={{ margin: 0, fontWeight: 500 }}>ETA: {routeInfo.eta}</p>
+                </div>
+                )}
 
                 {/* Profile Icon with Dropdown */}
                 <div style={{

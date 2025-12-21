@@ -39,7 +39,7 @@ def compute_route(request):
     destination = request.data.get("destination")
     url = "https://routes.googleapis.com/directions/v2:computeRoutes"
 
-    if not origin or destination:
+    if not origin or not destination:
         return Response({"detail":"You must provide the origin and the destination"},status=status.HTTP_400_BAD_REQUEST)
     
     request_body = {
@@ -84,8 +84,7 @@ def compute_route(request):
     
     data = google_response.json()
     route = data["routes"][0]
-
-    return Response({"distance_meters":route["distanceMeters"],"duration":int(route["duration"].replace("s",""))})
+    return Response({"distance_meters":route["distanceMeters"],"duration":int((route["duration"]).replace("s","")),"polyline":route["polyline"]["encodedPolyline"]})
     
 
 

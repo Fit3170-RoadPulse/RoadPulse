@@ -1,8 +1,7 @@
 from django.contrib import admin
-from django.urls import path
-from rp_core.views import health, samples, map, RegisterView, LoginView
-from django.urls import path, include
-from rp_core.views import health, samples, map_config, RegisterView, LoginView
+from django.urls import path,  include
+from rp_core.views import health, samples, map,map_config,compute_route, RegisterView, LoginView
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -13,4 +12,5 @@ urlpatterns = [
     path("api/login/", LoginView.as_view(), name="login"),
     path("api/", include("rp_core.urls")),
     path("api/register/", RegisterView.as_view(), name="register"),
+    path("api/map/compute-route/",compute_route,name="compute-route")
 ]
