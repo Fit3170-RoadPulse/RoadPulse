@@ -53,6 +53,20 @@ export default function ReportComponent({ location, onClose, onSubmitted }) {
         return Boolean(location && reportType && description.trim() && !isSubmitting);
     }, [location, reportType, description, isSubmitting]);
 
+    const locationLabel = useMemo(() => {
+        if (!location) return "Click the map to choose a location.";
+        return locationAddress || "Looking up address…";
+    }, [location, locationAddress]);
+
+    const locationCoordsLabel = useMemo(() => {
+        const lat = Number(location?.lat);
+        const lng = Number(location?.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return "-";
+        return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }, [location]);
+
+    const descriptionMaxLen = 280;
+
     useEffect(() => {
         setLocationAddress(null);
         if (!location) return;
@@ -164,6 +178,7 @@ export default function ReportComponent({ location, onClose, onSubmitted }) {
 
             setReportType("");
             setDescription("");
+            setFormMessage({ type: "success", message: "Report submitted successfully." });
             if (typeof onSubmitted === "function") onSubmitted(data);
         } catch (err) {
             console.error(err);
@@ -174,101 +189,57 @@ export default function ReportComponent({ location, onClose, onSubmitted }) {
     }
 
     return (
-        <div className="mapholder" style={{ 
-            width: '100%', 
-            height: '50vh', 
-            backgroundColor: "#F4F4F4",
-            borderColor:"black",
-            borderWidth:"2px",
-            borderRadius: "2rem",
-            display: "flex",
-            justifyContent: "center",
-            flexDirection:"column",
-            alignItems: "baseline",
-            paddingLeft: "2rem",
-            paddingRight: "2rem",
-            fontSize:"1rem",
-            fontWeight:"light",
-            color:"#1E1E1E",
-            }}>
-            <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h1 style={{
-                    fontWeight:"bold",
-                    fontSize:"2rem",
-                    color:"black",
-                    marginBottom:"1rem"
-                }}>New Incident Report</h1>
+        <div className="rp-report-card">
+            <div className="rp-report-accent" aria-hidden="true" />
+
+            <div className="rp-report-header">
+                <div style={{ minWidth: 0 }}>
+                    <h1 className="rp-report-title">New incident report</h1>
+                    <div className="rp-report-subtitle">
+                        Submit a report to help keep other drivers informed.
+                    </div>
+                </div>
                 <button
                     type="button"
+                    className="rp-icon-btn"
                     onClick={() => typeof onClose === "function" && onClose()}
                     aria-label="Close report form"
-                    style={{
-                        width: "34px",
-                        height: "34px",
-                        borderRadius: "10px",
-                        border: "1px solid #E5E7EB",
-                        background: "#FFFFFF",
-                        cursor: "pointer",
-                        color: "#111827",
-                        fontSize: "18px",
-                        lineHeight: "1",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: "0 2px 8px rgba(17, 24, 39, 0.10)",
-                        marginBottom: "1rem",
-                    }}
                 >
                     ×
                 </button>
             </div>
+
             {formMessage ? (
                 <div
-                    style={{
-                        width: "100%",
-                        background: formMessage.type === "error" ? "#fef2f2" : "#ecfdf5",
-                        border: `1px solid ${formMessage.type === "error" ? "#fecaca" : "#a7f3d0"}`,
-                        color: formMessage.type === "error" ? "#991b1b" : "#065f46",
-                        padding: "10px 12px",
-                        borderRadius: "10px",
-                        marginBottom: "12px",
-                    }}
+                    className={[
+                        "rp-alert",
+                        formMessage.type === "error" ? "rp-alert-error" : "rp-alert-success",
+                    ].join(" ")}
                     role="status"
                     aria-live="polite"
                 >
                     {formMessage.message}
                 </div>
             ) : null}
-            <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
-                <div style={{ fontSize: "0.9rem", color: "#333" }}>
-                    Address: {!location ? "Click the map" : (locationAddress || "Looking up…")}
-                </div>
+
+            <div className="rp-report-section">
+                <div className="rp-section-title">Location</div>
+                <div className="rp-section-main">{locationLabel}</div>
+                <div className="rp-section-meta">{locationCoordsLabel}</div>
             </div>
-            <div style={{
-                display: "flex",
-                justifyContent: "center",
-                flexDirection:"column",
-                alignItems: "baseline",
-                gap:"1rem",
-                width:"100%"
-                }}>
-                <div style={{
-                    display:"flex",
-                    justifyContent:"center",
-                    flexDirection:"column",
-                    gap:"0.2rem",
-                    width:"100%"
-                }}>
-                    <label htmlFor="incidentType">Incident Type</label>
-                    <select 
-                        name="incidentType" 
+
+            <div className="rp-form">
+                <div className="rp-field">
+                    <div className="rp-label-row">
+                        <label className="rp-label" htmlFor="incidentType">Incident type</label>
+                    </div>
+                    <select
+                        className="rp-select"
+                        name="incidentType"
                         id="incidentType"
                         value={reportType}
                         onChange={(e) => setReportType(e.target.value)}
-                        style = {{
-                            width: "100%",
-                            backgroundColor: "white"
-                        }}>
+                    >
                         <option value="" disabled>Pick a type</option>
                         <option value="ACCIDENT">Accident</option>
                         <option value="HAZARD">Hazard</option>
@@ -277,50 +248,32 @@ export default function ReportComponent({ location, onClose, onSubmitted }) {
                         <option value="OTHER">Other</option>
                     </select>
                 </div>
-                <div style={{
-                    display:"flex",
-                    justifyContent:"center",
-                    flexDirection:"column",
-                    width:"100%",
-                    gap:"0.2rem"
-                }}>
-                    <label htmlFor="description">Description</label>
-                    <textarea  
-                    id="description"
-                    name="description"
-                    placeholder="Additional Details"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    style={{
-                        backgroundColor:"white",
-                        width:"100%",
-                    }}
-                    required/>
+
+                <div className="rp-field">
+                    <div className="rp-label-row">
+                        <label className="rp-label" htmlFor="description">Details</label>
+                        <div className="rp-helper">{Math.min(description.length, descriptionMaxLen)}/{descriptionMaxLen}</div>
+                    </div>
+                    <textarea
+                        className="rp-textarea"
+                        id="description"
+                        name="description"
+                        placeholder="Describe what happened (what, where, and any hazards)."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        maxLength={descriptionMaxLen}
+                        required
+                    />
                 </div>
 
-                <div style={{
-                    display:"flex",
-                    justifyContent:"left",
-                }}>
+                <div className="rp-actions">
                     <button
                         type="button"
+                        className="rp-primary-btn"
                         onClick={submitReport}
                         disabled={!canSubmit}
-                        style={{
-                        backgroundColor:"black",
-                        color:"white",
-                        paddingLeft:"1rem",
-                        paddingRight:"1rem",
-                        paddingTop:"0.3rem",
-                        paddingBottom:"0.3rem",
-                        fontSize:"1rem",
-                        fontWeight:"normal",
-                        borderRadius:0,
-                        opacity: canSubmit ? 1 : 0.6,
-                        cursor: canSubmit ? "pointer" : "not-allowed",
-                    }}
                     >
-                        {isSubmitting ? "Submitting..." : "Submit"}
+                        {isSubmitting ? "Submitting…" : "Submit report"}
                     </button>
                 </div>
             </div>
