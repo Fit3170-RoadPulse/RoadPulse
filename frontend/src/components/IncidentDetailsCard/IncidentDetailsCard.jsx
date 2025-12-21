@@ -7,6 +7,8 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
   const [isVoting, setIsVoting] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [viewerLocation, setViewerLocation] = useState(null); // { lat, lng }
+  const [locationStatus, setLocationStatus] = useState("unknown"); // unknown | ok | denied | error
 
   const reportTypeLabel = useMemo(() => {
     return {
@@ -92,6 +94,49 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
     setHasVoted(false);
   }, [report?.id]);
 
+  const voteRadiusMeters = useMemo(() => {
+    const raw = import.meta.env.VITE_INCIDENT_REPORT_VOTE_RADIUS_METERS;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 500;
+  }, []);
+
+  function distanceMeters(lat1, lng1, lat2, lng2) {
+    const r = 6371000;
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * r * Math.asin(Math.sqrt(a));
+  }
+
+  useEffect(() => {
+    if (!report || report.report_type !== "HAZARD") return;
+    if (!navigator?.geolocation) {
+      setLocationStatus("error");
+      return;
+    }
+    setLocationStatus("unknown");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos?.coords?.latitude);
+        const lng = Number(pos?.coords?.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          setLocationStatus("error");
+          return;
+        }
+        setViewerLocation({ lat, lng });
+        setLocationStatus("ok");
+      },
+      (err) => {
+        if (err?.code === 1) setLocationStatus("denied");
+        else setLocationStatus("error");
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 }
+    );
+  }, [report?.id, report?.report_type]);
+
   function formatAustraliaDateTime(isoString) {
     if (!isoString) return "-";
     const date = new Date(isoString);
@@ -148,6 +193,16 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
   const isReporter = reporterId && currentUserId && reporterId === currentUserId;
   const isLoggedIn = Boolean(getAccessToken());
 
+  const canViewAndVoteByDistance = useMemo(() => {
+    if (!isHazard) return false;
+    if (!viewerLocation) return false;
+    const lat = Number(report.latitude);
+    const lng = Number(report.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+    const d = distanceMeters(lat, lng, viewerLocation.lat, viewerLocation.lng);
+    return d <= voteRadiusMeters;
+  }, [isHazard, report.latitude, report.longitude, viewerLocation, voteRadiusMeters]);
+
   const verificationBadge = useMemo(() => {
     if (!isHazard) return null;
     if (hazardVerified) {
@@ -186,6 +241,10 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
       setVoteMessage({ type: "error", message: "This hazard report is closed." });
       return;
     }
+    if (!canViewAndVoteByDistance) {
+      setVoteMessage({ type: "error", message: `You must be within ${Math.round(voteRadiusMeters)}m of the hazard to vote.` });
+      return;
+    }
     if (isReporter) {
       setVoteMessage({ type: "error", message: "You can’t vote on your own hazard report." });
       return;
@@ -201,7 +260,11 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ choice }),
+        body: JSON.stringify({
+          choice,
+          latitude: Number(viewerLocation?.lat).toFixed(6),
+          longitude: Number(viewerLocation?.lng).toFixed(6),
+        }),
       });
     }
 
@@ -432,6 +495,7 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
       </div>
 
       {isHazard ? (
+        canViewAndVoteByDistance ? (
         <div
           style={{
             background: "#FFFFFF",
@@ -537,6 +601,27 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated }
 
           {/* Intentionally keep this section minimal (no extra guidance text). */}
         </div>
+        ) : (
+          <div
+            style={{
+              background: "#FFFFFF",
+              border: "1px solid #E5E7EB",
+              borderRadius: "14px",
+              padding: "14px 14px",
+              color: "#111827",
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+            }}
+          >
+            <div style={{ fontSize: "0.9rem", fontWeight: 850, color: "#111827" }}>Community verification</div>
+            <div style={{ fontSize: "0.85rem", color: "#6B7280" }}>
+              {locationStatus === "denied"
+                ? "Enable location services to vote on this hazard report."
+                : `Only users within ${Math.round(voteRadiusMeters)}m of the hazard can vote.`}
+            </div>
+          </div>
+        )
       ) : null}
     </div>
   );
