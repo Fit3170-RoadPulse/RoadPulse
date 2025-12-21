@@ -330,7 +330,18 @@ export default function Report(){
                     height:"100%"
                 }}>
                     {selectedReport ? (
-                        <IncidentDetailsCard report={selectedReport} onClose={() => setSelectedReport(null)} />
+                        <IncidentDetailsCard
+                            report={selectedReport}
+                            onClose={() => setSelectedReport(null)}
+                            onReportUpdated={(updated) => {
+                                if (!updated?.id) return;
+                                setSelectedReport(updated);
+                                setReports((prev) => {
+                                    const next = prev.map((r) => (r.id === updated.id ? updated : r));
+                                    return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
+                                });
+                            }}
+                        />
                     ) : isClicked ? (
                         <ReportComponent
                             location={selectedLocation}
