@@ -412,7 +412,7 @@ class IncidentReportVotingTests(APITestCase):
         self.client.force_authenticate(user=self.v1)
         vr = self.client.post(
             reverse("incident-report-vote", kwargs={"report_id": report_id}),
-            {"choice": "YES"},
+            {"choice": "YES", "latitude": "-37.810000", "longitude": "144.960000"},
             format="json",
         )
         self.assertEqual(vr.status_code, status.HTTP_400_BAD_REQUEST)
@@ -456,7 +456,7 @@ class IncidentReportVotingTests(APITestCase):
             self.client.force_authenticate(user=voter)
             vr = self.client.post(
                 reverse("incident-report-vote", kwargs={"report_id": report_id}),
-                {"choice": "NO"},
+                {"choice": "NO", "latitude": "-37.810000", "longitude": "144.960000"},
                 format="json",
             )
             self.assertEqual(vr.status_code, status.HTTP_200_OK)
@@ -499,7 +499,7 @@ class IncidentReportVotingTests(APITestCase):
             self.client.force_authenticate(user=voter)
             self.client.post(
                 reverse("incident-report-vote", kwargs={"report_id": report_id}),
-                {"choice": "NO"},
+                {"choice": "NO", "latitude": "-37.810000", "longitude": "144.960000"},
                 format="json",
             )
 
@@ -530,7 +530,7 @@ class IncidentReportVotingTests(APITestCase):
             self.client.force_authenticate(user=voter)
             self.client.post(
                 reverse("incident-report-vote", kwargs={"report_id": report_id}),
-                {"choice": "YES"},
+                {"choice": "YES", "latitude": "-37.810000", "longitude": "144.960000"},
                 format="json",
             )
 
@@ -542,7 +542,7 @@ class IncidentReportVotingTests(APITestCase):
             self.client.force_authenticate(user=voter)
             self.client.post(
                 reverse("incident-report-vote", kwargs={"report_id": report_id}),
-                {"choice": "NO"},
+                {"choice": "NO", "latitude": "-37.810000", "longitude": "144.960000"},
                 format="json",
             )
 
