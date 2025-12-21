@@ -296,7 +296,7 @@ export default function Map() {
                     height: "100vh",
                     display: "flex",
                     justifyContent: "center",
-                    pointerEvents: "none",
+                    pointerEvents: "auto",
                 }}>
                     <div style={{
                         display: "flex",
@@ -304,12 +304,21 @@ export default function Map() {
                         flexDirection: "column",
                         width: "100%",
                         height: "100%",
-                        pointerEvents: "none",
+                        pointerEvents: "auto",
                     }}>
                         {selectedReport ? (
-                            <div style={{ pointerEvents: "auto" }}>
-                                <IncidentDetailsCard report={selectedReport} onClose={() => setSelectedReport(null)} />
-                            </div>
+                            <IncidentDetailsCard
+                                report={selectedReport}
+                                onClose={() => setSelectedReport(null)}
+                                onReportUpdated={(updated) => {
+                                    if (!updated?.id) return;
+                                    setSelectedReport(updated);
+                                    setReports((prev) => {
+                                        const next = prev.map((r) => (r.id === updated.id ? updated : r));
+                                        return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
+                                    });
+                                }}
+                            />
                         ) : null}
                     </div>
                 </div>
