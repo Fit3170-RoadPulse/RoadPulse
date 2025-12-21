@@ -59,3 +59,5 @@ class IncidentReportSerializer(serializers.ModelSerializer):
 
 class IncidentReportVoteCreateSerializer(serializers.Serializer):
     choice = serializers.ChoiceField(choices=IncidentReportVote.Choice.choices)
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False)
