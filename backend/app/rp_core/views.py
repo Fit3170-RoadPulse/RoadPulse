@@ -59,6 +59,15 @@ def reward_account(request):
 def map(_req):
     return JsonResponse({"status": "ok", "GMAPS_KEY": settings.GOOGLE_MAPS_API_KEY,"GMAPS_ID": settings.GOOGLE_MAPS_ID})
 
+@api_view(["GET"])
+def locationData(_req):
+    return JsonResponse({"status": "ok", 
+                         "pollingInterval": settings.pollingInterval,
+                         "enableHighAccuracy": settings.enableHighAccuracy,
+                         "timeout": settings.timeout,
+                         "maximumAge": settings.maximumAge,
+                         })
+
 class RegisterView(views.APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
