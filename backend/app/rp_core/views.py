@@ -37,54 +37,64 @@ def compute_route(request):
 
     origin = request.data.get("origin")
     destination = request.data.get("destination")
+    startTimes = request.data.get("startTimes")
     url = "https://routes.googleapis.com/directions/v2:computeRoutes"
+    responseMatrix = []
 
     if not origin or not destination:
         return Response({"detail":"You must provide the origin and the destination"},status=status.HTTP_400_BAD_REQUEST)
     
-    request_body = {
-        "origin":{
-            "location":{
-                "latLng":{
-                    "latitude":origin["latitude"],
-                    "longitude":origin["longitude"]
-                }
-            }
-        },
-        "destination":{
-            "location":{
-                "latLng":{
-                    "latitude":destination["latitude"],
-                    "longitude":destination["longitude"]
-                }
-            }
-        },
-        "travelMode":"DRIVE",
-        "routingPreference":"TRAFFIC_AWARE",
-        "languageCode": "en-US",
-    }
-
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': settings.GOOGLE_MAPS_API_KEY,
         'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
     }
 
-    try:
-        google_response = requests.post(
-            url,
-            headers=headers,
-            json=request_body
-        )
-        google_response.raise_for_status()
-    except requests.RequestException as e:
-        return Response({
-            "detail":"Failed to contact Google Route API"},status=status.HTTP_502_BAD_GATEWAY
-        )
-    
-    data = google_response.json()
-    route = data["routes"][0]
-    return Response({"distance_meters":route["distanceMeters"],"duration":int((route["duration"]).replace("s","")),"polyline":route["polyline"]["encodedPolyline"]})
+    for time in startTimes:
+        request_body = {
+            "origin":{
+                "location":{
+                    "latLng":{
+                        "latitude":origin["latitude"],
+                        "longitude":origin["longitude"]
+                    }
+                }
+            },
+            "destination":{
+                "location":{
+                    "latLng":{
+                        "latitude":destination["latitude"],
+                        "longitude":destination["longitude"]
+                    }
+                }
+            },
+            "travelMode":"DRIVE",
+            "routingPreference":"TRAFFIC_AWARE",
+            "departureTime": time,
+            "languageCode": "en-US",
+        }
+        try:
+            google_response = requests.post(
+                url,
+                headers=headers,
+                json=request_body
+            )
+            google_response.raise_for_status()
+        except requests.RequestException as e:
+            return Response({
+                "detail":"Failed to contact Google Route API"},status=status.HTTP_502_BAD_GATEWAY
+            )
+        
+        data = google_response.json()
+        route = data["routes"][0]
+        responseMatrix.append({
+            "starting_time":time,
+            "distance_meters":route["distanceMeters"],
+            "duration":int((route["duration"]).replace("s","")),
+            "polyline":route["polyline"]["encodedPolyline"]
+        })
+
+    return Response(responseMatrix)
     
 
 

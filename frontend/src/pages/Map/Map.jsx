@@ -12,7 +12,8 @@ export default function Map() {
     const [showDropdown, setShowDropdown] = useState(false);
     const [points] = useState(1000); // Replace with actual user points
     const navigate = useNavigate();
-    const [routeInfo, setRouteInfo] = useState(null)
+    const [routeInfo, setRouteInfo] = useState([]);
+    let routeInfoRows = [];
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -62,7 +63,9 @@ export default function Map() {
                     position: clicked,
                     title:"B",
                 });
-                fetchRoute(originMarker.position,destinationMarker.position,map)
+
+                const startTimes = generateStartTimes();  
+                fetchRoute(originMarker.position,destinationMarker.position,startTimes,map)
             } else{
                 originMarker.map = null;
                 destinationMarker.map =null;
@@ -77,22 +80,27 @@ export default function Map() {
         });
     }
 
-    async function fetchRoute(origin,destination,map){
+    async function fetchRoute(origin,destination,startTimes,map){
         const base = import.meta.env.VITE_API_URL;
         const response = await axios.post(`${base}/api/map/compute-route/`,{
             origin:{latitude:origin.lat,longitude:origin.lng},
             destination:{latitude:destination.lat,longitude:destination.lng},
+            startTimes: startTimes,
         });
 
-        drawPolyLine(map,response.data.polyline);
-        
-        const distanceKm = formatDistance(response.data.distance_meters);
-        const eta = formatDuration(response.data.duration);
+        console.log("Route response:",response.data);
+        let routeInfoArray = [];
 
-        setRouteInfo({ distanceKm, eta });
+        for(let option of response.data){
+            drawPolyLine(map,option.polyline);
 
-        
-
+            const distanceKm = formatDistance(option.distance_meters);
+            const eta = formatDuration(option.duration);
+            const starting_time = formatDate(option.starting_time);
+            routeInfoArray.push({distanceKm,eta,starting_time});
+        }
+        console.log("Route Info Array inside fetchRoute:", routeInfoArray);
+        setRouteInfo(routeInfoArray);
     }
 
     async function drawPolyLine(map,encodedPolyline){
@@ -109,6 +117,18 @@ export default function Map() {
         });
     }
 
+    function generateStartTimes(){
+        const startTimes = [];
+        const now = new Date();
+        const diffArray = [0, 15, 30, 45, 60]; // minutes from now
+
+        for (const time of diffArray){
+            const futureTime = new Date(now.getTime() + time * 60000);
+            startTimes.push(futureTime.toISOString());
+        }
+        return startTimes;
+    }
+
     function formatDuration(seconds) {
         if (!seconds || isNaN(seconds)) return "N/A";
 
@@ -123,6 +143,34 @@ export default function Map() {
         if (!meters || isNaN(meters)) return "N/A";
         return (meters / 1000).toFixed(1); 
     }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function generateRouteUI(){
+        console.log("Route Info Array:", routeInfo);
+        routeInfoRows = [];
+        for (let i = 0; i < routeInfo.length; i++) {
+            routeInfoRows.push(
+            <div
+                style={{
+                backgroundColor: 'white',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                zIndex: 1001,
+                pointerEvents: 'auto',
+                }}
+            >
+            <p style={{ margin: 0, fontWeight: 500 }}>Time: {routeInfo[i].starting_time}</p>
+            <p style={{ margin: 0, fontWeight: 500 }}>Distance: {routeInfo[i].distanceKm} km</p>
+            <p style={{ margin: 0, fontWeight: 500 }}>ETA: {routeInfo[i].eta}</p>
+        </div>);
+        }
+    }
+    generateRouteUI();
 
     return (
             <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
@@ -147,24 +195,19 @@ export default function Map() {
                 </div>
 
                  {/* Route info display */}
-                {routeInfo && (
-                <div
-                    style={{
-                    position: 'absolute',
-                    top: '120px',
-                    left: '120px',
-                    backgroundColor: 'white',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                    zIndex: 1001,
-                    pointerEvents: 'auto',
-                    }}
-                >
-                    <p style={{ margin: 0, fontWeight: 500 }}>Distance: {routeInfo.distanceKm} km</p>
-                    <p style={{ margin: 0, fontWeight: 500 }}>ETA: {routeInfo.eta}</p>
-                </div>
-                )}
+                {routeInfo && (<div
+                            style={{
+                            position: 'absolute',
+                            top: '120px',
+                            left: '120px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            zIndex: 1000,
+                            pointerEvents: 'auto'
+                            }}>
+                                {routeInfoRows}
+                            </div>)}
 
                 {/* Profile Icon with Dropdown */}
                 <div style={{
