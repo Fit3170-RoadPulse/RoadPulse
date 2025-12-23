@@ -132,15 +132,39 @@ export default function Map() {
     const handleTimeChange = async (index) => {
         if (!mapMarkers.origin || !mapMarkers.destination || !availableTimes[index] || !mapRef) return;
 
-        setSelectedTimeIndex(index);
+        // Get the selected time before refreshing
+        const selectedTime = availableTimes[index].time;
+
         setIsLoadingRoute(true);
 
-        // Clear existing polylines
+        // Clear existing polylines from map
         mapPolylines.forEach(polyline => polyline.setMap(null));
-        const newPolylines = [];
+
+        // Clear polylines state immediately
+        setMapPolylines([]);
 
         // Fetch new route for selected time
-        await fetchRoute(mapMarkers.origin.position, mapMarkers.destination.position, availableTimes[index].time, mapRef);
+        await fetchRoute(mapMarkers.origin.position, mapMarkers.destination.position, selectedTime, mapRef);
+
+        // Regenerate time slots based on CURRENT time for next selection
+        const refreshedTimes = generateStartTimes();
+        setAvailableTimes(refreshedTimes);
+
+        // Find which index in the new times is closest to the selected time
+        // This keeps the same selection highlighted after refresh
+        const selectedDate = new Date(selectedTime);
+        let closestIndex = 0;
+        let minDiff = Infinity;
+
+        refreshedTimes.forEach((timeSlot, i) => {
+            const diff = Math.abs(new Date(timeSlot.time) - selectedDate);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestIndex = i;
+            }
+        });
+
+        setSelectedTimeIndex(closestIndex);
     };
 
     async function fetchRoute(origin, destination, selectedTime, map) {
