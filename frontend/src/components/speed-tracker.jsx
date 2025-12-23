@@ -1,21 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
-function haversineMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371000; // meters
-  const toRad = (d) => (d * Math.PI) / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
 export default function SpeedTracker({ intervalMs = 2000 }) {
   const [simulate, setSimulate] = useState(false);
   const [speedKmh, setSpeedKmh] = useState(null);
+  const SPEED_LIMIT = 80;
 
   useEffect(() => {
     let timer;
@@ -50,6 +38,15 @@ export default function SpeedTracker({ intervalMs = 2000 }) {
     return () => clearInterval(timer);
   }, [simulate, intervalMs]);
 
+  const speedColor =
+    speedKmh == null
+      ? "text-gray-400"
+      : speedKmh > SPEED_LIMIT + 20
+      ? "text-red-600"
+      : speedKmh > SPEED_LIMIT
+      ? "text-yellow-500"
+      : "text-green-600";
+
   return (
     <div className="rounded-2xl border bg-white p-4 shadow w-64 text-left -translate-x-16">
       <div className="flex items-center justify-between">
@@ -62,8 +59,13 @@ export default function SpeedTracker({ intervalMs = 2000 }) {
         </button>
       </div>
 
-      <div className="mt-3 text-3xl font-bold">
+      <div className={`mt-3 text-3xl font-bold ${speedColor}`}>
         {speedKmh ?? "--"} <span className="text-base font-medium text-gray-600">km/h</span>
+        {speedKmh > SPEED_LIMIT && (
+        <p className="mt-1 text-xs text-red-600 font-semibold">
+          ⚠ Overspeeding
+        </p>
+      )}
       </div>
 
       <p className="mt-2 text-xs text-gray-500">
