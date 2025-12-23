@@ -24,27 +24,20 @@ const validatePassword = (password) => {
   return null;
 };
 
-// const validateEmail = (email) => {
-//   // Basic regex check for email format
-//   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-//     return "Please enter a valid email address.";
-//   }
-//   return null;
-// };
-
-const validateUsername = (username) => {
-  if (username.length < 3) {
-    return "Username must be at least 3 characters long.";
+const validateEmail = (email) => {
+  // Basic regex check for email format
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return "Please enter a valid email address.";
   }
   return null;
 };
 
 export default function LoginPage({ onLogin, onForgotPassword }) {
-  const [username, setUsername] = useState("");
+  // const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [remember, setRemember] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  // const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate();
   const [show, setShow] = useState({ current: false });
   const toggle = (field) => setShow((s) => ({ ...s, [field]: !s[field] }));
@@ -56,133 +49,193 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
   async function handleLogin() {
     setErrorMessage(""); // clear previous errors
 
-
-    // validate username
-    let error = validateUsername(username);
-    // if (error) return setErrorMessage(error);
+    // validate email
+    let error = validateEmail(email);
     if (error) {
-      alert(error);
+      setErrorMessage(error);
       return;
     }
-
-    // // validate email
-    // error = validateEmail(email);
-    // // if (error) return setErrorMessage(error);
-    // if (error) {
-    //   alert(error);
-    //   return;
-    // }
 
     // validate password
     error = validatePassword(password);
-    // if (error) return setErrorMessage(error);
     if (error) {
-      alert(error);
+      setErrorMessage(error);
       return;
     }
 
     try {
-    const res = await fetch("http://localhost:8000/api/login/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
+      const res = await fetch("http://localhost:8000/api/login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const text = await res.text(); // get raw response
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      console.error("Non-JSON response:", text);
-      alert("Server error occurred. Check console.");
-      return;
-    }
+      const text = await res.text(); // get raw response
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error("Non-JSON response:", text);
+        alert("Server error occurred. Check console.");
+        return;
+      }
 
-    if (res.ok) {
-      localStorage.setItem("access", data.access);
-      localStorage.setItem("refresh", data.refresh);
+      if (res.ok) {
+        localStorage.setItem("access", data.access);
+        localStorage.setItem("refresh", data.refresh);
 
-      if (typeof onLogin === "function") onLogin({ username, password });
+        if (typeof onLogin === "function") onLogin({ email, password });
 
-      navigate("/map"); // navigate on successful login
-    } else {
-      alert(data.detail || JSON.stringify(data) || "Login failed");
-    }
-  } catch (err) {
-    console.error("Network or fetch error:", err);
-    alert("Network error. Check backend server.");
-  }
-  }
-
-  function handleForgotPassword() {
-    const identifier = username || "";
-    if (typeof onForgotPassword === "function") {
-      onForgotPassword(identifier);
-    } else {
-      alert(
-        identifier
-          ? `Forgot password clicked — will send reset to account: ${identifier}`
-          : "Forgot password clicked — no username/email provided."
-      );
+        navigate("/map"); // navigate on successful login
+      } else {
+        setErrorMessage(data.detail || "Login failed. Please try again.");
+      }
+    } catch (err) {
+      console.error("Network or fetch error:", err);
+      setErrorMessage("Network error. Check backend server.");
     }
   }
+
+  // function handleForgotPassword() {
+  //   const identifier = email || "";
+  //   if (typeof onForgotPassword === "function") {
+  //     onForgotPassword(identifier);
+  //   } else {
+  //     alert(
+  //       identifier
+  //         ? `Forgot password clicked — will send reset to account: ${identifier}`
+  //         : "Forgot password clicked — no username/email provided."
+  //     );
+  //   }
+  // }
+  async function handleForgotPassword() {
+  setErrorMessage(""); // clear previous errors
+  if (!email) {
+    setErrorMessage("Please enter your email.");
+    return;
+  }
+
+  try {
+  const res = await fetch("http://localhost:8000/api/forgot-password/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
+
+  if (res.ok) {
+    setErrorMessage("✅ Reset code sent to your email.");
+  } else if (res.status === 404) {
+    setErrorMessage("❌ No account found with this email.");
+  } else {
+    setErrorMessage(data.detail || "An error occurred. Please try again.");
+  }
+} catch (err) {
+  console.error(err);
+  setErrorMessage("Network error. Check backend server.");
+}
+
+}
+
 
   return (
-    <div className="login-container">
-      <h1 className="login-title">Welcome Back!</h1>
-      <p className="login-hint">Enter your username and password to login.</p>
+    <div className="login-page-wrapper">
 
-      <div className="login-field">
-        <label className="login-label">Username:</label>
-        <input
-          className="login-input"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Enter your username"
-        />
-      </div>
+      <div className="car-1">🚗</div>
+      <div className="car-2">🚙</div>
 
-      <div className="login-field">
-        <label className="login-label">Password:</label>
-        <input
-          className="login-input"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
-          type={show.current ? "text" : "password"}
-        />
+      <div className="pedestrian-1">🚶</div>
+      <div className="pedestrian-2">🚶‍♀️</div>
 
-        <button
-          type="button"
-          className="login-icon-btn"
-          onClick={() => toggle("current")}
-          aria-label="Toggle new password visibility"
+      <div className="tree-1">🌳</div>
+      <div className="tree-2">🌲</div>
+      <div className="tree-3">🌳</div>
+
+      <div className="cloud-1">☁️</div>
+      <div className="cloud-2">☁️</div>
+      <div className="cloud-3">☁️</div>
+
+      <div className="login-container">
+        <h1 className="login-title">Welcome to RoadPulse!</h1>
+        <p className="login-hint">Navigate your journey with confidence</p>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleLogin();
+          }}
         >
-          {show.current ? "👁️" : "🙈"}
-        </button>
-      </div>
+          {errorMessage && (
+            <div className="login-error">
+              {errorMessage}
+            </div>
+          )}
 
-      <div className="forgot-password-link-container">
-        <button
-          onClick={handleForgotPassword}
-          className="forgot-password-link"
-          type="button"
-        >
-          Forgot password?
-        </button>
-      </div>
+          <div className="login-field">
+            <label className="login-label">Email:</label>
+            <input
+              className="login-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+            />
+          </div>
 
-      <div className="login-buttons">
-        {/* <Link handleLogin className="login-primaryBtn">
-          Login
-        </Link> */}
-        <button
-          onClick={handleLogin}
-          className="login-primaryBtn"
-          type="button"
-        >
-          Login
-        </button>
+          <div className="login-field">
+            <label className="login-label">Password:</label>
+            <input
+              className="login-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              type={show.current ? "text" : "password"}
+            />
+
+            <button
+              type="button"
+              className="login-icon-btn"
+              onClick={() => toggle("current")}
+              aria-label="Toggle new password visibility"
+            >
+              {show.current ? "👁️" : "🙈"}
+            </button>
+          </div>
+
+          <div className="forgot-password-link-container">
+            <button
+              onClick={handleForgotPassword}
+              className="forgot-password-link"
+              type="button"
+            >
+              Forgot password?
+            </button>
+          </div>
+
+          <div className="login-buttons">
+            <button
+              // onClick={handleLogin}
+              className="login-primaryBtn"
+              type="submit"
+            >
+              Login
+            </button>
+          </div>
+        </form>
+
+        <div className="register-link-container">
+          <p className="register-text">
+            Don't have an account?{" "}
+            <Link to="/registration-page" className="register-link">
+              Sign up
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
