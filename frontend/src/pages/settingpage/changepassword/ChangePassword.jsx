@@ -22,20 +22,49 @@ export default function ChangePassword() {
     return null;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const err = validate();
     if (err) {
       setMsg({ type: "error", text: err });
       return;
     }
-    setMsg({ type: "success", text: "New password has been updated." });
-    setValues({ current: "", newPass: "", repeat: "" });
+
+    try {
+      const res = await fetch("http://localhost:8000/api/change-password/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("access")}`,
+        },
+        body: JSON.stringify({
+          current: values.current,
+          newPass: values.newPass,
+          repeat: values.repeat,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setMsg({ type: "success", text: data.detail });
+        setValues({ current: "", newPass: "", repeat: "" });
+      } else {
+        setMsg({
+          type: "error",
+          text: Array.isArray(data.detail) ? data.detail.join(", ") : data.detail,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setMsg({ type: "error", text: "Network error. Check backend server." });
+    }
   };
+
 
   return (
     <div className="change-password-root">
-      {/* <button
+      <button
         className="close-btn"
         aria-label="Close"
         onClick={() => navigate("/setting-menu-page")}
@@ -43,7 +72,7 @@ export default function ChangePassword() {
         type="button"
       >
         ✕
-      </button> */}
+      </button>
 
       <div className="settings-layout">
         <aside className="settings-left-column" aria-hidden={false}>

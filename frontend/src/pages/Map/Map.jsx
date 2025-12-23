@@ -12,6 +12,7 @@ export default function Map() {
     const [showDropdown, setShowDropdown] = useState(false);
     const [points] = useState(1000); // Replace with actual user points
     const navigate = useNavigate();
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -29,6 +30,13 @@ export default function Map() {
     const handleSettingsClick = () => {
         setShowDropdown(false);
         navigate("/setting-menu-page"); // Navigate to settings page
+    };
+
+    const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setShowLogoutConfirm(false);
+    navigate("/login-page");
     };
 
 
@@ -249,6 +257,10 @@ export default function Map() {
                             {/* Logout Section */}
                             <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px' }}>
                                 <button
+                                    onClick={() => {
+                                        setShowDropdown(false);
+                                        setShowLogoutConfirm(true);
+                                    }}
                                     style={{
                                         width: '100%',
                                         padding: '12px 16px',
@@ -287,6 +299,17 @@ export default function Map() {
                         }}
                     />
                 )}
+                {/* Logout Confirmation Modal */}
+                {showLogoutConfirm && (
+                <div className="logout-modal">
+                    <div className="logout-box">
+                        <h3>Confirm Logout</h3>
+                        <p>Are you sure you want to log out?</p>
+                        <button onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
+                        <button onClick={handleLogout}>Log Out</button>
+                    </div>
+                </div>
+            )}
 
             </div>
         ); 
