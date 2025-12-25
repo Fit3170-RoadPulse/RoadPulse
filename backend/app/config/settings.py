@@ -82,4 +82,10 @@ GOOGLE_MAPS_ID = "9f96fc85ced76649d1bf190d"
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Location configs
+pollingInterval = 20
+enableHighAccuracy = True
+timeout = 20000
+maximumAge = 1000
+
 CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]

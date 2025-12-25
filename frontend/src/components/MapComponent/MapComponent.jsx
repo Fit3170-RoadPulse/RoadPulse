@@ -37,7 +37,7 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function }) {
 
     return (
         <div className="mapholder" style={{ width: "100%", height: "100%" }}>
-        {/* Speed Tracker Overlay */}
+        {/* Speed Tracker Overlay
         <div
         style={{
             position: "absolute",
@@ -47,7 +47,7 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function }) {
         }}
         >
         <SpeedTracker />
-        </div>
+        </div> */}
         <div
             ref={mapRef}
             style={{ width: "100%", height: "100%", minHeight: "400px" }}

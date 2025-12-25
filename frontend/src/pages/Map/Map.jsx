@@ -1,11 +1,26 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef} from "react";
 import axios from "axios";
 import { User, Award, Settings, LogOut } from "lucide-react";
 import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import "./Map.css"
+import SpeedTracker from "../../components/speed-tracker";
 import RewardsPage from "../rewardspage/RewardsPage";
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
 
 export default function Map() {
     let [mapData, setMapData] = useState(null);
@@ -13,13 +28,166 @@ export default function Map() {
     const [points] = useState(1000); // Replace with actual user points
     const navigate = useNavigate();
     const [routeInfo, setRouteInfo] = useState(null)
+    const [useMockPath, setUseMockPath] = useState(true);
+
+    const [location, setLocation] = useState(null);
+    const [speedKmh, setSpeedKmh] = useState(null);
+    const prevLocationRef = useRef(null);
+    let locationPollingData = useRef(null);
+    let lastUpdateTimeRef = useRef(0);
+
+    // Fallback mock location (used if real geolocation fails)
+    // const mockLocation = {
+    //     latitude: -37.813904798147796, 
+    //     longitude: 144.98810008133233,
+    //     accuracy: 50,
+    //     timestamp: Date.now(),
+    // };
+
+    const mockPath = [
+        { latitude: -37.8139, longitude: 144.9881 },
+        { latitude: -37.8137, longitude: 144.9881 },
+        { latitude: -37.8134, longitude: 144.9881 },
+        { latitude: -37.8130, longitude: 144.9881 },
+        { latitude: -37.8125, longitude: 144.9881 },
+        { latitude: -37.8122, longitude: 144.9881 },
+        { latitude: -37.8120, longitude: 144.9881 },
+    ];
+
+  // ----------------------------
+  // Effect A: load backend config + start REAL GPS watcher (runs once)
+  // ----------------------------    
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/`).then((r) => {
             setMapData(r.data)
         });
+
+        axios.get(`${base}/api/map/location/`).then((r) => {
+            locationPollingData.current = r.data;
+            console.log("Location Polling Data Ref:", locationPollingData);
+
+            // if (!navigator.geolocation) {
+            //     setLocation(mockLocation);
+            //     console.log('Geolocation is not supported by your browser');
+            //     return;
+            // }
+
+            // Success handler: updates the state with the new position
+            const successHandler = (position) => {
+                const now = Date.now();
+                // Only update if the specified interval has passed since the last update
+                if (now - lastUpdateTimeRef.current >= locationPollingData.current?.pollingInterval) {
+                    let newLocation = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        timestamp: position.timestamp,
+                    };
+                    setLocation(newLocation);
+                    lastUpdateTimeRef.current = now;
+                    console.log("Location updated:", newLocation);
+                }
+            };
+
+            // Error handler: updates the error state
+            const errorHandler = (err) => {
+                console.error("Geolocation error:", {
+                    code: err.code,
+                    message: err.message,
+                });
+                setLocation(mockLocation);
+                console.log("Location updated:", mockLocation);
+            };
+
+            // Options object for watchPosition (optional)
+            const options = {
+                enableHighAccuracy: locationPollingData.current?.enableHighAccuracy,
+                timeout: locationPollingData.current?.timeout ?? 10000,
+                maximumAge: locationPollingData.current?.maximumAge ?? 0,
+            };
+
+            // Start watching the position and store the watch ID
+            const id = navigator.geolocation.watchPosition(
+                successHandler,
+                errorHandler,
+                options
+            );
+
+            // Cleanup function: stops watching the position when the component unmounts
+            return () => {
+                if (id) {
+                    navigator.geolocation.clearWatch(id);
+                }
+            };
+        });
     }, []);
+
+  // ----------------------------
+  // Effect B: Mock GPS path generator
+  // ----------------------------    
+
+    useEffect(() => {
+        if (!useMockPath) return;
+
+        let index = 0;
+
+        const interval = setInterval(() => {
+            const point = mockPath[index % mockPath.length];
+
+            const mockLocation = {
+            latitude: point.latitude,
+            longitude: point.longitude,
+            accuracy: 5,
+            timestamp: Date.now(),
+            };
+
+            setLocation(mockLocation);
+            console.log("Mock location:", mockLocation);
+
+            index++;
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [useMockPath]);
+
+  // ----------------------------
+  // Effect C: Speed calculation from location updates
+  // ----------------------------
+  useEffect(() => {
+    if (!location) return;
+
+    const prev = prevLocationRef.current;
+    prevLocationRef.current = location;
+
+    if (!prev) {
+      setSpeedKmh(0);
+      return;
+    }
+
+    const t1 = typeof prev.timestamp === "number" ? prev.timestamp : Date.now();
+    const t2 = typeof location.timestamp === "number" ? location.timestamp : Date.now();
+    const dtMs = t2 - t1;
+
+    if (!Number.isFinite(dtMs) || dtMs <= 0) return;
+
+    const distM = haversineMeters(
+      prev.latitude,
+      prev.longitude,
+      location.latitude,
+      location.longitude
+    );
+
+    const kmh = (distM / (dtMs / 1000)) * 3.6;
+
+    // show stable value; small jitter becomes 0
+    const shown = kmh < 1 ? 0 : Math.round(kmh);
+
+    console.log("dist(m):", distM.toFixed(2), "dt(ms):", dtMs, "km/h:", kmh.toFixed(2));
+    setSpeedKmh(shown);
+  }, [location]);    
+
     console.log(mapData);
 
     const handleRewardsClick = () => {
@@ -35,7 +203,7 @@ export default function Map() {
 
     async function setMarker(map){
         let originMarker = null;
-        //let directionsRenderer = null;
+        let directionsRenderer = null;
         let trafficLayer = null;
         let destinationMarker = null;
         
@@ -43,8 +211,8 @@ export default function Map() {
         trafficLayer = new google.maps.TrafficLayer();
         trafficLayer.setMap(map);
 
-        //directionsRenderer = new google.maps.DirectionsRenderer();
-        //directionsRenderer.setMap(map);
+        directionsRenderer = new google.maps.DirectionsRenderer();
+        directionsRenderer.setMap(map);
 
         map.addListener("click", (e) =>{
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
@@ -125,218 +293,229 @@ export default function Map() {
     }
 
     return (
-            <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-                <div style={{ 
-                    position: 'absolute', 
-                    top: 0, 
-                    left: '100px', 
-                    right: 0, 
-                    bottom: 0, 
-                    zIndex: 1,
-                    pointerEvents: "auto"
-                    }}>
-                    <MapComponent API_KEY={mapData?.GMAPS_KEY} MAP_ID={mapData?.GMAPS_ID} map_function={setMarker}/>
-                </div>
-
-                {/* Overlay UI */}
-                <div className="overlay-ui" 
-                style={{
-                pointerEvents: "none"
-                }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
-                    <MapPage onSearch={() => console.log("Search triggered!")} />
-                </div>
-
-                 {/* Route info display */}
-                {routeInfo && (
-                <div
-                    style={{
-                    position: 'absolute',
-                    top: '120px',
-                    left: '120px',
-                    backgroundColor: 'white',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                    zIndex: 1001,
-                    pointerEvents: 'auto',
-                    }}
-                >
-                    <p style={{ margin: 0, fontWeight: 500 }}>Distance: {routeInfo.distanceKm} km</p>
-                    <p style={{ margin: 0, fontWeight: 500 }}>ETA: {routeInfo.eta}</p>
-                </div>
-                )}
-
-                {/* Profile Icon with Dropdown */}
-                <div style={{
-                    position: 'absolute',
-                    top: '60px',
-                    right: '20px',
-                    zIndex: 1000,
-                    pointerEvents: 'auto'
+        <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+            <div style={{ 
+                position: 'absolute', 
+                top: 0, 
+                left: '100px', 
+                right: 0, 
+                bottom: 0, 
+                zIndex: 1,
+                pointerEvents: "auto"
                 }}>
-                    <button
-                        onClick={() => setShowDropdown(!showDropdown)}
-                        style={{
-                            width: '60px',
-                            height: '60px',
-                            borderRadius: '50%',
-                            backgroundColor: 'white',
-                            border: 'none',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            outline: 'none'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                    >
-                        <User size={24} color="#374151" />
-                    </button>
-    
-                    {showDropdown && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '60px',
-                            right: '0',
-                            width: '240px',
-                            backgroundColor: 'white',
-                            borderRadius: '12px',
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                            border: '1px solid #e5e7eb',
-                            overflow: 'hidden',
-                            zIndex: 1001
-                        }}>
-                            {/* User Info Section */}
-                            <div style={{
-                                padding: '16px',
-                                borderBottom: '1px solid #e5e7eb'
-                            }}>
-                                <p style={{
-                                    fontSize: '14px',
-                                    fontWeight: '600',
-                                    color: '#1f2937',
-                                    margin: '0 0 4px 0'
-                                }}>Jack</p>
-                                <p style={{
-                                    fontSize: '12px',
-                                    color: '#6b7280',
-                                    margin: 0
-                                }}>{points} Points</p>
-                            </div>
-    
-                            {/* Menu Items */}
-                            <div>
-                                <button
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#374151',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <User size={20} color="#374151" />
-                                    <span style={{ fontSize: '14px' }}>Profile</span>
-                                </button>
-    
-                                <button
-                                    onClick={handleRewardsClick}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#374151',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fefaefff'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <Award size={20} color="#FFB20F" />
-                                    <span style={{ fontWeight: '500', fontSize: '14px' }}>Rewards</span>
-                                </button>
-    
-                                <button
-                                    onClick={handleSettingsClick}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#374151',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <Settings size={20} color="#374151" />
-                                    <span style={{ fontSize: '14px' }}>Settings</span>
-                                </button>
-                            </div>
-    
-                            {/* Logout Section */}
-                            <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px' }}>
-                                <button
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#dc2626',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <LogOut size={20} color="#dc2626" />
-                                    <span style={{ fontSize: '14px' }}>Logout</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-    
-                {/* Click outside to close dropdown */}
-                {showDropdown && (
-                    <div
-                        onClick={() => setShowDropdown(false)}
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 999
-                        }}
-                    />
-                )}
+                <MapComponent API_KEY={mapData?.GMAPS_KEY} MAP_ID={mapData?.GMAPS_ID} map_function={setMarker}/>
 
+                <div className="absolute top-4 right-26 z-30">
+                    <SpeedTracker speedKmh={speedKmh} />
+                </div>
+
+                <button
+                onClick={() => setUseMockPath((v) => !v)}
+                className="absolute top-4 right-80 z-20 px-3 py-1 bg-white border rounded-lg text-sm shadow"
+                >
+                {useMockPath ? "Using Mock GPS" : "Using Real GPS"}
+                </button>
             </div>
-        ); 
+
+            {/* Overlay UI */}
+            <div className="overlay-ui" 
+            style={{
+            pointerEvents: "none"
+            }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
+                <MapPage onSearch={() => console.log("Search triggered!")} />
+            </div>
+
+                {/* Route info display */}
+            {routeInfo && (
+            <div
+                style={{
+                position: 'absolute',
+                top: '120px',
+                left: '120px',
+                backgroundColor: 'white',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                zIndex: 1001,
+                pointerEvents: 'auto',
+                }}
+            >
+                <p style={{ margin: 0, fontWeight: 500 }}>Distance: {routeInfo.distanceKm} km</p>
+                <p style={{ margin: 0, fontWeight: 500 }}>ETA: {routeInfo.eta}</p>
+            </div>
+            )}
+
+            {/* Profile Icon with Dropdown */}
+            <div style={{
+                position: 'absolute',
+                top: '60px',
+                right: '20px',
+                zIndex: 1000,
+                pointerEvents: 'auto'
+            }}>
+                <button
+                    onClick={() => setShowDropdown(!showDropdown)}
+                    style={{
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '50%',
+                        backgroundColor: 'white',
+                        border: 'none',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                        outline: 'none'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                >
+                    <User size={24} color="#374151" />
+                </button>
+
+                {showDropdown && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '60px',
+                        right: '0',
+                        width: '240px',
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                        border: '1px solid #e5e7eb',
+                        overflow: 'hidden',
+                        zIndex: 1001
+                    }}>
+                        {/* User Info Section */}
+                        <div style={{
+                            padding: '16px',
+                            borderBottom: '1px solid #e5e7eb'
+                        }}>
+                            <p style={{
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                color: '#1f2937',
+                                margin: '0 0 4px 0'
+                            }}>Jack</p>
+                            <p style={{
+                                fontSize: '12px',
+                                color: '#6b7280',
+                                margin: 0
+                            }}>{points} Points</p>
+                        </div>
+
+                        {/* Menu Items */}
+                        <div>
+                            <button
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    transition: 'background-color 0.2s',
+                                    color: '#374151',
+                                    outline: 'none'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                                <User size={20} color="#374151" />
+                                <span style={{ fontSize: '14px' }}>Profile</span>
+                            </button>
+
+                            <button
+                                onClick={handleRewardsClick}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    transition: 'background-color 0.2s',
+                                    color: '#374151',
+                                    outline: 'none'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fefaefff'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                                <Award size={20} color="#FFB20F" />
+                                <span style={{ fontWeight: '500', fontSize: '14px' }}>Rewards</span>
+                            </button>
+
+                            <button
+                                onClick={handleSettingsClick}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    transition: 'background-color 0.2s',
+                                    color: '#374151',
+                                    outline: 'none'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                                <Settings size={20} color="#374151" />
+                                <span style={{ fontSize: '14px' }}>Settings</span>
+                            </button>
+                        </div>
+
+                        {/* Logout Section */}
+                        <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px' }}>
+                            <button
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    transition: 'background-color 0.2s',
+                                    color: '#dc2626',
+                                    outline: 'none'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                                <LogOut size={20} color="#dc2626" />
+                                <span style={{ fontSize: '14px' }}>Logout</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Click outside to close dropdown */}
+            {showDropdown && (
+                <div
+                    onClick={() => setShowDropdown(false)}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 999
+                    }}
+                />
+            )}
+
+        </div>
+    ); 
 }
