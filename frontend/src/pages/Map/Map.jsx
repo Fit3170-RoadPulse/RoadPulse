@@ -27,7 +27,7 @@ export default function Map() {
     const [showDropdown, setShowDropdown] = useState(false);
     const [points] = useState(1000); // Replace with actual user points
     const navigate = useNavigate();
-    const [routeInfo, setRouteInfo] = useState(null)
+    const [routeInfo, setRouteInfo] = useState([])
     let routeInfoRows = [];
     const [useMockPath, setUseMockPath] = useState(true);
 
@@ -40,7 +40,7 @@ export default function Map() {
     const lastEtaSecRef = useRef(null);
     const lastRerouteAtRef = useRef(0);
 
-    const REROUTE_INTERVAL_MS = 30000; // every 30s
+    const REROUTE_INTERVAL_MS = 5000; // every 30s
     const ETA_CHANGE_THRESHOLD_SEC = 120; // reroute if ETA changes by >= 2 min
 
     let locationPollingData = useRef(null);
@@ -200,6 +200,59 @@ export default function Map() {
 
     console.log(mapData);
 
+    useEffect(() => {
+        console.log("REROUTE CHECK", {
+            hasDestination: !!destinationRef.current,
+            hasMap: !!mapRef.current,
+            hasLocation: !!location,
+        });
+        // only reroute if we have destination + map + current location
+        if (!destinationRef.current || !mapRef.current || !location) return;
+
+        const interval = setInterval(async () => {
+            // must have location and destination
+            if (!destinationRef.current || !mapRef.current || !location) return;
+
+
+            // throttle so it doesn’t spam if interval is short
+            const now = Date.now();
+            if (now - lastRerouteAtRef.current < REROUTE_INTERVAL_MS - 500) return;
+
+            const origin = { lat: location.latitude, lng: location.longitude };
+            const destination = destinationRef.current;
+
+            console.log(
+            `[REROUTE TICK] ${new Date().toLocaleTimeString()} origin=(${origin.lat.toFixed(5)},${origin.lng.toFixed(5)})`
+            );
+
+            try {
+            const newEtaSec = await fetchRoute(origin, destination, startTimes, mapRef.current);
+
+            // reroute decision: only if ETA changed enough
+            const oldEtaSec = lastEtaSecRef.current;
+            if (typeof oldEtaSec === "number" && typeof newEtaSec === "number") {
+                const diff = Math.abs(newEtaSec - oldEtaSec);
+
+                if (diff >= ETA_CHANGE_THRESHOLD_SEC) {
+                console.log("Rerouting (ETA changed):", { oldEtaSec, newEtaSec, diff });
+                lastEtaSecRef.current = newEtaSec;
+                lastRerouteAtRef.current = now;
+                } else {
+                // keep last ETA, but we already redrew polyline from fetchRoute
+                // If you want "only redraw when needed", move drawPolyLine into this if-block.
+                console.log("No significant change, ETA diff:", diff);
+                }
+            } else {
+                lastEtaSecRef.current = newEtaSec;
+            }
+            } catch (e) {
+            console.error("Reroute failed:", e);
+            }
+        }, REROUTE_INTERVAL_MS);
+
+        return () => clearInterval(interval);
+    }, [location]);
+
     const handleRewardsClick = () => {
         setShowDropdown(false);
         navigate("/rewards-page"); // Navigate to rewards page
@@ -213,19 +266,19 @@ export default function Map() {
 
     async function setMarker(map){
         mapRef.current = map;
+
         let originMarker = null;
-        let directionsRenderer = null;
-        let trafficLayer = null;
         let destinationMarker = null;
         
         const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-        trafficLayer = new google.maps.TrafficLayer();
+
+        const trafficLayer = new google.maps.TrafficLayer();
         trafficLayer.setMap(map);
 
-        directionsRenderer = new google.maps.DirectionsRenderer();
+        const directionsRenderer = new google.maps.DirectionsRenderer();
         directionsRenderer.setMap(map);
 
-        map.addListener("click", async (e) =>{
+        map.addListener("click", async(e) =>{
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
 
             if (!originMarker){
@@ -234,33 +287,53 @@ export default function Map() {
                     position: clicked,
                     title:"A",
                 });
+
+                // reset route state
+                destinationRef.current = null;
+                lastEtaSecRef.current = null;
+                setRouteInfo([]);
+                if (polylineRef.current) {
+                    polylineRef.current.setMap(null);
+                    polylineRef.current = null;
+                }
+                return;
+            }
                 
-            }else if (!destinationMarker){
+            if (!destinationMarker) {
                 destinationMarker = new AdvancedMarkerElement({
                     map: map,
                     position: clicked,
                     title:"B",
                 });
-
+                 
                 destinationRef.current = destinationMarker.position; // save destination
-                const etaSec = await fetchRoute(originMarker.position, destinationMarker.position, map);
-                lastEtaSecRef.current = etaSec; // save initial ETA
 
-            } else{
-                originMarker.map = null;
-                destinationMarker.map = null;
-                destinationRef.current = null;
-                lastEtaSecRef.current = null;
-                if (polylineRef.current) polylineRef.current.setMap(null);
-                polylineRef.current = null;
-                setRouteInfo(null);
-                originMarker = new AdvancedMarkerElement({
-                    map: map,
-                    position: clicked,
-                    title:"A",
-                });
-                destinationMarker = null;
+                const startTimes = generateStartTimes(); 
+
+                const etaSec = await fetchRoute(
+                    originMarker.position,
+                    destinationMarker.position,
+                    startTimes,
+                    map
+                );
+
+                lastEtaSecRef.current = etaSec; // save initial ETA
+                return;
             }
+
+            originMarker.map = null;
+            destinationMarker.map = null;
+            originMarker = new AdvancedMarkerElement({
+                map: map,
+                position: clicked,
+                title:"A",
+            });
+
+            destinationMarker = null;
+            destinationRef.current = null;
+            lastEtaSecRef.current = null;
+            setRouteInfo([]);
+        
         });
     }
 
@@ -276,15 +349,15 @@ export default function Map() {
         let routeInfoArray = [];
 
         for(let option of response.data){
-            drawPolyLine(map,response.data.polyline);
+            drawPolyLine(map,option.polyline);
         
-            const distanceKm = formatDistance(response.data.distance_meters);
-            const eta = formatDuration(response.data.duration);
+            const distanceKm = formatDistance(option.distance_meters);
+            const eta = formatDuration(option.duration);
             const starting_time = formatDate(option.starting_time);
             routeInfoArray.push({distanceKm,eta,starting_time});
         }
         console.log("Route Info Array inside fetchRoute:", routeInfoArray);
-        setRouteInfo({ distanceKm, eta });
+        setRouteInfo(routeInfoArray);
 
         // return raw seconds so reroute logic can compare
         return response.data.duration;        
@@ -301,12 +374,12 @@ export default function Map() {
         }
 
         polylineRef.current = new google.maps.Polyline({
-        path:decodedPath,
-        geodesic: true,
-        strokeColor: "#2563eb",
-        strokeOpacity: 0.9,
-        strokeWeight: 5,
-        map,
+            path:decodedPath,
+            geodesic: true,
+            strokeColor: "#2563eb",
+            strokeOpacity: 0.9,
+            strokeWeight: 5,
+            map,
         });
     }
 
@@ -349,49 +422,6 @@ export default function Map() {
         }
     }
     generateRouteUI();
-
-    useEffect(() => {
-        // only reroute if we have destination + map + current location
-        if (!destinationRef.current || !mapRef.current || !location) return;
-
-        const interval = setInterval(async () => {
-            // must have location and destination
-            if (!destinationRef.current || !mapRef.current || !location) return;
-
-            // throttle so it doesn’t spam if interval is short
-            const now = Date.now();
-            if (now - lastRerouteAtRef.current < REROUTE_INTERVAL_MS - 500) return;
-
-            const origin = { lat: location.latitude, lng: location.longitude };
-            const destination = destinationRef.current;
-
-            try {
-            const newEtaSec = await fetchRoute(origin, destination, mapRef.current);
-
-            // reroute decision: only if ETA changed enough
-            const oldEtaSec = lastEtaSecRef.current;
-            if (typeof oldEtaSec === "number" && typeof newEtaSec === "number") {
-                const diff = Math.abs(newEtaSec - oldEtaSec);
-
-                if (diff >= ETA_CHANGE_THRESHOLD_SEC) {
-                console.log("Rerouting (ETA changed):", { oldEtaSec, newEtaSec, diff });
-                lastEtaSecRef.current = newEtaSec;
-                lastRerouteAtRef.current = now;
-                } else {
-                // keep last ETA, but we already redrew polyline from fetchRoute
-                // If you want "only redraw when needed", move drawPolyLine into this if-block.
-                console.log("No significant change, ETA diff:", diff);
-                }
-            } else {
-                lastEtaSecRef.current = newEtaSec;
-            }
-            } catch (e) {
-            console.error("Reroute failed:", e);
-            }
-        }, REROUTE_INTERVAL_MS);
-
-        return () => clearInterval(interval);
-    }, [location]);
 
     function formatDuration(seconds) {
         if (!seconds || isNaN(seconds)) return "N/A";
