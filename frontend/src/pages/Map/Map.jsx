@@ -42,7 +42,7 @@ export default function Map() {
     const locationRef = useRef(null);
     const [hasRoute, setHasRoute] = useState(false);
 
-    const REROUTE_INTERVAL_MS = 5000; // every 30s
+    const REROUTE_INTERVAL_MS = 30000; // every 30s
     const [rerouteCount, setRerouteCount] = useState(0);
     const ETA_CHANGE_THRESHOLD_SEC = 120; // reroute if ETA changes by >= 2 min
 
