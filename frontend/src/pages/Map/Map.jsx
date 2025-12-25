@@ -28,11 +28,21 @@ export default function Map() {
     const [points] = useState(1000); // Replace with actual user points
     const navigate = useNavigate();
     const [routeInfo, setRouteInfo] = useState(null)
+    let routeInfoRows = [];
     const [useMockPath, setUseMockPath] = useState(true);
 
     const [location, setLocation] = useState(null);
     const [speedKmh, setSpeedKmh] = useState(null);
     const prevLocationRef = useRef(null);
+    const mapRef = useRef(null);
+    const destinationRef = useRef(null);
+    const polylineRef = useRef(null);
+    const lastEtaSecRef = useRef(null);
+    const lastRerouteAtRef = useRef(0);
+
+    const REROUTE_INTERVAL_MS = 30000; // every 30s
+    const ETA_CHANGE_THRESHOLD_SEC = 120; // reroute if ETA changes by >= 2 min
+
     let locationPollingData = useRef(null);
     let lastUpdateTimeRef = useRef(0);
 
@@ -202,6 +212,7 @@ export default function Map() {
 
 
     async function setMarker(map){
+        mapRef.current = map;
         let originMarker = null;
         let directionsRenderer = null;
         let trafficLayer = null;
@@ -214,7 +225,7 @@ export default function Map() {
         directionsRenderer = new google.maps.DirectionsRenderer();
         directionsRenderer.setMap(map);
 
-        map.addListener("click", (e) =>{
+        map.addListener("click", async (e) =>{
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
 
             if (!originMarker){
@@ -230,11 +241,19 @@ export default function Map() {
                     position: clicked,
                     title:"B",
                 });
-                fetchRoute(originMarker.position,destinationMarker.position,map)
+
+                destinationRef.current = destinationMarker.position; // save destination
+                const etaSec = await fetchRoute(originMarker.position, destinationMarker.position, map);
+                lastEtaSecRef.current = etaSec; // save initial ETA
+
             } else{
                 originMarker.map = null;
-                destinationMarker.map =null;
-
+                destinationMarker.map = null;
+                destinationRef.current = null;
+                lastEtaSecRef.current = null;
+                if (polylineRef.current) polylineRef.current.setMap(null);
+                polylineRef.current = null;
+                setRouteInfo(null);
                 originMarker = new AdvancedMarkerElement({
                     map: map,
                     position: clicked,
@@ -245,21 +264,30 @@ export default function Map() {
         });
     }
 
-    async function fetchRoute(origin,destination,map){
+    async function fetchRoute(origin,destination,startTimes,map){
         const base = import.meta.env.VITE_API_URL;
         const response = await axios.post(`${base}/api/map/compute-route/`,{
             origin:{latitude:origin.lat,longitude:origin.lng},
             destination:{latitude:destination.lat,longitude:destination.lng},
+            startTimes: startTimes,
         });
 
-        drawPolyLine(map,response.data.polyline);
-        
-        const distanceKm = formatDistance(response.data.distance_meters);
-        const eta = formatDuration(response.data.duration);
+        console.log("Route response:",response.data);
+        let routeInfoArray = [];
 
+        for(let option of response.data){
+            drawPolyLine(map,response.data.polyline);
+        
+            const distanceKm = formatDistance(response.data.distance_meters);
+            const eta = formatDuration(response.data.duration);
+            const starting_time = formatDate(option.starting_time);
+            routeInfoArray.push({distanceKm,eta,starting_time});
+        }
+        console.log("Route Info Array inside fetchRoute:", routeInfoArray);
         setRouteInfo({ distanceKm, eta });
 
-        
+        // return raw seconds so reroute logic can compare
+        return response.data.duration;        
 
     }
 
@@ -267,7 +295,12 @@ export default function Map() {
         const maps = await google.maps.importLibrary("geometry");
         const decodedPath = google.maps.geometry.encoding.decodePath(encodedPolyline);
 
-        new google.maps.Polyline({
+        // remove old polyline if exists
+        if (polylineRef.current) {
+            polylineRef.current.setMap(null);
+        }
+
+        polylineRef.current = new google.maps.Polyline({
         path:decodedPath,
         geodesic: true,
         strokeColor: "#2563eb",
@@ -276,6 +309,89 @@ export default function Map() {
         map,
         });
     }
+
+    function generateStartTimes(){
+        const startTimes = [];
+        const now = new Date();
+        const diffArray = [0, 15, 30, 45, 60]; // minutes from now
+
+        for (const time of diffArray){
+            const futureTime = new Date(now.getTime() + time * 60000);
+            startTimes.push(futureTime.toISOString());
+        }
+        return startTimes;
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function generateRouteUI(){
+        console.log("Route Info Array:", routeInfo);
+        routeInfoRows = [];
+        for (let i = 0; i < routeInfo.length; i++) {
+            routeInfoRows.push(
+            <div
+                style={{
+                backgroundColor: 'white',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                zIndex: 1001,
+                pointerEvents: 'auto',
+                }}
+            >
+            <p style={{ margin: 0, fontWeight: 500 }}>Time: {routeInfo[i].starting_time}</p>
+            <p style={{ margin: 0, fontWeight: 500 }}>Distance: {routeInfo[i].distanceKm} km</p>
+            <p style={{ margin: 0, fontWeight: 500 }}>ETA: {routeInfo[i].eta}</p>
+        </div>);
+        }
+    }
+    generateRouteUI();
+
+    useEffect(() => {
+        // only reroute if we have destination + map + current location
+        if (!destinationRef.current || !mapRef.current || !location) return;
+
+        const interval = setInterval(async () => {
+            // must have location and destination
+            if (!destinationRef.current || !mapRef.current || !location) return;
+
+            // throttle so it doesn’t spam if interval is short
+            const now = Date.now();
+            if (now - lastRerouteAtRef.current < REROUTE_INTERVAL_MS - 500) return;
+
+            const origin = { lat: location.latitude, lng: location.longitude };
+            const destination = destinationRef.current;
+
+            try {
+            const newEtaSec = await fetchRoute(origin, destination, mapRef.current);
+
+            // reroute decision: only if ETA changed enough
+            const oldEtaSec = lastEtaSecRef.current;
+            if (typeof oldEtaSec === "number" && typeof newEtaSec === "number") {
+                const diff = Math.abs(newEtaSec - oldEtaSec);
+
+                if (diff >= ETA_CHANGE_THRESHOLD_SEC) {
+                console.log("Rerouting (ETA changed):", { oldEtaSec, newEtaSec, diff });
+                lastEtaSecRef.current = newEtaSec;
+                lastRerouteAtRef.current = now;
+                } else {
+                // keep last ETA, but we already redrew polyline from fetchRoute
+                // If you want "only redraw when needed", move drawPolyLine into this if-block.
+                console.log("No significant change, ETA diff:", diff);
+                }
+            } else {
+                lastEtaSecRef.current = newEtaSec;
+            }
+            } catch (e) {
+            console.error("Reroute failed:", e);
+            }
+        }, REROUTE_INTERVAL_MS);
+
+        return () => clearInterval(interval);
+    }, [location]);
 
     function formatDuration(seconds) {
         if (!seconds || isNaN(seconds)) return "N/A";
@@ -326,24 +442,19 @@ export default function Map() {
             </div>
 
                 {/* Route info display */}
-            {routeInfo && (
-            <div
+            {routeInfo && (<div
                 style={{
                 position: 'absolute',
                 top: '120px',
                 left: '120px',
-                backgroundColor: 'white',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                zIndex: 1001,
-                pointerEvents: 'auto',
-                }}
-            >
-                <p style={{ margin: 0, fontWeight: 500 }}>Distance: {routeInfo.distanceKm} km</p>
-                <p style={{ margin: 0, fontWeight: 500 }}>ETA: {routeInfo.eta}</p>
-            </div>
-            )}
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '12px',
+                zIndex: 1000,
+                pointerEvents: 'auto'
+                }}>
+                {routeInfoRows}
+            </div>)}
 
             {/* Profile Icon with Dropdown */}
             <div style={{
