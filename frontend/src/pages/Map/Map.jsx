@@ -39,8 +39,11 @@ export default function Map() {
     const polylineRef = useRef(null);
     const lastEtaSecRef = useRef(null);
     const lastRerouteAtRef = useRef(0);
+    const locationRef = useRef(null);
+    const [hasRoute, setHasRoute] = useState(false);
 
     const REROUTE_INTERVAL_MS = 5000; // every 30s
+    const [rerouteCount, setRerouteCount] = useState(0);
     const ETA_CHANGE_THRESHOLD_SEC = 120; // reroute if ETA changes by >= 2 min
 
     let locationPollingData = useRef(null);
@@ -201,22 +204,20 @@ export default function Map() {
     console.log(mapData);
 
     useEffect(() => {
-        console.log("REROUTE CHECK", {
-            hasDestination: !!destinationRef.current,
-            hasMap: !!mapRef.current,
-            hasLocation: !!location,
-        });
+        if (!hasRoute) return;
+
         // only reroute if we have destination + map + current location
-        if (!destinationRef.current || !mapRef.current || !location) return;
+        // if (!destinationRef.current || !mapRef.current || !location) return;
 
         const interval = setInterval(async () => {
+            const loc = locationRef.current;
             // must have location and destination
             if (!destinationRef.current || !mapRef.current || !location) return;
 
 
             // throttle so it doesn’t spam if interval is short
-            const now = Date.now();
-            if (now - lastRerouteAtRef.current < REROUTE_INTERVAL_MS - 500) return;
+            // const now = Date.now();
+            // if (now - lastRerouteAtRef.current < REROUTE_INTERVAL_MS - 500) return;
 
             const origin = { lat: location.latitude, lng: location.longitude };
             const destination = destinationRef.current;
@@ -225,8 +226,12 @@ export default function Map() {
             `[REROUTE TICK] ${new Date().toLocaleTimeString()} origin=(${origin.lat.toFixed(5)},${origin.lng.toFixed(5)})`
             );
 
+            setRerouteCount((c) => c + 1);
             try {
-            const newEtaSec = await fetchRoute(origin, destination, startTimes, mapRef.current);
+                const startTimes = generateStartTimes();
+                const newEtaSec = await fetchRoute(
+                    origin, destination, startTimes, mapRef.current
+                );
 
             // reroute decision: only if ETA changed enough
             const oldEtaSec = lastEtaSecRef.current;
@@ -251,6 +256,10 @@ export default function Map() {
         }, REROUTE_INTERVAL_MS);
 
         return () => clearInterval(interval);
+    }, [hasRoute]);
+
+    useEffect(() => {
+        locationRef.current = location;
     }, [location]);
 
     const handleRewardsClick = () => {
@@ -305,7 +314,7 @@ export default function Map() {
                     position: clicked,
                     title:"B",
                 });
-                 
+                setHasRoute(true);
                 destinationRef.current = destinationMarker.position; // save destination
 
                 const startTimes = generateStartTimes(); 
@@ -333,6 +342,7 @@ export default function Map() {
             destinationRef.current = null;
             lastEtaSecRef.current = null;
             setRouteInfo([]);
+            setHasRoute(false);
         
         });
     }
@@ -656,6 +666,10 @@ export default function Map() {
                     }}
                 />
             )}
+
+            <div className="absolute top-24 left-4 z-30 bg-white/90 border rounded-xl p-2 text-xs shadow">
+                Route recompute ticks: {rerouteCount}
+            </div>
 
         </div>
     ); 
