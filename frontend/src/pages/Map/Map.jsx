@@ -14,6 +14,7 @@ export default function Map() {
     const navigate = useNavigate();
 
     const [location, setLocation] = useState(null);
+    const [cumulativeDistance, setCumulativeDistance] = useState(0);
     let locationPollingData = useRef(null);
     let lastUpdateTimeRef = useRef(0);
 
@@ -52,8 +53,17 @@ export default function Map() {
                         accuracy: position.coords.accuracy,
                         timestamp: position.timestamp,
                     };
+                    let distance = 0;
+                    if (location) {
+                        distance = google.maps.geometry.spherical.computeDistanceBetween(
+                            new google.maps.LatLng(location.latitude, location.longitude), 
+                            new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
+                        );
+                    }
+                    setCumulativeDistance(cumulativeDistance + distance);
                     setLocation(newLocation);
                     lastUpdateTimeRef.current = now;
+                    console.log("Distance moved (m):", distance);
                     console.log("Location updated:", newLocation);
                 }
             };
