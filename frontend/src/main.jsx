@@ -26,16 +26,40 @@ createRoot(document.getElementById('root')).render(
           {/* If you want to navigate to a page via filepath, I think you must include the route here */}
           <Route path="/" element={<LoginPage />} />
           <Route path="/registration-page" element={<RegistrationPage />} />
-          <Route path="/registration-page" element={<RegistrationPage />} />
-          <Route path="/setting-menu-page" element={<SettingMenu />} />
-          <Route path="/change-password" element={<ChangePassword />} />
-          <Route path="/report" element={<Report />} />
-          <Route path="/map" element={<Map />} />
-          <Route path="*" element={<NotFound />} />
-          <Route path="/Emergency" element={<Emergency />} />
           <Route path="/email-verification" element={<EmailVerification />} />
-          <Route path="/email-verification" element={<EmailVerification />} />
-          <Route path="/rewards-page" element={<RewardsPage />} />
+          
+          {/* Protected Routes - Authentication required */}
+          <Route path="/map" element={
+            <ProtectedRoute>
+              <Map />
+            </ProtectedRoute>
+          } />
+          <Route path="/rewards-page" element={
+            <ProtectedRoute>
+              <RewardsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/setting-menu-page" element={
+            <ProtectedRoute>
+              <SettingMenu />
+            </ProtectedRoute>
+          } />
+          <Route path="/change-password" element={
+            <ProtectedRoute>
+              <ChangePassword />
+            </ProtectedRoute>
+          } />
+          <Route path="/report" element={
+            <ProtectedRoute>
+              <Report />
+            </ProtectedRoute>
+          } />
+          <Route path="/Emergency" element={
+            <ProtectedRoute>
+              <Emergency />
+            </ProtectedRoute>
+          } />
+          
 
           {/* Below route for testing. Remove once not needed */}
           <Route path="/demo" element={<Demo />} />
