@@ -25,8 +25,8 @@ export default function EmailVerification() {
             
 
 
-            <div className="login-button">
-                <Link to="/login-page" className="login-primaryBtn">
+            <div className="ev-button">
+                <Link to="/login-page" className="ev-primaryBtn">
                     Login
                 </Link>
                 

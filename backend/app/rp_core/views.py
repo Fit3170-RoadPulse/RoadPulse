@@ -93,14 +93,10 @@ class LoginView(views.APIView):
         password = request.data.get("password")
 
         if not email or not password:
-            return Response({"detail: Email and password are required."})
+            return Response({"detail": "Email and password are required."}, status=400)
         
-        try:
-            user_obj = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response({"detail": "Invalid email or password. Please try again."}, status=401)
-
-        user = authenticate(username=user_obj.username, password=password)
+        # Use email for authentication (custom backend handles this)
+        user = authenticate(request, email=email, password=password)
 
         if user is None:
             return Response({"detail": "Invalid email or password. Please try again."}, status=401)
