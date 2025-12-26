@@ -21,9 +21,10 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
-        {/* Public Routes - No authentication required */}
-        <Route path="/" element={<App />} />
+        {/* If you want to navigate to a page via filepath, I think you must include the route here */}
+        <Route path="/" element={<LoginPage />} />
         <Route path="/login-page" element={<LoginPage />} />
+        <Route path="/app" element={<App />} />
         <Route path="/registration-page" element={<RegistrationPage />} />
         <Route path="/email-verification" element={<EmailVerification />} />
 
