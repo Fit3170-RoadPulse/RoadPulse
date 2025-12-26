@@ -408,7 +408,7 @@ export default function Map() {
     function generateStartTimes(){
         const startTimes = [];
         const now = new Date();
-        const diffArray = [0, 15, 30, 45, 60]; // minutes from now
+        const diffArray = [0, 60, 120, 180, 240]; // minutes from now
 
         for (const time of diffArray){
             const futureTime = new Date(now.getTime() + time * 60000);
