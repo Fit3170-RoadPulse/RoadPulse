@@ -57,3 +57,26 @@
   font-size: 11px;
   color: #666;
 }
+
+.report-vote-buttons {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.vote-btn {
+  border: none;
+  background: #e0e0e0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.vote-btn.still {
+  background: #c8f5c8; /* light green */
+}
+
+.vote-btn.gone {
+  background: #f5c8c8; /* light red */
+}

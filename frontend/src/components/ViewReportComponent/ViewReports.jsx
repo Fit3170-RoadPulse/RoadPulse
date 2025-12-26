@@ -7,8 +7,8 @@ export default function ViewReports() {
   useEffect(() => {
     console.log("ViewReports mounted");
 
-    // MOCK DATA (replace later with API)
-    setReports([
+    // MOCK DATA (replace later with API if needed)
+    const initialReports = [
       {
         id: 1,
         type: "Heavy Traffic",
@@ -21,8 +21,30 @@ export default function ViewReports() {
         time: "25 minutes ago",
         severity: "critical",
       },
-    ]);
+    ];
+
+    setReports(initialReports);
+
+    // Set auto-expiry for each report (3 minutes)
+    initialReports.forEach((report) => {
+      setTimeout(() => {
+        setReports((prevReports) =>
+          prevReports.filter((r) => r.id !== report.id)
+        );
+      }, 180000); // 180,000 ms = 3 minutes
+    });
   }, []);
+
+  // Handle vote
+  const handleVote = (reportId, vote) => {
+    if (vote === "gone") {
+      // Remove the report immediately if user says it's gone
+      setReports((prevReports) =>
+        prevReports.filter((report) => report.id !== reportId)
+      );
+    }
+    // If 'still', do nothing—the report will stay until auto-expiry
+  };
 
   return (
     <div className="view-reports-container">
@@ -37,6 +59,24 @@ export default function ViewReports() {
               <span className="report-type">{report.type}</span>
               <span className="report-time">{report.time}</span>
             </div>
+
+            <div className="report-vote-buttons">
+  <button
+    className="vote-btn still"
+    onClick={() => handleVote(report.id, "still")}
+    title="Still there?" // tooltip text
+  >
+    ✅
+  </button>
+  <button
+    className="vote-btn gone"
+    onClick={() => handleVote(report.id, "gone")}
+    title="Not there?" // tooltip text
+  >
+    ❌
+  </button>
+</div>
+
           </div>
         ))}
       </div>
