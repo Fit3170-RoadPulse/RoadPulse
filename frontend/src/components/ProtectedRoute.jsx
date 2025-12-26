@@ -8,7 +8,7 @@ import { isAuthenticated } from "../lib/api";
 export default function ProtectedRoute({ children }) {
     if (!isAuthenticated()) {
         // Use replace: true to prevent users from going back to protected route
-        return <Navigate to="/login-page" replace />;
+        return <Navigate to="/" replace />;
     }
 
     return children;

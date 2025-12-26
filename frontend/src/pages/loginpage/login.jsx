@@ -209,7 +209,7 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
             </button>
           </div>
 
-          <div className="forgot-password-link-container">
+          {/* <div className="forgot-password-link-container">
             <button
               onClick={handleForgotPassword}
               className="forgot-password-link"
@@ -217,7 +217,7 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
             >
               Forgot password?
             </button>
-          </div>
+          </div> */}
 
           <div className="login-buttons">
             <button

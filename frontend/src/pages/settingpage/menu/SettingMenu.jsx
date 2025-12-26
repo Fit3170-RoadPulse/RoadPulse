@@ -12,8 +12,9 @@ export default function SettingMenu() {
     clearAuth(); // Clear JWT tokens (access and refresh)
     setShowLogoutConfirm(false);
     // Use replace: true to prevent back button from returning to authenticated pages
-    navigate("/login-page", { replace: true });
+    navigate("/", { replace: true });
   };
+
 
   return (
     <>
