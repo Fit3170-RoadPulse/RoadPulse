@@ -29,12 +29,14 @@ export default function Map() {
     const navigate = useNavigate();
     const [routeInfo, setRouteInfo] = useState([])
     let routeInfoRows = [];
-    const [useMockPath, setUseMockPath] = useState(true);
+    // const [useMockPath, setUseMockPath] = useState(true);
 
     const [location, setLocation] = useState(null);
     const [speedKmh, setSpeedKmh] = useState(null);
     const prevLocationRef = useRef(null);
     const mapRef = useRef(null);
+
+    const originRef = useRef(null);
     const destinationRef = useRef(null);
     const polylineRef = useRef(null);
     const lastEtaSecRef = useRef(null);
@@ -57,15 +59,15 @@ export default function Map() {
     //     timestamp: Date.now(),
     // };
 
-    const mockPath = [
-        { latitude: -37.8139, longitude: 144.9881 },
-        { latitude: -37.8137, longitude: 144.9881 },
-        { latitude: -37.8134, longitude: 144.9881 },
-        { latitude: -37.8130, longitude: 144.9881 },
-        { latitude: -37.8125, longitude: 144.9881 },
-        { latitude: -37.8122, longitude: 144.9881 },
-        { latitude: -37.8120, longitude: 144.9881 },
-    ];
+    // const mockPath = [
+    //     { latitude: -37.8139, longitude: 144.9881 },
+    //     { latitude: -37.8137, longitude: 144.9881 },
+    //     { latitude: -37.8134, longitude: 144.9881 },
+    //     { latitude: -37.8130, longitude: 144.9881 },
+    //     { latitude: -37.8125, longitude: 144.9881 },
+    //     { latitude: -37.8122, longitude: 144.9881 },
+    //     { latitude: -37.8120, longitude: 144.9881 },
+    // ];
 
   // ----------------------------
   // Effect A: load backend config + start REAL GPS watcher (runs once)
@@ -97,6 +99,7 @@ export default function Map() {
                         longitude: position.coords.longitude,
                         accuracy: position.coords.accuracy,
                         timestamp: position.timestamp,
+                        // speedMps: position.coords.speed,
                     };
                     setLocation(newLocation);
                     lastUpdateTimeRef.current = now;
@@ -110,8 +113,7 @@ export default function Map() {
                     code: err.code,
                     message: err.message,
                 });
-                setLocation(mockLocation);
-                console.log("Location updated:", mockLocation);
+                
             };
 
             // Options object for watchPosition (optional)
@@ -141,29 +143,29 @@ export default function Map() {
   // Effect B: Mock GPS path generator
   // ----------------------------    
 
-    useEffect(() => {
-        if (!useMockPath) return;
+    // useEffect(() => {
+    //     if (!useMockPath) return;
 
-        let index = 0;
+    //     let index = 0;
 
-        const interval = setInterval(() => {
-            const point = mockPath[index % mockPath.length];
+    //     const interval = setInterval(() => {
+    //         const point = mockPath[index % mockPath.length];
 
-            const mockLocation = {
-            latitude: point.latitude,
-            longitude: point.longitude,
-            accuracy: 5,
-            timestamp: Date.now(),
-            };
+    //         const mockLocation = {
+    //         latitude: point.latitude,
+    //         longitude: point.longitude,
+    //         accuracy: 5,
+    //         timestamp: Date.now(),
+    //         };
 
-            setLocation(mockLocation);
-            console.log("Mock location:", mockLocation);
+    //         setLocation(mockLocation);
+    //         console.log("Mock location:", mockLocation);
 
-            index++;
-        }, 2000);
+    //         index++;
+    //     }, 2000);
 
-        return () => clearInterval(interval);
-    }, [useMockPath]);
+    //     return () => clearInterval(interval);
+    // }, [useMockPath]);
 
   // ----------------------------
   // Effect C: Speed calculation from location updates
@@ -179,11 +181,17 @@ export default function Map() {
       return;
     }
 
+    // const speedMps =
+    //   typeof location.speedMps === "number" && Number.isFinite(location.speedMps)
+    //     ? location.speedMps
+    //     : null;
+    // const kmh = speedMps !== null ? Math.max(0, speedMps * 3.6) : 0;
+
     const t1 = typeof prev.timestamp === "number" ? prev.timestamp : Date.now();
     const t2 = typeof location.timestamp === "number" ? location.timestamp : Date.now();
     const dtMs = t2 - t1;
 
-    if (!Number.isFinite(dtMs) || dtMs <= 0) return;
+    // if (!Number.isFinite(dtMs) || dtMs <= 0) return;
 
     const distM = haversineMeters(
       prev.latitude,
@@ -197,12 +205,14 @@ export default function Map() {
     // show stable value; small jitter becomes 0
     const shown = kmh < 1 ? 0 : Math.round(kmh);
 
-    console.log("dist(m):", distM.toFixed(2), "dt(ms):", dtMs, "km/h:", kmh.toFixed(2));
+    console.log("dist(m):", distM.toFixed(2), "dt(ms):", dtMs, "km/h:", kmh.toFixed(2))
+    // console.log("speed(m/s):", speedMps ?? "N/A", "km/h:", kmh.toFixed(2));
     setSpeedKmh(shown);
   }, [location]);    
 
     console.log(mapData);
 
+    //periodically calculate route
     useEffect(() => {
         if (!hasRoute) return;
 
@@ -212,18 +222,18 @@ export default function Map() {
         const interval = setInterval(async () => {
             const loc = locationRef.current;
             // must have location and destination
-            if (!destinationRef.current || !mapRef.current || !location) return;
+            if (!destinationRef.current || !mapRef.current || !originRef.current) return;
 
 
             // throttle so it doesn’t spam if interval is short
             // const now = Date.now();
             // if (now - lastRerouteAtRef.current < REROUTE_INTERVAL_MS - 500) return;
 
-            const origin = { lat: location.latitude, lng: location.longitude };
+            const origin = originRef.current;
             const destination = destinationRef.current;
 
             console.log(
-            `[REROUTE TICK] ${new Date().toLocaleTimeString()} origin=(${origin.lat.toFixed(5)},${origin.lng.toFixed(5)})`
+            `[REROUTE TICK] ${new Date().toLocaleTimeString()} origin=(${origin.lat.toFixed(5)},${origin.lng.toFixed(5)}) dest=(${destination.lat.toFixed(5)},${destination.lng.toFixed(5)})`
             );
 
             setRerouteCount((c) => c + 1);
@@ -298,6 +308,7 @@ export default function Map() {
                 });
 
                 // reset route state
+                originRef.current = clicked;
                 destinationRef.current = null;
                 lastEtaSecRef.current = null;
                 setRouteInfo([]);
@@ -315,13 +326,13 @@ export default function Map() {
                     title:"B",
                 });
                 setHasRoute(true);
-                destinationRef.current = destinationMarker.position; // save destination
+                destinationRef.current = clicked; // save destination
 
                 const startTimes = generateStartTimes(); 
 
                 const etaSec = await fetchRoute(
-                    originMarker.position,
-                    destinationMarker.position,
+                    originRef.current,
+                    destinationRef.current,
                     startTimes,
                     map
                 );
@@ -338,6 +349,7 @@ export default function Map() {
                 title:"A",
             });
 
+            originRef.current = clicked;
             destinationMarker = null;
             destinationRef.current = null;
             lastEtaSecRef.current = null;
@@ -465,12 +477,12 @@ export default function Map() {
                     <SpeedTracker speedKmh={speedKmh} />
                 </div>
 
-                <button
+                {/* <button
                 onClick={() => setUseMockPath((v) => !v)}
                 className="absolute top-4 right-80 z-20 px-3 py-1 bg-white border rounded-lg text-sm shadow"
                 >
                 {useMockPath ? "Using Mock GPS" : "Using Real GPS"}
-                </button>
+                </button> */}
             </div>
 
             {/* Overlay UI */}
