@@ -6,12 +6,15 @@ import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import "./Map.css"
 import RewardsPage from "../rewardspage/RewardsPage";
+import { fetchRewardAccount, clearAuth, isAuthenticated } from "../../lib/api";
 
 export default function Map() {
     let [mapData, setMapData] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
-    const [points] = useState(1000); // Replace with actual user points
+    const [points, setPoints] = useState(0);
+    const [username, setUsername] = useState("");
     const navigate = useNavigate();
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const [location, setLocation] = useState(null);
     const [cumulativeDistance, setCumulativeDistance] = useState(0);
@@ -31,6 +34,27 @@ export default function Map() {
         axios.get(`${base}/api/map/`).then((r) => {
             setMapData(r.data)
         });
+
+        // Fetch user data if authenticated
+        async function loadUserData() {
+            if (!isAuthenticated()) {
+                return; // Don't redirect, just don't load user data
+            }
+
+            try {
+                const data = await fetchRewardAccount();
+                setPoints(data.reward_points);
+                setUsername(data.username);
+            } catch (err) {
+                console.error("Failed to fetch user data:", err);
+                // If authentication failed, clear tokens
+                if (err.message.includes("Authentication failed")) {
+                    clearAuth();
+                }
+            }
+        }
+
+        loadUserData();
 
         axios.get(`${base}/api/map/location/`).then((r) => {
             locationPollingData.current = r.data;
@@ -111,6 +135,12 @@ export default function Map() {
         navigate("/setting-menu-page"); // Navigate to settings page
     };
 
+    const handleLogout = () => {
+        clearAuth(); // Clear JWT tokens (access and refresh)
+        setShowLogoutConfirm(false);
+        // Use replace: true to prevent back button from returning to authenticated pages
+        navigate("/login-page", { replace: true });
+    };
 
     async function setMarker(map){
         let originMarker = null;

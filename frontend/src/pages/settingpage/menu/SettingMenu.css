@@ -1,46 +1,189 @@
 .settings-page {
-  min-height: 100vh;
-  position: left;
   display: flex;
-  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f5f5;
 }
 
 .settings-left-nav {
   width: 250px;
-  position: absolute;
-  height: 100vh;
-  top:0;
-  left: 0;
   background: white;
+  border-right: 1px solid #e5e7eb;
+  padding: 24px 0;
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
 }
 
-.settings-block {
-  display: block;
-  padding: 10px 15px;
-  margin: 20px;
-  color: black;
-  background: none;
-  cursor: pointer;
+.settings-title {
+  padding: 0 20px;
+  margin-bottom: 24px;
+  font-size: 24px;
+  color: #333;
 }
 
 .settings-menu {
   list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+}
+
+.settings-block {
+  display: block;
+  padding: 12px 20px;
+  margin: 4px 12px;
+  color: #666;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  width: calc(100% - 24px);
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
 }
 
 .settings-block:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: black;
-  border-radius: 8px;
+  background: #f3f4f6;
+  color: #333;
 }
 
 .settings-logout {
   margin-top: auto;
+  color: #dc2626;
+  border-top: 2px solid #f3f4f6;
+  margin-top: 8px;
+  padding-top: 12px;
 }
 
-.settings-close-btn {
+.settings-logout:hover {
+  background: #f3f4f6;
+}
+
+/* Right Content Area */
+.settings-content {
+  flex: 1;
+  margin-left: 250px;
+  padding: 40px;
+  position: relative;
+  min-height: 100vh;
+}
+
+.settings-welcome {
+  max-width: 800px;
+}
+
+.settings-welcome h1 {
+  font-size: 32px;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.settings-welcome p {
+  color: #666;
+  font-size: 16px;
+}
+
+.logout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+}
+
+.logout-box {
+  background: white;
+  padding: 32px 24px;
+  border-radius: 12px;
+  width: 320px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.logout-box h3 {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.logout-box p {
+  font-size: 15px;
+  color: #6b7280;
+  margin-bottom: 24px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.logout-box button {
+  margin: 0 6px;
+  padding: 11px 28px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-box button:first-of-type {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.logout-box button:first-of-type:hover {
+  background: #e5e7eb;
+}
+
+.logout-box button:last-of-type {
+  background: #dc2626;
+  color: white;
+}
+
+.logout-box button:last-of-type:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.logout-btn {
+  margin-top: auto;
+  padding: 12px 20px;
+  width: calc(100% - 24px);
+  border: none;
+  border-radius: 8px;
+  background: white;
+  color: red;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: #f3f4f6;
+  border: none;
+  outline: none;
+}
+
+.logout-btn:focus {
+  border: none;
+  outline: none;
+}
+
+.close-btn {
   position: fixed;
   top: 16px;
   right: 20px;
@@ -49,4 +192,16 @@
   font-size: 24px;
   cursor: pointer;
   z-index: 1000;
+  color: #333;
+  padding: 8px;
+}
+
+.close-btn:hover {
+  color: #000;
+}
+
+.close-btn:focus {
+  color: #000;
+  border: none;
+  outline: none;
 }

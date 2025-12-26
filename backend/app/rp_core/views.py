@@ -15,7 +15,24 @@ from config import settings
 from .serializers import RegisterSerializer
 from .models import AppUser, ExchangeItem, RewardRedemption
 from rp_core.services.points import deduct_points
+from django.contrib.auth import get_user_model
+from rest_framework import serializers
+from rest_framework import views, status
+from rest_framework.response import Response
+from .serializers import RegisterSerializer
+from rest_framework import status, views
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .serializers import ChangePasswordSerializer
+from rest_framework import views, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 
+
+
+User = get_user_model()
 
 def health(_req):
     return JsonResponse({
@@ -73,17 +90,23 @@ class RegisterView(views.APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"success":True, "message": "User registered"}, status=status.HTTP_201_CREATED)
+            return Response({"success": True, "message": "User registered"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 class LoginView(views.APIView):
-    def post(self,request):
-        username = request.data.get("username")
+    def post(self, request):
+        email = request.data.get("email")
         password = request.data.get("password")
 
-        user = authenticate(username=username, password=password)
+        if not email or not password:
+            return Response({"detail": "Email and password are required."}, status=400)
+        
+        # Use email for authentication (custom backend handles this)
+        user = authenticate(request, email=email, password=password)
+
         if user is None:
-            return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"detail": "Invalid email or password. Please try again."}, status=401)
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -92,6 +115,88 @@ class LoginView(views.APIView):
             "username": user.username,
             "email": user.email
         })
+
+class ForgotPasswordView(views.APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        
+        if not email:
+            return Response(
+                {"detail": "Email is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "No account found with this email"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            send_reset_email(user)
+        except Exception as e:
+            # Log error in backend
+            print(f"Failed to send reset email: {e}")
+            return Response(
+                {"detail": "Failed to send reset email. Please try again later."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        return Response(
+            {"detail": "Reset code sent to your email"}, 
+            status=status.HTTP_200_OK
+        )
+
+def send_reset_email(user):
+    """
+    Mock email sending function.
+    Just prints to console instead of actually sending an email.
+    """
+    print(f"[MOCK] Sending password reset email to: {user.email}")
+    # You could also simulate a reset code:
+    reset_code = "123456"
+    print(f"[MOCK] Reset code for {user.email}: {reset_code}")
+    return True
+
+class ChangePasswordView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        current_password = request.data.get("current")
+        new_password = request.data.get("newPass")
+        repeat_password = request.data.get("repeat")
+
+        # 1. Check all fields are provided
+        if not current_password or not new_password or not repeat_password:
+            return Response({"detail": "Please fill in all fields."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Check current password
+        if not user.check_password(current_password):
+            return Response({"detail": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 3. Check new passwords match
+        if new_password != repeat_password:
+            return Response({"detail": "The two new password entries do not match."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 4. Prevent using the same password
+        if current_password == new_password:
+            return Response({"detail": "New password cannot be the same as the current password."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 5. Validate new password (Django password validators)
+        try:
+            validate_password(new_password, user=user)
+        except ValidationError as e:
+            return Response({"detail": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 6. Save the new password
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"detail": "Password updated successfully."}, status=status.HTTP_200_OK)
+
 def list_exchange_items(_req):
     items = ExchangeItem.objects.filter(is_active=True).order_by("name")
     data = [{
@@ -207,27 +312,6 @@ def redeem_reward(request):
         "created_at": redemption.created_at.isoformat(),
     })
 
-class RegisterView(views.APIView):
-    def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"success":True, "message": "User registered"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
-class LoginView(views.APIView):
-    def post(self,request):
-        username = request.data.get("username")
-        password = request.data.get("password")
 
-        user = authenticate(username=username, password=password)
-        if user is None:
-            return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
-
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            "username": user.username,
-            "email": user.email
-        })

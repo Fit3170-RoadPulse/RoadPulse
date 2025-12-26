@@ -7,11 +7,17 @@ from django.db.models import Q, F
 
 # Custom user model
 class AppUser(AbstractUser):
+    # Override username to allow duplicates
+    username = models.CharField(max_length=150, unique=False)
     email = models.EmailField(unique=True)
     reward_points = models.PositiveIntegerField(
         default=0,
         help_text="Points available for redeeming rewards.",
     )
+    
+    # Use email as USERNAME_FIELD since Django requires it to be unique
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
 
     def __str__(self):
         return self.username
