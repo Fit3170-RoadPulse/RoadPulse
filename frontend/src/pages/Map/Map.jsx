@@ -6,7 +6,7 @@ import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import "./Map.css"
 import RewardsPage from "../rewardspage/RewardsPage";
-import { fetchRewardAccount, clearAuth, isAuthenticated } from "../../lib/api";
+import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../lib/api";
 
 export default function Map() {
     let [mapData, setMapData] = useState(null);
@@ -84,7 +84,20 @@ export default function Map() {
                             new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
                         );
                     }
-                    setCumulativeDistance(cumulativeDistance + distance);
+                    // Use functional update to avoid stale state
+                    setCumulativeDistance((prev) => prev + distance);
+
+                    // Persist the delta to the backend (if authenticated)
+                    if (isAuthenticated() && distance > 0) {
+                        // fire-and-forget; log errors but don't block location handling
+                        (async () => {
+                            try {
+                                await apiPost("/user/distance/", { distance_m: distance });
+                            } catch (err) {
+                                console.error("Failed to persist cumulative distance:", err);
+                            }
+                        })();
+                    }
                     setLocation(newLocation);
                     lastUpdateTimeRef.current = now;
                     console.log("Distance moved (m):", distance);

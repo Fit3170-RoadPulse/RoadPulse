@@ -14,6 +14,12 @@ class AppUser(AbstractUser):
         default=0,
         help_text="Points available for redeeming rewards.",
     )
+    # Total cumulative distance the user has travelled using the app (in kilometres).
+    # Stored as a float to allow fractional kilometres. Default is 0.0 for new users.
+    cumulative_distance = models.FloatField(
+        default=0.0,
+        help_text="Total distance travelled by the user (kilometres)",
+    )
     
     # Use email as USERNAME_FIELD since Django requires it to be unique
     USERNAME_FIELD = 'email'

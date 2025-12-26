@@ -9,4 +9,5 @@ urlpatterns = [
     path("rewards/account/", views.reward_account, name="reward-account"),
     path("rewards/items/", views.list_exchange_items, name="exchange-items"),
     path("rewards/redeem/", views.redeem_reward, name="redeem-reward"),
+    path("user/distance/", views.update_cumulative_distance, name="update-distance"),
 ]

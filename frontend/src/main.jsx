@@ -13,7 +13,6 @@ import RegistrationPage from './pages/registrationpage/RegistrationPage.jsx';
 import EmailVerification from './pages/emailverificationpage/EmailVerification.jsx';
 import LoginPage from "./pages/loginpage/login.jsx";
 import RewardsPage from './pages/rewardspage/RewardsPage';
-import Demo from './components/point-widget-component';
 import ProtectedRoute from './components/ProtectedRoute';
 
 
@@ -58,10 +57,7 @@ createRoot(document.getElementById('root')).render(
             <Emergency />
           </ProtectedRoute>
         } />
-
-        {/* Below route for testing. Remove once not needed */}
-        <Route path="/demo" element={<Demo />} />
-
+        
         {/* 404 Not Found - Must be last */}
         <Route path="*" element={<NotFound />} />
       </Routes>
