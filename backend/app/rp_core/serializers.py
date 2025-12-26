@@ -5,6 +5,8 @@ from rest_framework.validators import UniqueValidator
 User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
+    # Allow duplicate usernames - no unique validator
+    username = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True, min_length=8)
     email = serializers.EmailField(
         validators=[UniqueValidator(queryset=User.objects.all(),
