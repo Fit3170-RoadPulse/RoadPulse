@@ -167,7 +167,7 @@ export default function RegisterPage({ onRegister, navigateTo }) {
 
                     <div className="register-field">
                         <label className="register-label">Password:</label>
-                        
+
                         <input
                             className="register-input"
                             value={password}
@@ -186,14 +186,14 @@ export default function RegisterPage({ onRegister, navigateTo }) {
                     </div>
 
                     <div className="register-buttons">
-                        <button 
+                        <button
                             className="register-primaryBtn"
                             type="submit"
-                            >
+                        >
                             Register
                         </button>
                     </div>
-                </form> 
+                </form>
 
                 <div className="login-link-container">
                     <p className="login-link-text">

@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.db.models import Q, F
+from django.conf import settings
 
 
 # Custom user model
@@ -13,6 +14,10 @@ class AppUser(AbstractUser):
     reward_points = models.PositiveIntegerField(
         default=0,
         help_text="Points available for redeeming rewards.",
+    )
+    provisional_points = models.PositiveIntegerField(
+        default=0,
+        help_text="Provisional points pending hazard outcomes; not spendable.",
     )
     
     # Use email as USERNAME_FIELD since Django requires it to be unique
@@ -110,11 +115,19 @@ class RewardRedemption(models.Model):
 class IncidentReportQuerySet(models.QuerySet):
     def active(self):
         now = timezone.now()
-        return self.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now))
+        return self.filter(status=IncidentReport.Status.OPEN).filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=now)
+        )
 
 
 # Incident report model
 class IncidentReport(models.Model):
+    class Status(models.TextChoices):
+        OPEN = "OPEN", "Open"
+        CONFIRMED = "CONFIRMED", "Confirmed"
+        REJECTED = "REJECTED", "Rejected"
+        TIED = "TIED", "Tied"
+
     # Report types
     class ReportType(models.TextChoices):
         ACCIDENT = "ACCIDENT", "Accident"
@@ -135,6 +148,17 @@ class IncidentReport(models.Model):
         blank=True,
         related_name="incident_reports"
     )
+
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN, db_index=True)
+    ended_at = models.DateTimeField(blank=True, null=True, db_index=True)
+
+    yes_votes = models.PositiveIntegerField(default=0)
+    no_votes = models.PositiveIntegerField(default=0)
+    total_votes = models.PositiveIntegerField(default=0, db_index=True)
+    consecutive_no_votes = models.PositiveIntegerField(default=0)
+
+    required_votes = models.PositiveIntegerField(default=7, help_text="Total votes required to close the report.")
+    settled_at = models.DateTimeField(blank=True, null=True, db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     expires_at = models.DateTimeField(blank=True, null=True, db_index=True)
@@ -166,8 +190,9 @@ class IncidentReport(models.Model):
         # First save: let Django set created_at
         if creating and self.expires_at is None:
             super().save(*args, **kwargs)
-            # Now created_at is set; compute expiry
-            self.expires_at = self.created_at + timedelta(minutes=1)
+            # Now created_at is set; compute expiry (minutes vary by type)
+            minutes = _expire_minutes_for_report_type(self.report_type)
+            self.expires_at = self.created_at + timedelta(minutes=minutes)
             # Persist just the expiry to avoid recursion and extra writes
             super().save(update_fields=["expires_at"])
             return
@@ -180,7 +205,80 @@ class IncidentReport(models.Model):
 
     @property
     def is_active(self):
+        if self.status != self.Status.OPEN:
+            return False
         return self.expires_at is None or self.expires_at > timezone.now()
+
+
+def _expire_minutes_for_report_type(report_type: str) -> int:
+    """
+    Per-type expiry in minutes.
+    Falls back to INCIDENT_REPORT_EXPIRE_HOURS (legacy) if type-specific settings are missing/invalid.
+    """
+    default_minutes = int(getattr(settings, "INCIDENT_REPORT_EXPIRE_HOURS", 24)) * 60
+    try:
+        mapping = {
+            IncidentReport.ReportType.HAZARD: int(getattr(settings, "INCIDENT_REPORT_EXPIRE_MINUTES_HAZARD", default_minutes)),
+            IncidentReport.ReportType.ACCIDENT: int(getattr(settings, "INCIDENT_REPORT_EXPIRE_MINUTES_ACCIDENT", default_minutes)),
+            IncidentReport.ReportType.WEATHER: int(getattr(settings, "INCIDENT_REPORT_EXPIRE_MINUTES_WEATHER", default_minutes)),
+            IncidentReport.ReportType.CRIME: int(getattr(settings, "INCIDENT_REPORT_EXPIRE_MINUTES_CRIME", default_minutes)),
+            IncidentReport.ReportType.OTHER: int(getattr(settings, "INCIDENT_REPORT_EXPIRE_MINUTES_OTHER", default_minutes)),
+        }
+        minutes = mapping.get(report_type, default_minutes)
+    except Exception:
+        minutes = default_minutes
+    return max(1, int(minutes))
+
+
+class IncidentReportVote(models.Model):
+    class Choice(models.TextChoices):
+        YES = "YES", "Yes"
+        NO = "NO", "No"
+
+    report = models.ForeignKey(
+        IncidentReport,
+        on_delete=models.CASCADE,
+        related_name="votes",
+    )
+    voter = models.ForeignKey(
+        AppUser,
+        on_delete=models.CASCADE,
+        related_name="incident_report_votes",
+    )
+    choice = models.CharField(max_length=3, choices=Choice.choices)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["report", "voter"], name="uniq_incident_vote_per_user"),
+        ]
+
+
+class IncidentProvisionalMark(models.Model):
+    class Role(models.TextChoices):
+        REPORTER = "REPORTER", "Reporter"
+        VOTER = "VOTER", "Voter"
+
+    report = models.ForeignKey(
+        IncidentReport,
+        on_delete=models.CASCADE,
+        related_name="provisional_marks",
+    )
+    user = models.ForeignKey(
+        AppUser,
+        on_delete=models.CASCADE,
+        related_name="incident_provisional_marks",
+    )
+    role = models.CharField(max_length=20, choices=Role.choices)
+    amount = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    settled_at = models.DateTimeField(blank=True, null=True, db_index=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["report", "user", "role"], name="uniq_incident_provisional_mark"),
+        ]
 
 
 class PointTransaction(models.Model):

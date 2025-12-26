@@ -64,10 +64,11 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/login/", {
+      const base = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${base}/api/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password })
       });
 
       const text = await res.text(); // get raw response
@@ -81,8 +82,17 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
       }
 
       if (res.ok) {
-        localStorage.setItem("access", data.access);
-        localStorage.setItem("refresh", data.refresh);
+        const access = String(data.access || "")
+          .trim()
+          .replace(/^Bearer\s+/i, "")
+          .replace(/^\"+|\"+$/g, "");
+        const refresh = String(data.refresh || "")
+          .trim()
+          .replace(/^Bearer\s+/i, "")
+          .replace(/^\"+|\"+$/g, "");
+        localStorage.setItem("access", access);
+        localStorage.setItem("refresh", refresh);
+        window.dispatchEvent(new Event("rp:auth-changed"));
 
         if (typeof onLogin === "function") onLogin({ email, password });
 
@@ -121,7 +131,7 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
       const res = await fetch("http://localhost:8000/api/forgot-password/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email })
       });
 
       let data;
@@ -142,13 +152,10 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
       console.error(err);
       setErrorMessage("Network error. Check backend server.");
     }
-
   }
-
 
   return (
     <div className="login-page-wrapper">
-
       <div className="car-1">🚗</div>
       <div className="car-2">🚙</div>
 
@@ -173,11 +180,7 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
             handleLogin();
           }}
         >
-          {errorMessage && (
-            <div className="login-error">
-              {errorMessage}
-            </div>
-          )}
+          {errorMessage && <div className="login-error">{errorMessage}</div>}
 
           <div className="login-field">
             <label className="login-label">Email:</label>

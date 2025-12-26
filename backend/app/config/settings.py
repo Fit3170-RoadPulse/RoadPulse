@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent       # .../backend/app
 ROOT_DIR = BASE_DIR.parent.parent                       # .../RoadPulse
@@ -69,6 +70,24 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
 }
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=12),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+}
+
+# Incident report voting
+INCIDENT_REPORT_REQUIRED_VOTES = int(os.getenv("INCIDENT_REPORT_REQUIRED_VOTES", "7"))
+INCIDENT_REPORT_NO_STREAK_LIMIT = int(os.getenv("INCIDENT_REPORT_NO_STREAK_LIMIT", "3"))
+INCIDENT_REPORT_FAST_REJECT_MINUTES = int(os.getenv("INCIDENT_REPORT_FAST_REJECT_MINUTES", "5"))
+INCIDENT_REPORT_VOTE_RADIUS_METERS = int(os.getenv("INCIDENT_REPORT_VOTE_RADIUS_METERS", "150"))
+
+# Incident expiry by time (minutes)
+INCIDENT_REPORT_EXPIRE_MINUTES_HAZARD = int(os.getenv("INCIDENT_REPORT_EXPIRE_MINUTES_HAZARD", "15"))
+INCIDENT_REPORT_EXPIRE_MINUTES_ACCIDENT = int(os.getenv("INCIDENT_REPORT_EXPIRE_MINUTES_ACCIDENT", "10"))
+INCIDENT_REPORT_EXPIRE_MINUTES_WEATHER = int(os.getenv("INCIDENT_REPORT_EXPIRE_MINUTES_WEATHER", "30"))
+INCIDENT_REPORT_EXPIRE_MINUTES_CRIME = int(os.getenv("INCIDENT_REPORT_EXPIRE_MINUTES_CRIME", "10"))
+INCIDENT_REPORT_EXPIRE_MINUTES_OTHER = int(os.getenv("INCIDENT_REPORT_EXPIRE_MINUTES_OTHER", "20"))
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
