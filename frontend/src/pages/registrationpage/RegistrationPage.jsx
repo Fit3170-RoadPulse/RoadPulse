@@ -94,7 +94,7 @@ export default function RegisterPage({ onRegister, navigateTo }) {
                 setIsRegistered(true);
                 if (typeof onRegister === "function") onRegister({ username, email, password });
                 // navigate("/email-verification");
-                navigate("/login-page");
+                navigate("/");
             } else {
                 // backend returned error JSON
                 if (data.email) {
