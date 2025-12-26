@@ -227,8 +227,12 @@ def update_cumulative_distance(request):
             new_distance = float(data["cumulative_distance"])
             if new_distance < 0:
                 return Response({"detail": "Cumulative distance cannot be negative."}, status=400)
+            old_distance = user.cumulative_distance or 0.0
+            delta_km = new_distance - old_distance
+            if delta_km > 0:
+                user.reward_points = (user.reward_points or 0.0) + (delta_km * 0.1)
             user.cumulative_distance = new_distance
-            user.save(update_fields=["cumulative_distance"])
+            user.save(update_fields=["cumulative_distance", "reward_points"])
             return Response({"cumulative_distance": user.cumulative_distance})
         except (TypeError, ValueError):
             return Response({"detail": "Invalid cumulative_distance value."}, status=400)
