@@ -2,29 +2,31 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import "./SettingMenu.css";
+import { clearAuth } from "../../../lib/api";
 
 export default function SettingMenu() {
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
-    navigate("/login-page");
+    clearAuth(); // Clear JWT tokens (access and refresh)
+    setShowLogoutConfirm(false);
+    // Use replace: true to prevent back button from returning to authenticated pages
+    navigate("/login-page", { replace: true });
   };
 
   return (
     <>
       <div className="settings-page">
         <button
-        className="close-btn"
-        aria-label="Close"
-        onClick={() => navigate("/map")}
-        title="Back to settings"
-        type="button"
-      >
-        ✕
-      </button>
+          className="close-btn"
+          aria-label="Close"
+          onClick={() => navigate("/map")}
+          title="Back to settings"
+          type="button"
+        >
+          ✕
+        </button>
 
         <nav className="settings-left-nav" aria-label="Settings navigation">
           <h2 className="settings-title">Settings</h2>

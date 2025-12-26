@@ -86,7 +86,9 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
 
         if (typeof onLogin === "function") onLogin({ email, password });
 
-        navigate("/map"); // navigate on successful login
+        // Use replace: true to remove login page from history
+        // This prevents back button from returning to login after successful login
+        navigate("/map", { replace: true });
       } else {
         setErrorMessage(data.detail || "Login failed. Please try again.");
       }
@@ -109,39 +111,39 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
   //   }
   // }
   async function handleForgotPassword() {
-  setErrorMessage(""); // clear previous errors
-  if (!email) {
-    setErrorMessage("Please enter your email.");
-    return;
+    setErrorMessage(""); // clear previous errors
+    if (!email) {
+      setErrorMessage("Please enter your email.");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:8000/api/forgot-password/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
+
+      if (res.ok) {
+        setErrorMessage("✅ Reset code sent to your email.");
+      } else if (res.status === 404) {
+        setErrorMessage("❌ No account found with this email.");
+      } else {
+        setErrorMessage(data.detail || "An error occurred. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Network error. Check backend server.");
+    }
+
   }
-
-  try {
-  const res = await fetch("http://localhost:8000/api/forgot-password/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-
-  let data;
-  try {
-    data = await res.json();
-  } catch {
-    data = {};
-  }
-
-  if (res.ok) {
-    setErrorMessage("✅ Reset code sent to your email.");
-  } else if (res.status === 404) {
-    setErrorMessage("❌ No account found with this email.");
-  } else {
-    setErrorMessage(data.detail || "An error occurred. Please try again.");
-  }
-} catch (err) {
-  console.error(err);
-  setErrorMessage("Network error. Check backend server.");
-}
-
-}
 
 
   return (
