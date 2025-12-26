@@ -46,27 +46,27 @@ export default function Map() {
             const successHandler = (position) => {
                 const now = Date.now();
                 // Only update if the specified interval has passed since the last update
-                if (now - lastUpdateTimeRef.current >= locationPollingData.current?.pollingInterval) {
-                    let newLocation = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        accuracy: position.coords.accuracy,
-                        timestamp: position.timestamp,
-                    };
-                    let distance = 0;
-                    if (location) {
-                        distance = google.maps.geometry.spherical.computeDistanceBetween(
-                            new google.maps.LatLng(location.latitude, location.longitude), 
-                            new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
-                        );
-                    }
-                    setCumulativeDistance(cumulativeDistance + distance);
-                    setLocation(newLocation);
-                    lastUpdateTimeRef.current = now;
-                    console.log("Distance moved (m):", distance);
-                    console.log("Location updated:", newLocation);
+                
+                let newLocation = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy,
+                    timestamp: position.timestamp,
+                };
+                let distance = 0;
+                if (location && newLocation) {
+                    distance = google.maps.geometry.spherical.computeDistanceBetween(
+                        new google.maps.LatLng(location.latitude, location.longitude), 
+                        new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
+                    );
                 }
-            };
+                setCumulativeDistance(cumulativeDistance + distance);
+                setLocation(newLocation);
+                lastUpdateTimeRef.current = now;
+                console.log("Distance moved (m):", distance);
+                console.log("Location updated:", newLocation);
+            }
+        
 
             // Error handler: updates the error state
             const errorHandler = (err) => {
@@ -80,24 +80,21 @@ export default function Map() {
 
             // Options object for watchPosition (optional)
             const options = {
-                enableHighAccuracy: locationPollingData.current?.enableHighAccuracy,
+                enableHighAccuracy: locationPollingData.current?.enableHighAccuracy ?? true,
                 timeout: locationPollingData.current?.timeout ?? 10000,
                 maximumAge: locationPollingData.current?.maximumAge ?? 0,
             };
 
-            // Start watching the position and store the watch ID
-            const id = navigator.geolocation.watchPosition(
-                successHandler,
-                errorHandler,
-                options
-            );
+            const intervalID = setInterval( async () => {
+                navigator.geolocation.getCurrentPosition(
+                    successHandler,
+                    errorHandler,
+                    options
+                );
+            }, locationPollingData.current?.pollingInterval ?? 100);
 
             // Cleanup function: stops watching the position when the component unmounts
-            return () => {
-                if (id) {
-                    navigator.geolocation.clearWatch(id);
-                }
-            };
+            return () => clearInterval(intervalID);
         });
     }, []);
 
