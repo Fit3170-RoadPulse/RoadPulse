@@ -198,7 +198,7 @@ export default function RegisterPage({ onRegister, navigateTo }) {
                 <div className="login-link-container">
                     <p className="login-link-text">
                         Already have an account?
-                        <Link to="/login-page" className="login-link">
+                        <Link to="/" className="login-link">
                             Login
                         </Link>
                     </p>
