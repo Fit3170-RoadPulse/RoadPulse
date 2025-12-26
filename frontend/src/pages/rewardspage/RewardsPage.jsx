@@ -8,13 +8,16 @@ function RewardsPage() {
     const navigate = useNavigate();
     const [points, setPoints] = useState(0);
     const [username, setUsername] = useState("");
-    const [updatedDate] = useState("3 September 2025"); // Replace with actual data
-    const [expireDate] = useState("31 Oct 2025"); // Replace with actual data
+    const [updatedDate] = useState(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
+    const [expireDate] = useState(() => {
+        const now = new Date();
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return lastDay.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    });
     const [activeTab, setActiveTab] = useState("redeem");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [distanceKm, setDistanceKm] = useState(null);
-    const [distanceLoading, setDistanceLoading] = useState(false);
     const [showBarcodeModal, setShowBarcodeModal] = useState(false);
 
     // Fetch user reward account data on component mount
@@ -25,6 +28,7 @@ function RewardsPage() {
                 const data = await fetchRewardAccount();
                 setPoints(data.reward_points);
                 setUsername(data.username);
+                setDistanceKm(data.cumulative_distance);
                 setError(null);
             } catch (err) {
                 console.error("Failed to fetch reward account:", err);
@@ -39,21 +43,6 @@ function RewardsPage() {
         }
 
         loadUserData();
-        // load a mock total distance for display under the points card
-        async function loadDistance() {
-            try {
-                setDistanceLoading(true);
-                // simulate delay / placeholder value
-                await new Promise((r) => setTimeout(r, 400));
-                setDistanceKm(123.4);
-            } catch (e) {
-                console.error("Failed to load distance:", e);
-            } finally {
-                setDistanceLoading(false);
-            }
-        }
-
-        loadDistance();
     }, [navigate]);
 
     // Close barcode modal on Escape
@@ -139,7 +128,7 @@ function RewardsPage() {
             {/* Total distance travelled (below points card) */}
             {/* Total distance travelled (boxed panel below points card) */}
             <div className="mt-1 mb-4 w-full max-w-sm mx-auto rounded-lg border p-3 bg-white text-center">
-                {distanceLoading ? (
+                {loading ? (
                     <p className="text-sm text-gray-500">Loading distance…</p>
                 ) : distanceKm != null ? (
                     <p className="text-sm" style={{ margin: 0 }}>
