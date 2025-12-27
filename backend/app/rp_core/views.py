@@ -82,7 +82,7 @@ def compute_route(request):
             google_response.raise_for_status()
         except requests.RequestException as e:
             return Response({
-                "detail":"Failed to contact Google Route API"},status=status.HTTP_502_BAD_GATEWAY
+                "detail":"Failed to contact Google Route API", "error": str(e)},status=status.HTTP_502_BAD_GATEWAY
             )
         
         data = google_response.json()
