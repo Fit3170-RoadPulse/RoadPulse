@@ -376,7 +376,8 @@ export default function Map() {
             const distanceKm = formatDistance(option.distance_meters);
             const eta = formatDuration(option.duration);
             const starting_time = formatDate(option.starting_time);
-            routeInfoArray.push({distanceKm,eta,starting_time});
+            const arrival_time = formatDate(convertDateToMiliseconds(option.starting_time) + option.duration * 1000);
+            routeInfoArray.push({distanceKm,eta,starting_time, arrival_time});
         }
         console.log("Route Info Array inside fetchRoute:", routeInfoArray);
         setRouteInfo(routeInfoArray);
@@ -416,6 +417,10 @@ export default function Map() {
         }
         return startTimes;
     }
+    function convertDateToMiliseconds(dateString) {
+        const date = new Date(dateString);
+        return date.getTime();
+    }
 
     function formatDate(dateString) {
         const date = new Date(dateString);
@@ -437,8 +442,8 @@ export default function Map() {
                 pointerEvents: 'auto',
                 }}
             >
-            <p style={{ margin: 0, fontWeight: 500 }}>Time: {routeInfo[i].starting_time}</p>
-            <p style={{ margin: 0, fontWeight: 500 }}>Distance: {routeInfo[i].distanceKm} km</p>
+            <p style={{ margin: 0, fontWeight: 500 }}>Departure: {routeInfo[i].starting_time}</p>
+            <p style={{ margin: 0, fontWeight: 500 }}>Arrival: {routeInfo[i].arrival_time}</p>
             <p style={{ margin: 0, fontWeight: 500 }}>ETA: {routeInfo[i].eta}</p>
         </div>);
         }
@@ -497,14 +502,18 @@ export default function Map() {
             {routeInfo && (<div
                 style={{
                 position: 'absolute',
-                top: '120px',
+                top: '200px',
                 left: '120px',
                 display: 'flex',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
                 justifyContent: 'space-between',
+                flexDirection: 'column',
                 gap: '12px',
                 zIndex: 1000,
                 pointerEvents: 'auto'
                 }}>
+                {routeInfo[0]?.distanceKm && (<p style={{ margin: 0, fontWeight: 500, padding: '15px 50px' }}>Distance: {routeInfo[0]?.distanceKm} km</p>)}
                 {routeInfoRows}
             </div>)}
 
@@ -679,7 +688,7 @@ export default function Map() {
                 />
             )}
 
-            <div className="absolute top-24 left-4 z-30 bg-white/90 border rounded-xl p-2 text-xs shadow">
+            <div className="absolute top-24 left-30 z-30 bg-white/90 border rounded-xl p-2 text-xs shadow">
                 Route recompute ticks: {rerouteCount}
             </div>
 
