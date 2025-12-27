@@ -17,7 +17,26 @@ from .models import AppUser, ExchangeItem, RewardRedemption
 from rp_core.services.points import deduct_points
 import json
 import requests
+from datetime import datetime, timezone, timedelta
 
+def ensure_future_rfc3339(dt_str):
+    """
+    Ensures timestamp is UTC, RFC3339, and in the future.
+    """
+    dt = datetime.fromisoformat(dt_str.replace("Z", ""))
+    
+    # Convert to UTC
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
+
+    # Add buffer if time is not in the future
+    now = datetime.now(timezone.utc)
+    if dt <= now:
+        dt = now + timedelta(minutes=5)
+
+    return dt.isoformat()
 def health(_req):
     return JsonResponse({
         "status": "ok",
@@ -47,9 +66,19 @@ def compute_route(request):
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': settings.GOOGLE_MAPS_API_KEY,
-        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
+        'X-Goog-FieldMask': (
+            'routes.distanceMeters,'
+            'routes.duration,'
+            'routes.polyline.encodedPolyline'
+        )
     }
-    
+
+    if not startTimes or not isinstance(startTimes, list):
+        return Response(
+            {"detail": "startTimes must be a non-empty list"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+        
     for time in startTimes:
         request_body = {
             "origin":{
@@ -70,7 +99,7 @@ def compute_route(request):
             },
             "travelMode":"DRIVE",
             "routingPreference":"TRAFFIC_AWARE",
-            "departureTime": time,
+            "departureTime": ensure_future_rfc3339(time),
             "languageCode": "en-US",
         }
         try:
@@ -82,7 +111,7 @@ def compute_route(request):
             google_response.raise_for_status()
         except requests.RequestException as e:
             return Response({
-                "detail":"Failed to contact Google Route API", "error": str(e)},status=status.HTTP_502_BAD_GATEWAY
+                "detail":"Failed to contact Google Route API", "error": str(e),"google_response": google_response.text},status=status.HTTP_502_BAD_GATEWAY
             )
         
         data = google_response.json()

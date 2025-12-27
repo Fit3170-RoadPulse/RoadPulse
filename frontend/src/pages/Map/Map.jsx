@@ -410,10 +410,12 @@ export default function Map() {
         const startTimes = [];
         const now = new Date();
         const diffArray = [0, 60, 120, 180, 240]; // minutes from now
+        const offsetFromNow = 60000;
 
         for (const time of diffArray){
-            const futureTime = new Date(now.getTime() + time * 60000);
+            const futureTime = new Date(now.getTime() + time * 60000 + offsetFromNow);
             startTimes.push(futureTime.toISOString());
+            console.log("Generated start time:", futureTime.toISOString());
         }
         return startTimes;
     }
