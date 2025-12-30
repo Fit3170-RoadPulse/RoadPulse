@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { User, Award, Settings, LogOut, X } from "lucide-react";
+import { User, Award, Settings, LogOut, X, AlertTriangle } from "lucide-react";
 import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import "./Map.css"
@@ -20,6 +20,7 @@ export default function Map() {
     const [showTimeSelector, setShowTimeSelector] = useState(false);
     const [isLoadingRoute, setIsLoadingRoute] = useState(false);
     const [mapRef, setMapRef] = useState(null);
+    const [showErrorPopup, setShowErrorPopup] = useState(false);
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -204,6 +205,9 @@ export default function Map() {
         } catch (error) {
             console.error("Error fetching route:", error);
             setRouteInfo(null);
+            if (error.response && error.response.status === 502) {
+                setShowErrorPopup(true);
+            }
         } finally {
             setIsLoadingRoute(false);
         }
@@ -556,6 +560,105 @@ export default function Map() {
                     </div>
                 )}
             </div>
+
+            {/* Error Popup */}
+            {showErrorPopup && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 2000,
+                    backdropFilter: 'blur(4px)'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '16px',
+                        padding: '24px',
+                        width: '90%',
+                        maxWidth: '400px',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                        textAlign: 'center',
+                        position: 'relative',
+                        animation: 'fadeIn 0.2s ease-out'
+                    }}>
+                        <button
+                            onClick={() => setShowErrorPopup(false)}
+                            style={{
+                                position: 'absolute',
+                                top: '16px',
+                                right: '16px',
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <X size={20} color="#9ca3af" />
+                        </button>
+
+                        <div style={{
+                            width: '48px',
+                            height: '48px',
+                            backgroundColor: '#fef2f2',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 16px auto'
+                        }}>
+                            <AlertTriangle size={24} color="#dc2626" />
+                        </div>
+
+                        <h3 style={{
+                            fontSize: '18px',
+                            fontWeight: '600',
+                            color: '#111827',
+                            marginBottom: '8px',
+                            marginTop: 0
+                        }}>
+                            Server Error
+                        </h3>
+
+                        <p style={{
+                            fontSize: '14px',
+                            color: '#6b7280',
+                            marginBottom: '24px',
+                            lineHeight: '1.5'
+                        }}>
+                            We encountered a 502 Bad Gateway error. The server is currently unavailable. Please try again later.
+                        </p>
+
+                        <button
+                            onClick={() => setShowErrorPopup(false)}
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                backgroundColor: '#dc2626',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontWeight: '500',
+                                fontSize: '14px',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Click outside to close dropdown */}
             {
