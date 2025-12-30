@@ -84,6 +84,24 @@ export default function App() {
       >
         Go to Map
       </button>
+      
+      {/* Below button for testing. Remove once not needed */}
+      <button
+        onClick={() => (window.location.href = "/demo")}
+        style={{
+          marginBottom: 20,
+          padding: "8px 14px",
+          borderRadius: 8,
+          background: "#0b74de",
+          color: "white",
+          border: "none",
+          cursor: "pointer",
+        }}
+        aria-label="Go to Demo"
+      >
+        Go to Point Widget Demo
+      </button>
+
     </div>
   );
 }
