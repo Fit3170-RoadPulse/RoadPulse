@@ -11,13 +11,19 @@ class AppUser(AbstractUser):
     # Override username to allow duplicates
     username = models.CharField(max_length=150, unique=False)
     email = models.EmailField(unique=True)
-    reward_points = models.PositiveIntegerField(
-        default=0,
+    reward_points = models.FloatField(
+        default=0.0,
         help_text="Points available for redeeming rewards.",
     )
     provisional_points = models.PositiveIntegerField(
         default=0,
         help_text="Provisional points pending hazard outcomes; not spendable.",
+    )
+    # Total cumulative distance the user has travelled using the app (in kilometres).
+    # Stored as a float to allow fractional kilometres. Default is 0.0 for new users.
+    cumulative_distance = models.FloatField(
+        default=0.0,
+        help_text="Total distance travelled by the user (kilometres)",
     )
     
     # Use email as USERNAME_FIELD since Django requires it to be unique

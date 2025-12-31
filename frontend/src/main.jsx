@@ -13,7 +13,6 @@ import RegistrationPage from './pages/registrationpage/RegistrationPage.jsx';
 import EmailVerification from './pages/emailverificationpage/EmailVerification.jsx';
 import LoginPage from "./pages/loginpage/login.jsx";
 import RewardsPage from './pages/rewardspage/RewardsPage';
-import Demo from './components/point-widget-component';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
@@ -25,6 +24,7 @@ createRoot(document.getElementById('root')).render(
         <Routes>
           {/* If you want to navigate to a page via filepath, I think you must include the route here */}
           <Route path="/" element={<LoginPage />} />
+          <Route path="/app" element={<App />} />
           <Route path="/registration-page" element={<RegistrationPage />} />
           <Route path="/email-verification" element={<EmailVerification />} />
           

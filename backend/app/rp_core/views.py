@@ -36,7 +36,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from rest_framework.parsers import JSONParser
 import json
+import requests
 
 
 User = get_user_model()
@@ -141,6 +143,7 @@ def reward_account(request):
         "id": user.id,
         "username": user.get_username(),
         "reward_points": user.reward_points,
+        "cumulative_distance": user.cumulative_distance,
         "provisional_points": getattr(user, "provisional_points", 0),
     })
 
@@ -278,9 +281,14 @@ def incident_report_vote(request, report_id: int):
 
     return Response(IncidentReportSerializer(report).data, status=status.HTTP_200_OK)
 
-
-
-
+@api_view(["GET"])
+def locationData(_req):
+    return JsonResponse({"status": "ok", 
+                         "pollingInterval": settings.pollingInterval,
+                         "enableHighAccuracy": settings.enableHighAccuracy,
+                         "timeout": settings.timeout,
+                         "maximumAge": settings.maximumAge,
+                         })
 
 class RegisterView(views.APIView):
     def post(self, request):
@@ -406,6 +414,59 @@ def list_exchange_items(_req):
         "stock": item.stock,
     } for item in items]
     return Response(data)
+
+
+# Update the authenticated user's cumulative distance.
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_cumulative_distance(request):
+    """Accepts a JSON body with either `distance_m` (meters) or `distance_km` (kilometres) to add,
+    or `cumulative_distance` to set the total directly.
+    """
+    user = request.user
+
+    data = request.data or {}
+    
+    # Check if setting directly
+    if "cumulative_distance" in data:
+        try:
+            new_distance = float(data["cumulative_distance"])
+            if new_distance < 0:
+                return Response({"detail": "Cumulative distance cannot be negative."}, status=400)
+            old_distance = user.cumulative_distance or 0.0
+            delta_km = new_distance - old_distance
+            if delta_km > 0:
+                user.reward_points = (user.reward_points or 0.0) + (delta_km * 0.1)
+            user.cumulative_distance = new_distance
+            user.save(update_fields=["cumulative_distance", "reward_points"])
+            return Response({"cumulative_distance": user.cumulative_distance})
+        except (TypeError, ValueError):
+            return Response({"detail": "Invalid cumulative_distance value."}, status=400)
+    
+    # Otherwise, add to existing
+    distance_m = data.get("distance_m")
+    distance_km = data.get("distance_km")
+
+    try:
+        if distance_m is not None:
+            distance_m = float(distance_m)
+            delta_km = distance_m / 1000.0
+        elif distance_km is not None:
+            delta_km = float(distance_km)
+        else:
+            return Response({"detail": "Provide distance_m (meters), distance_km (kilometres), or cumulative_distance."}, status=400)
+    except (TypeError, ValueError):
+        return Response({"detail": "Invalid distance value."}, status=400)
+
+    if delta_km <= 0:
+        return Response({"detail": "Distance must be positive."}, status=400)
+
+    # Increment user's cumulative distance and persist
+    user.cumulative_distance = (user.cumulative_distance or 0.0) + delta_km
+    user.reward_points = (user.reward_points or 0.0) + (delta_km * 0.1)
+    user.save(update_fields=["cumulative_distance", "reward_points"])
+
+    return Response({"cumulative_distance": user.cumulative_distance})
 
 
 # Redeem reward points for an exchange item

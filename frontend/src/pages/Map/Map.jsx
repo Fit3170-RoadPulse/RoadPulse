@@ -6,7 +6,7 @@ import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import "./Map.css"
 import RewardsPage from "../rewardspage/RewardsPage";
-import { fetchRewardAccount, clearAuth, isAuthenticated } from "../../lib/api";
+import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../lib/api";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 
 export default function Map() {
@@ -25,6 +25,19 @@ export default function Map() {
     const [mapRef, setMapRef] = useState(null);
     const [showErrorPopup, setShowErrorPopup] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+    // const [location, setLocation] = useState(null); // We will use the UserLocation Ref
+    const [cumulativeDistance, setCumulativeDistance] = useState(0);
+    let locationPollingData = useRef(null);
+    let lastUpdateTimeRef = useRef(0);
+
+    // Fallback mock location (used if real geolocation fails)
+    const mockLocation = {
+        latitude: -37.813904798147796, 
+        longitude: 144.98810008133233,
+        accuracy: 50,
+        timestamp: Date.now(),
+    };
     const [selectedReport, setSelectedReport] = useState(null);
     const [reports, setReports] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
@@ -60,6 +73,87 @@ export default function Map() {
         }
 
         loadUserData();
+
+        axios.get(`${base}/api/map/location/`).then((r) => {
+            locationPollingData.current = r.data;
+            console.log("Location Polling Data Ref:", locationPollingData);
+
+            if (!navigator.geolocation) {
+                setLocation(mockLocation);
+                console.log('Geolocation is not supported by your browser');
+                return;
+            }
+
+            // Success handler: updates the state with the new position
+            const successHandler = (position) => {
+                const now = Date.now();
+                // Only update if the specified interval has passed since the last update
+                if (now - lastUpdateTimeRef.current >= locationPollingData.current?.pollingInterval) {
+                    let newLocation = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        timestamp: position.timestamp,
+                    };
+                    let distance = 0;
+                    if (location) {
+                        distance = google.maps.geometry.spherical.computeDistanceBetween(
+                            new google.maps.LatLng(location.latitude, location.longitude), 
+                            new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
+                        );
+                    }
+                    // Use functional update to avoid stale state
+                    setCumulativeDistance((prev) => prev + distance);
+
+                    // Persist the delta to the backend (if authenticated)
+                    if (isAuthenticated() && distance > 0) {
+                        // fire-and-forget; log errors but don't block location handling
+                        (async () => {
+                            try {
+                                await apiPost("/user/distance/", { distance_m: distance });
+                            } catch (err) {
+                                console.error("Failed to persist cumulative distance:", err);
+                            }
+                        })();
+                    }
+                    setLocation(newLocation);
+                    lastUpdateTimeRef.current = now;
+                    console.log("Distance moved (m):", distance);
+                    console.log("Location updated:", newLocation);
+                }
+            };
+
+            // Error handler: updates the error state
+            const errorHandler = (err) => {
+                console.error("Geolocation error:", {
+                    code: err.code,
+                    message: err.message,
+                });
+                setLocation(mockLocation);
+                console.log("Location updated:", mockLocation);
+            };
+
+            // Options object for watchPosition (optional)
+            const options = {
+                enableHighAccuracy: locationPollingData.current?.enableHighAccuracy,
+                timeout: locationPollingData.current?.timeout ?? 10000,
+                maximumAge: locationPollingData.current?.maximumAge ?? 0,
+            };
+
+            // Start watching the position and store the watch ID
+            const id = navigator.geolocation.watchPosition(
+                successHandler,
+                errorHandler,
+                options
+            );
+
+            // Cleanup function: stops watching the position when the component unmounts
+            return () => {
+                if (id) {
+                    navigator.geolocation.clearWatch(id);
+                }
+            };
+        });
     }, []);
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -310,7 +404,7 @@ export default function Map() {
             }
         });
     }, [createIncidentPinContent, reportTypeLabel]);
-
+    
     const handleTimeChange = async (index) => {
         if (!mapMarkers.origin || !mapMarkers.destination || !availableTimes[index] || !mapRef) return;
 
@@ -564,10 +658,10 @@ export default function Map() {
                     </div>
             </div>
 
-            {/* Overlay UI */}
-            <div className="overlay-ui"
+                {/* Overlay UI */}
+                <div className="overlay-ui" 
                 style={{
-                    pointerEvents: "none"
+                pointerEvents: "none"
                 }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
                 <MapPage onSearch={() => console.log("Search triggered!")} />
             </div>

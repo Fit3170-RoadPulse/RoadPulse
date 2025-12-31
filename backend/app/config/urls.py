@@ -1,11 +1,14 @@
 from django.contrib import admin
+# from django.urls import path
+# from rp_core.views import health, samples, map, locationData, RegisterView, LoginView, ForgotPasswordView
 from django.urls import path, include
-from rp_core.views import health, samples, map, map_config, compute_route, RegisterView, LoginView, ForgotPasswordView, ChangePasswordView
+from rp_core.views import health, samples, map, map_config, locationData, compute_route, RegisterView, LoginView, ForgotPasswordView, ChangePasswordView
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/map/", map),
+    path("api/map/location/", locationData),
     path("api/health/", health),
     path("api/samples/", samples),
     path("api/register/", RegisterView.as_view(), name="register"),
