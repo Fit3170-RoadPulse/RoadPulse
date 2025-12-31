@@ -3,7 +3,7 @@ from django.db.models import F
 from rp_core.models import AppUser, PointTransaction
 
 
-def get_balance(user: AppUser) -> int:
+def get_balance(user: AppUser) -> float:
     return user.reward_points
 
 @transaction.atomic

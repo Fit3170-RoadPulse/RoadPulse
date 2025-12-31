@@ -39,7 +39,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.parsers import JSONParser
 import json
 import requests
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_DOWN
 
 
 User = get_user_model()
@@ -417,60 +417,55 @@ def list_exchange_items(_req):
     return Response(data)
 
 
-# Update the authenticated user's cumulative distance.
+POINTS_PER_10KM = Decimal("0.1")
+KM_BLOCK = Decimal("10")
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def update_cumulative_distance(request):
-    """Accepts a JSON body with either `distance_m` (meters) or `distance_km` (kilometres) to add,
-    or `cumulative_distance` to set the total directly.
-    """
     user = request.user
-
     data = request.data or {}
-    
-    # Check if setting directly
-    if "cumulative_distance" in data:
-        try:
-            new_distance = float(data["cumulative_distance"])
-            if new_distance < 0:
-                return Response({"detail": "Cumulative distance cannot be negative."}, status=400)
-            old_distance = user.cumulative_distance or 0.0
-            delta_km = new_distance - old_distance
-            if delta_km > 0:
-                user.reward_points = (user.reward_points or 0.0) + (delta_km * 0.1)
-            user.cumulative_distance = new_distance
-            user.save(update_fields=["cumulative_distance", "reward_points"])
-            return Response({"cumulative_distance": user.cumulative_distance})
-        except (TypeError, ValueError):
-            return Response({"detail": "Invalid cumulative_distance value."}, status=400)
-    
-    # Otherwise, add to existing
-    distance_m = data.get("distance_m")
-    distance_km = data.get("distance_km")
 
+    old_distance = Decimal(str(user.cumulative_distance or 0))
+
+    # --- Determine new distance ---
     try:
-        if distance_m is not None:
-            distance_m = float(distance_m)
-            delta_km = distance_m / 1000.0
-        elif distance_km is not None:
-            delta_km = float(distance_km)
+        if "cumulative_distance" in data:
+            new_distance = Decimal(str(data["cumulative_distance"]))
+        elif "distance_m" in data:
+            new_distance = old_distance + (Decimal(str(data["distance_m"])) / Decimal("1000"))
+        elif "distance_km" in data:
+            new_distance = old_distance + Decimal(str(data["distance_km"]))
         else:
-            return Response({"detail": "Provide distance_m (meters), distance_km (kilometres), or cumulative_distance."}, status=400)
-    except (TypeError, ValueError):
+            return Response(
+                {"detail": "Provide distance_m, distance_km, or cumulative_distance."},
+                status=400
+            )
+    except Exception:
         return Response({"detail": "Invalid distance value."}, status=400)
 
-    if delta_km <= 0:
-        return Response({"detail": "Distance must be positive."}, status=400)
+    if new_distance < old_distance:
+        return Response({"detail": "Distance cannot decrease."}, status=400)
 
-    # Increment user's cumulative distance and persist
-    user.cumulative_distance = (user.cumulative_distance or 0.0) + delta_km
-    user.reward_points = (
-        Decimal(user.reward_points or 0)
-        + (Decimal(delta_km) * Decimal("0.1"))
-    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    # --- Compute 10km blocks crossed ---
+    old_blocks = (old_distance / KM_BLOCK).to_integral_value(rounding=ROUND_DOWN)
+    new_blocks = (new_distance / KM_BLOCK).to_integral_value(rounding=ROUND_DOWN)
+
+    blocks_gained = new_blocks - old_blocks
+
+    # --- Award points only for new blocks ---
+    if blocks_gained > 0:
+        points_awarded = blocks_gained * POINTS_PER_10KM
+        user.reward_points = Decimal(str(user.reward_points or 0)) + points_awarded
+
+    user.cumulative_distance = float(new_distance)
     user.save(update_fields=["cumulative_distance", "reward_points"])
 
-    return Response({"cumulative_distance": user.cumulative_distance})
+    return Response({
+        "cumulative_distance": float(user.cumulative_distance),
+        "points_awarded": float(blocks_gained * POINTS_PER_10KM),
+        "total_points": float(user.reward_points),
+    })
 
 
 # Redeem reward points for an exchange item

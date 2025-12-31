@@ -26,9 +26,9 @@ function RewardsPage() {
             try {
                 setLoading(true);
                 const data = await fetchRewardAccount();
-                setPoints(data.reward_points);
-                setUsername(data.username);
-                setDistanceKm(data.cumulative_distance);
+                setPoints(Number(data.reward_points ?? 0));
+                setUsername(data.username ?? "");
+                setDistanceKm(Number(data.cumulative_distance ?? 0));
                 setError(null);
             } catch (err) {
                 console.error("Failed to fetch reward account:", err);
@@ -119,10 +119,7 @@ function RewardsPage() {
                         <p className="points-amount">
                             {Number(points).toLocaleString(undefined, { maximumFractionDigits: 2 })} Points
                         </p>
-                        <p className="last-updated">Last updated {updatedDate}</p>
-                        <p className="expiry-notice">
-                            ⌛️ {Number(points).toLocaleString(undefined, { maximumFractionDigits: 2 })} points will expire by {expireDate}
-                        </p>
+                        <p className="last-updated">Last updated {updatedDate}</p>                       
                     </div>
                 </div>
             </div>
