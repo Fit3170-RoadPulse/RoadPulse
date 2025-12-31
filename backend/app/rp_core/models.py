@@ -178,15 +178,15 @@ class IncidentReport(models.Model):
         constraints = [
             models.CheckConstraint(
                 name="lat_range",
-                check=Q(latitude__gte=-90) & Q(latitude__lte=90)
+                condition=Q(latitude__gte=-90) & Q(latitude__lte=90)
             ),
             models.CheckConstraint(
                 name="lng_range",
-                check=Q(longitude__gte=-180) & Q(longitude__lte=180)
+                condition=Q(longitude__gte=-180) & Q(longitude__lte=180)
             ),
             models.CheckConstraint(
                 name="expiry_after_created",
-                check=Q(expires_at__isnull=True) | Q(expires_at__gte=F("created_at"))
+                condition=Q(expires_at__isnull=True) | Q(expires_at__gte=F("created_at"))
             ),
         ]
 
@@ -316,7 +316,7 @@ class PointTransaction(models.Model):
         constraints = [
             models.CheckConstraint(
                 name="pt_amount_gt_zero",
-                check=Q(amount__gt=0),
+                condition=Q(amount__gt=0),
             ),
         ]
 
