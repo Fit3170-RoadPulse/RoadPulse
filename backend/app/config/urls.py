@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from rp_core.views import health, samples, map, RegisterView, LoginView, ForgotPasswordView, ChangePasswordView
+from rp_core.views import health, samples, map, map_config, compute_route, RegisterView, LoginView, ForgotPasswordView, ChangePasswordView
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -15,4 +15,5 @@ urlpatterns = [
     path("api/forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
     path("api/change-password/", ChangePasswordView.as_view(), name="change-password"),
 
+    path("api/map/compute-route/",compute_route,name="compute-route")
 ]
