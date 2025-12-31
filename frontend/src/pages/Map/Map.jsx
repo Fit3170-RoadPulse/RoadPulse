@@ -32,6 +32,7 @@ export default function Map() {
     const mapReadyRef = useRef(false);
     const mapInstanceRef = useRef(null);
     const reportMarkersRef = useRef(new globalThis.Map()); // id -> AdvancedMarkerElement
+    const trafficLayerRef = useRef(null); 
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -84,29 +85,29 @@ export default function Map() {
         window.addEventListener("rp:auth-changed", onAuthChanged);
         return () => window.removeEventListener("rp:auth-changed", onAuthChanged);
     }, []);
-    useEffect(() => {
-        const base = import.meta.env.VITE_API_URL || "";
-        const fetchReports = () =>
-            axios
-                .get(`${base}/api/incident-reports/`)
-                .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
-                .catch(() => {});
+    // useEffect(() => {
+    //     const base = import.meta.env.VITE_API_URL || "";
+    //     const fetchReports = () =>
+    //         axios
+    //             .get(`${base}/api/incident-reports/`)
+    //             .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
+    //             .catch(() => {});
 
-        fetchReports();
-        const t = setInterval(fetchReports, 15000);
-        return () => clearInterval(t);
-    }, []);
-    useEffect(() => {
-        const base = import.meta.env.VITE_API_URL || "";
-        const fetchReports = () =>
-            axios
-                .get(`${base}/api/incident-reports/`)
-                .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
-                .catch(() => {});
-        const onAuthChanged = () => fetchReports();
-        window.addEventListener("rp:auth-changed", onAuthChanged);
-        return () => window.removeEventListener("rp:auth-changed", onAuthChanged);
-    }, []);
+    //     fetchReports();
+    //     const t = setInterval(fetchReports, 15000);
+    //     return () => clearInterval(t);
+    // }, []);
+    // useEffect(() => {
+    //     const base = import.meta.env.VITE_API_URL || "";
+    //     const fetchReports = () =>
+    //         axios
+    //             .get(`${base}/api/incident-reports/`)
+    //             .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
+    //             .catch(() => {});
+    //     const onAuthChanged = () => fetchReports();
+    //     window.addEventListener("rp:auth-changed", onAuthChanged);
+    //     return () => window.removeEventListener("rp:auth-changed", onAuthChanged);
+    // }, []);
     console.log(mapData);
 
     const reportTypeLabel = useMemo(() => {
@@ -240,8 +241,12 @@ export default function Map() {
         if (!g?.maps?.importLibrary) return;
         const { AdvancedMarkerElement } = await g.maps.importLibrary("marker");
 
-        trafficLayer = new g.maps.TrafficLayer();
-        trafficLayer.setMap(map);
+        // trafficLayer = new g.maps.TrafficLayer();
+        // trafficLayer.setMap(map);
+        if (!trafficLayerRef.current) {
+        trafficLayerRef.current = new g.maps.TrafficLayer();
+        trafficLayerRef.current.setMap(map);
+        }
 
         //directionsRenderer = new google.maps.DirectionsRenderer();
         //directionsRenderer.setMap(map);
