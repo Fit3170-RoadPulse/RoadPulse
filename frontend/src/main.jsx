@@ -61,9 +61,6 @@ createRoot(document.getElementById('root')).render(
           } />
           
 
-          {/* Below route for testing. Remove once not needed */}
-          <Route path="/demo" element={<Demo />} />
-
           {/* 404 Not Found - Must be last */}
           <Route path="*" element={<NotFound />} />
         </Routes>
