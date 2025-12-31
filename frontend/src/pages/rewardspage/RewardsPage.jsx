@@ -116,10 +116,12 @@ function RewardsPage() {
                     </div>
 
                     <div className="points-info">
-                        <p className="points-amount">{points} Points</p>
+                        <p className="points-amount">
+                            {Number(points).toLocaleString(undefined, { maximumFractionDigits: 2 })} Points
+                        </p>
                         <p className="last-updated">Last updated {updatedDate}</p>
                         <p className="expiry-notice">
-                            ⌛️ {points} points will expire by {expireDate}
+                            ⌛️ {Number(points).toLocaleString(undefined, { maximumFractionDigits: 2 })} points will expire by {expireDate}
                         </p>
                     </div>
                 </div>

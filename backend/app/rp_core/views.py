@@ -39,6 +39,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.parsers import JSONParser
 import json
 import requests
+from decimal import Decimal, ROUND_HALF_UP
 
 
 User = get_user_model()
@@ -463,7 +464,10 @@ def update_cumulative_distance(request):
 
     # Increment user's cumulative distance and persist
     user.cumulative_distance = (user.cumulative_distance or 0.0) + delta_km
-    user.reward_points = (user.reward_points or 0.0) + (delta_km * 0.1)
+    user.reward_points = (
+        Decimal(user.reward_points or 0)
+        + (Decimal(delta_km) * Decimal("0.1"))
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     user.save(update_fields=["cumulative_distance", "reward_points"])
 
     return Response({"cumulative_distance": user.cumulative_distance})
