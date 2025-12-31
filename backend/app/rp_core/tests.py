@@ -19,8 +19,9 @@ class RewardExchangeTests(APITestCase):
             username="testuser",
             password="pass12345",
             email="testuser@example.com",
-            reward_points=100,
         )
+        # Give user initial points via transaction
+        add_points(self.user, 100, "initial_balance")
         self.item = ExchangeItem.objects.create(
             name="Fuel Voucher",
             description="Redeemable at participating stations.",
@@ -54,7 +55,7 @@ class RewardExchangeTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
         self.item.refresh_from_db()
-        self.assertEqual(self.user.reward_points, 50)
+        self.assertEqual(self.user.available_points, 50)
         self.assertEqual(self.item.stock, 3)
 
         redemption = RewardRedemption.objects.get()
@@ -207,22 +208,22 @@ class PointsServiceTests(TestCase):
             username="alice",
             email="alice@example.com",
             password="secret",
-            reward_points=10,
         )
+        # Give user initial points via transaction
+        add_points(self.user, 10, "initial_balance")
 
     # ---- get_balance ----
     def test_get_balance_returns_user_field(self):
         self.assertEqual(get_balance(self.user), 10)
-        self.user.reward_points = 42
-        self.user.save(update_fields=["reward_points"])
+        # Add more points
+        add_points(self.user, 32, "bonus")
         self.assertEqual(get_balance(self.user), 42)
 
     # ---- add_points ----
     def test_add_points_happy_path(self):
         txn = add_points(self.user, amount=5, reason="daily_login")
         self.assertIsInstance(txn, PointTransaction)
-        self.user.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 15)
+        self.assertEqual(self.user.available_points, 15)
         self.assertEqual(txn.kind, PointTransaction.Kind.EARN)
         self.assertEqual(txn.amount, 5)
         self.assertEqual(txn.reason, "daily_login")
@@ -235,8 +236,7 @@ class PointsServiceTests(TestCase):
         self.assertEqual(t1.pk, t2.pk)
 
         # points only applied once
-        self.user.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 15)
+        self.assertEqual(self.user.available_points, 15)
         self.assertEqual(
             PointTransaction.objects.filter(user=self.user, reference=ref).count(), 1
         )
@@ -244,30 +244,26 @@ class PointsServiceTests(TestCase):
     def test_add_points_with_different_refs_creates_multiple_txns(self):
         add_points(self.user, 5, "bonus", ref="A")
         add_points(self.user, 5, "bonus", ref="B")
-        self.user.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 20)
-        self.assertEqual(PointTransaction.objects.filter(user=self.user).count(), 2)
+        self.assertEqual(self.user.available_points, 20)
+        self.assertEqual(PointTransaction.objects.filter(user=self.user).count(), 3)  # + initial 10
 
     def test_add_points_without_ref_not_idempotent(self):
         add_points(self.user, 3, "streak")
         add_points(self.user, 3, "streak")
-        self.user.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 16)  # +3 twice
+        self.assertEqual(self.user.available_points, 16)  # +3 twice
         self.assertEqual(PointTransaction.objects.filter(user=self.user, reason="streak").count(), 2)
 
     def test_add_points_invalid_amount_raises_and_no_side_effects(self):
         with self.assertRaises(ValueError):
             add_points(self.user, 0, "bad")
-        self.user.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 10)
-        self.assertEqual(PointTransaction.objects.filter(user=self.user).count(), 0)
+        self.assertEqual(self.user.available_points, 10)
+        self.assertEqual(PointTransaction.objects.filter(user=self.user).count(), 1)  # only initial
 
     # ---- deduct_points ----
     def test_deduct_points_happy_path(self):
         txn = deduct_points(self.user, 4, "redeem_reward", ref="order-1")
         self.assertIsInstance(txn, PointTransaction)
-        self.user.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 6)
+        self.assertEqual(self.user.available_points, 6)
         self.assertEqual(txn.kind, PointTransaction.Kind.SPEND)
         self.assertEqual(txn.amount, 4)
         self.assertEqual(txn.reference, "order-1")
@@ -278,8 +274,7 @@ class PointsServiceTests(TestCase):
         # second call should return the same txn and not double-spend
         t2 = deduct_points(self.user, 5, "redeem_reward", ref=ref)
         self.assertEqual(t1.pk, t2.pk)
-        self.user.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 5)
+        self.assertEqual(self.user.available_points, 5)
         self.assertEqual(
             PointTransaction.objects.filter(user=self.user, reference=ref).count(), 1
         )
@@ -287,16 +282,14 @@ class PointsServiceTests(TestCase):
     def test_deduct_points_insufficient_raises_and_no_side_effects(self):
         with self.assertRaises(ValueError):
             deduct_points(self.user, 999, "redeem_reward")
-        self.user.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 10)
-        self.assertEqual(PointTransaction.objects.filter(user=self.user).count(), 0)
+        self.assertEqual(self.user.available_points, 10)
+        self.assertEqual(PointTransaction.objects.filter(user=self.user, kind=PointTransaction.Kind.SPEND).count(), 0)
 
     def test_deduct_points_invalid_amount_raises(self):
         with self.assertRaises(ValueError):
             deduct_points(self.user, 0, "bad")
-        self.user.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 10)
-        self.assertEqual(PointTransaction.objects.filter(user=self.user).count(), 0)
+        self.assertEqual(self.user.available_points, 10)
+        self.assertEqual(PointTransaction.objects.filter(user=self.user, kind=PointTransaction.Kind.SPEND).count(), 0)
 
     # ---- cross-user + reference semantics ----
     def test_same_reference_allowed_for_different_users(self):
@@ -304,14 +297,13 @@ class PointsServiceTests(TestCase):
             username="bob",
             email="bob@example.com",
             password="secret",
-            reward_points=20,
         )
+        # Give bob initial points
+        add_points(bob, 20, "initial_balance")
         add_points(self.user, 5, "daily_login", ref="dup-ref")
         add_points(bob, 5, "daily_login", ref="dup-ref")
-        self.user.refresh_from_db(fields=["reward_points"])
-        bob.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 15)
-        self.assertEqual(bob.reward_points, 25)
+        self.assertEqual(self.user.available_points, 15)
+        self.assertEqual(bob.available_points, 25)
 
     # ---- basic atomicity sanity checks ----
     def test_functions_run_in_atomic_transactions(self):
@@ -323,8 +315,7 @@ class PointsServiceTests(TestCase):
         with transaction.atomic():
             add_points(self.user, 2, "outer")
             deduct_points(self.user, 1, "outer-spend")
-        self.user.refresh_from_db(fields=["reward_points"])
-        self.assertEqual(self.user.reward_points, 11)
+        self.assertEqual(self.user.available_points, 11)
 
     # ---- model indexing/constraints would not block our idempotency pattern ----
     def test_reference_index_allows_multiple_rows_without_unique(self):
@@ -467,21 +458,22 @@ class IncidentReportVotingTests(APITestCase):
         self.assertIsNotNone(report.settled_at)
 
         # report is rejected quickly; provisional is settled into reward then penalty applies
-        self.reporter.refresh_from_db(fields=["reward_points", "provisional_points"])
+        self.reporter.refresh_from_db(fields=["provisional_points"])
         self.assertEqual(self.reporter.provisional_points, 0)
-        self.assertEqual(self.reporter.reward_points, 0)
+        self.assertEqual(self.reporter.available_points, 0)
 
         # each voter got +1 provisional, settled into reward at close
         for voter in [self.v1, self.v2, self.v3]:
-            voter.refresh_from_db(fields=["reward_points", "provisional_points"])
+            voter.refresh_from_db(fields=["provisional_points"])
             self.assertEqual(voter.provisional_points, 0)
-            self.assertEqual(voter.reward_points, 1)
+            self.assertEqual(voter.available_points, 1)
 
     @override_settings(INCIDENT_REPORT_FAST_REJECT_MINUTES=5)
     def test_fast_reject_applies_minus_3_when_reporter_has_points(self):
         # Give reporter enough points so we can observe the full -3 deduction.
-        self.reporter.reward_points = 10
-        self.reporter.save(update_fields=["reward_points"])
+        # Create initial points via transaction instead of setting field directly
+        from .services.points import add_points
+        add_points(self.reporter, 10, "initial_balance")
 
         self.client.force_authenticate(user=self.reporter)
         report_id = self.client.post(
@@ -504,9 +496,9 @@ class IncidentReportVotingTests(APITestCase):
             )
 
         # Provisional settles (+1) then -3 penalty => 10 + 1 - 3 = 8
-        self.reporter.refresh_from_db(fields=["reward_points", "provisional_points"])
+        self.reporter.refresh_from_db(fields=["provisional_points"])
         self.assertEqual(self.reporter.provisional_points, 0)
-        self.assertEqual(self.reporter.reward_points, 8)
+        self.assertEqual(self.reporter.available_points, 8)
 
     @override_settings(INCIDENT_REPORT_REQUIRED_VOTES=5)
     def test_confirmed_rewards_and_penalties(self):
@@ -535,8 +527,11 @@ class IncidentReportVotingTests(APITestCase):
             )
 
         # Add 2 NO voters to reach 5 total votes -> close
-        v4 = AppUser.objects.create_user(username="v4", email="v4@example.com", password="pass12345", reward_points=1)
-        v5 = AppUser.objects.create_user(username="v5", email="v5@example.com", password="pass12345", reward_points=1)
+        from .services.points import add_points
+        v4 = AppUser.objects.create_user(username="v4", email="v4@example.com", password="pass12345")
+        add_points(v4, 1, "initial_balance")
+        v5 = AppUser.objects.create_user(username="v5", email="v5@example.com", password="pass12345")
+        add_points(v5, 1, "initial_balance")
         no_voters = [v4, v5]
         for voter in no_voters:
             self.client.force_authenticate(user=voter)
@@ -550,18 +545,18 @@ class IncidentReportVotingTests(APITestCase):
         self.assertEqual(report.status, IncidentReport.Status.CONFIRMED)
 
         # reporter: provisional settles (+1) then +2 confirmed bonus = 3
-        self.reporter.refresh_from_db(fields=["reward_points", "provisional_points"])
+        self.reporter.refresh_from_db(fields=["provisional_points"])
         self.assertEqual(self.reporter.provisional_points, 0)
-        self.assertEqual(self.reporter.reward_points, 3)
+        self.assertEqual(self.reporter.available_points, 3)
 
         # YES voters: provisional settles into reward (+1)
         for voter in yes_voters:
-            voter.refresh_from_db(fields=["reward_points", "provisional_points"])
+            voter.refresh_from_db(fields=["provisional_points"])
             self.assertEqual(voter.provisional_points, 0)
-            self.assertEqual(voter.reward_points, 1)
+            self.assertEqual(voter.available_points, 1)
 
         # NO voters: provisional settles into reward (+1), no penalties
         for voter in no_voters:
-            voter.refresh_from_db(fields=["reward_points", "provisional_points"])
+            voter.refresh_from_db(fields=["provisional_points"])
             self.assertEqual(voter.provisional_points, 0)
-            self.assertEqual(voter.reward_points, 2)
+            self.assertEqual(voter.available_points, 2)

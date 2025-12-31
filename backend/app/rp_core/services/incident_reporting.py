@@ -17,7 +17,7 @@ def _safe_deduct(user: AppUser, amount: int, reason: str, ref: str) -> None:
     if amount <= 0:
         return
     user.refresh_from_db(fields=["reward_points"])
-    to_deduct = min(int(user.reward_points), int(amount))
+    to_deduct = min(int(user.available_points), int(amount))
     if to_deduct <= 0:
         return
     try:

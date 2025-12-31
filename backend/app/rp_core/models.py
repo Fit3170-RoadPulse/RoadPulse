@@ -30,6 +30,56 @@ class AppUser(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
+    @property
+    def available_points(self):
+        """Calculate available points from non-expired transactions."""
+        from django.db.models import Sum, Case, When, IntegerField
+        from django.utils import timezone
+        
+        now = timezone.now()
+        result = self.point_transactions.filter(
+            # Include EARN and ADJUST transactions that haven't expired
+            kind__in=[PointTransaction.Kind.EARN, PointTransaction.Kind.ADJUST]
+        ).filter(
+            # Either no expiry or expiry is in the future
+            models.Q(expiry_date__isnull=True) | models.Q(expiry_date__gt=now)
+        ).aggregate(
+            earned=Sum('amount', default=0)
+        )
+        
+        # Subtract spent points
+        spent = self.point_transactions.filter(
+            kind=PointTransaction.Kind.SPEND
+        ).aggregate(
+            spent=Sum('amount', default=0)
+        )['spent']
+        
+        return result['earned'] - spent
+
+    @property
+    def points_expiring_this_month(self):
+        """Calculate points that will expire by the end of the current month."""
+        from django.utils import timezone
+        from django.db.models import Sum
+        
+        now = timezone.now()
+        # Get end of current month at 23:59:59.999999
+        if now.month == 12:
+            end_of_month = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0) - timezone.timedelta(microseconds=1)
+        else:
+            end_of_month = now.replace(day=1, month=now.month + 1, hour=0, minute=0, second=0, microsecond=0) - timezone.timedelta(microseconds=1)
+        
+        result = self.point_transactions.filter(
+            kind__in=[PointTransaction.Kind.EARN, PointTransaction.Kind.ADJUST],
+            expiry_date__isnull=False,
+            expiry_date__lte=end_of_month,
+            expiry_date__gt=now
+        ).aggregate(
+            expiring=Sum('amount', default=0)
+        )
+        
+        return result['expiring']
+
     def __str__(self):
         return self.username
 
@@ -306,6 +356,10 @@ class PointTransaction(models.Model):
         help_text="Idempotency key to avoid double-charging (optional)"
     )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    expiry_date = models.DateTimeField(
+        blank=True, null=True, db_index=True,
+        help_text="When these points expire (null means never expires)"
+    )
 
     class Meta:
         ordering = ["-created_at"]

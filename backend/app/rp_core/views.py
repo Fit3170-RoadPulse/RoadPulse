@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.contrib.auth import authenticate
 from django.conf import settings
 from django.utils import timezone
+from datetime import timedelta
 from math import asin, cos, radians, sin, sqrt
 from rest_framework import status, views
 from rest_framework.decorators import api_view, permission_classes
@@ -15,8 +16,8 @@ from .incidentReport import (
     IncidentReportVoteCreateSerializer,
     RegisterSerializerIncidentReport,
 )
-from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption
-from rp_core.services.points import deduct_points
+from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption, PointTransaction
+from rp_core.services.points import deduct_points, add_points
 from rp_core.services.incident_reporting import (
     close_and_settle_report,
     grant_report_provisional_point,
@@ -139,12 +140,22 @@ def map_config(_req):
 @permission_classes([IsAuthenticated])
 def reward_account(request):
     user = request.user
+    from django.utils import timezone
+    
+    now = timezone.now()
+    if now.month == 12:
+        end_of_month = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0) - timezone.timedelta(microseconds=1)
+    else:
+        end_of_month = now.replace(day=1, month=now.month + 1, hour=0, minute=0, second=0, microsecond=0) - timezone.timedelta(microseconds=1)
+    
     return Response({
         "id": user.id,
         "username": user.get_username(),
-        "reward_points": user.reward_points,
+        "reward_points": user.available_points,
         "cumulative_distance": user.cumulative_distance,
         "provisional_points": getattr(user, "provisional_points", 0),
+        "points_expiring_this_month": user.points_expiring_this_month,
+        "end_of_month": end_of_month.date().isoformat(),
     })
 
 
@@ -436,9 +447,18 @@ def update_cumulative_distance(request):
             old_distance = user.cumulative_distance or 0.0
             delta_km = new_distance - old_distance
             if delta_km > 0:
-                user.reward_points = (user.reward_points or 0.0) + (delta_km * 0.1)
+                # Create point transaction for earned points (1 point per km)
+                points_earned = int(delta_km * 1)  # 1 point per km
+                if points_earned > 0:
+                    add_points(
+                        user=user,
+                        amount=points_earned,
+                        reason="distance_travelled",
+                        ref=f"distance_{user.id}_{int(timezone.now().timestamp())}",
+                        expiry_date=timezone.now() + timedelta(days=365)
+                    )
             user.cumulative_distance = new_distance
-            user.save(update_fields=["cumulative_distance", "reward_points"])
+            user.save(update_fields=["cumulative_distance"])
             return Response({"cumulative_distance": user.cumulative_distance})
         except (TypeError, ValueError):
             return Response({"detail": "Invalid cumulative_distance value."}, status=400)
@@ -461,10 +481,20 @@ def update_cumulative_distance(request):
     if delta_km <= 0:
         return Response({"detail": "Distance must be positive."}, status=400)
 
-    # Increment user's cumulative distance and persist
+    # Increment user's cumulative distance
     user.cumulative_distance = (user.cumulative_distance or 0.0) + delta_km
-    user.reward_points = (user.reward_points or 0.0) + (delta_km * 0.1)
-    user.save(update_fields=["cumulative_distance", "reward_points"])
+    user.save(update_fields=["cumulative_distance"])
+
+    # Create point transaction for earned points (1 point per km)
+    points_earned = int(delta_km * 1)  # 1 point per km
+    if points_earned > 0:
+        add_points(
+            user=user,
+            amount=points_earned,
+            reason="distance_travelled",
+            ref=f"distance_{user.id}_{int(timezone.now().timestamp())}",
+            expiry_date=timezone.now() + timedelta(days=365)
+        )
 
     return Response({"cumulative_distance": user.cumulative_distance})
 
@@ -535,17 +565,19 @@ def redeem_reward(request):
 
         # Check sufficient points
         total_cost = item.points_cost * quantity
-        if user.reward_points < total_cost:
+        if user.available_points < total_cost:
             return Response(
                 {"detail": "Not enough reward points."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Deduct points and stock, create redemption record
-        try:
-            deduct_points(user, total_cost, reason="redeem_reward", ref=f"Redeem: Item {item.id} with quantity of {quantity}")
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        # Create spend transaction
+        deduct_points(
+            user=user,
+            amount=total_cost,
+            reason="redeem_reward",
+            ref=f"Redeem: Item {item.id} with quantity of {quantity}"
+        )
 
         # Deduct stock if not unlimited
         if item.stock is not None:
@@ -568,6 +600,6 @@ def redeem_reward(request):
         },
         "quantity": quantity,
         "points_spent": total_cost,
-        "remaining_points": user.reward_points,
+        "remaining_points": user.available_points,
         "created_at": redemption.created_at.isoformat(),
     })

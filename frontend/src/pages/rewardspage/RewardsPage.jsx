@@ -9,11 +9,8 @@ function RewardsPage() {
     const [points, setPoints] = useState(0);
     const [username, setUsername] = useState("");
     const [updatedDate] = useState(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
-    const [expireDate] = useState(() => {
-        const now = new Date();
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        return lastDay.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    });
+    const [expireDate, setExpireDate] = useState(null);
+    const [expiringPoints, setExpiringPoints] = useState(0);
     const [activeTab, setActiveTab] = useState("redeem");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -29,6 +26,19 @@ function RewardsPage() {
                 setPoints(data.reward_points);
                 setUsername(data.username);
                 setDistanceKm(data.cumulative_distance);
+                setExpiringPoints(data.points_expiring_this_month || 0);
+                
+                // Set expiry date to end of current month
+                if (data.end_of_month) {
+                    const endOfMonth = new Date(data.end_of_month);
+                    setExpireDate(endOfMonth.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
+                } else {
+                    // Fallback to end of month if no expiry
+                    const now = new Date();
+                    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    setExpireDate(lastDay.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
+                }
+                
                 setError(null);
             } catch (err) {
                 console.error("Failed to fetch reward account:", err);
@@ -119,7 +129,7 @@ function RewardsPage() {
                         <p className="points-amount">{points} Points</p>
                         <p className="last-updated">Last updated {updatedDate}</p>
                         <p className="expiry-notice">
-                            ⌛️ {points} points will expire by {expireDate}
+                            ⌛️ {expiringPoints} points will expire by {expireDate}
                         </p>
                     </div>
                 </div>
