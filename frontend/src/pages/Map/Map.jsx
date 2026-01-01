@@ -1042,7 +1042,8 @@ export default function Map() {
                 )}
             </div>
 
-            <button
+            {/* Testing button to check if distance and points gets updated correctly */}
+            {/* <button
                 style={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999 }}
                 onClick={async () => {
                     const distance = 1000; // meters
@@ -1059,7 +1060,7 @@ export default function Map() {
                 }}
                 >
                 Simulate +1km
-            </button>
+            </button> */}
 
 
             {/* Error Popup */}
