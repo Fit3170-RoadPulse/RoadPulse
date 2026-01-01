@@ -1,45 +1,43 @@
+from decimal import Decimal, ROUND_DOWN
+
+from django.conf import settings
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import JsonResponse
-from django.contrib.auth import authenticate
-from django.conf import settings
 from django.utils import timezone
+
 from math import asin, cos, radians, sin, sqrt
-from rest_framework import status, views
+
+from rest_framework import status, views, serializers
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from .incidentReport import (
-    IncidentReportCreateSerializer,
-    IncidentReportSerializer,
-    IncidentReportVoteCreateSerializer,
-    RegisterSerializerIncidentReport,
-)
-from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import JSONParser
+
 from rp_core.services.points import deduct_points
 from rp_core.services.incident_reporting import (
     close_and_settle_report,
     grant_report_provisional_point,
     grant_vote_provisional_point,
 )
-from django.contrib.auth import get_user_model
-from rest_framework import serializers
-from rest_framework import views, status
-from rest_framework.response import Response
-from .serializers import RegisterSerializer
-from rest_framework import status, views
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from .serializers import ChangePasswordSerializer
-from rest_framework import views, status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
-from rest_framework.parsers import JSONParser
+
+from .incidentReport import (
+    IncidentReportCreateSerializer,
+    IncidentReportSerializer,
+    IncidentReportVoteCreateSerializer,
+    RegisterSerializerIncidentReport,
+)
+from .serializers import RegisterSerializer, ChangePasswordSerializer
+from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption
+
+
 import json
 import requests
-from decimal import Decimal, ROUND_DOWN
+
 
 
 User = get_user_model()
