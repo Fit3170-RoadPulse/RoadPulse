@@ -5,7 +5,6 @@ import { User, Award, Settings, LogOut, X, AlertTriangle } from "lucide-react";
 import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import "./Map.css"
-import RewardsPage from "../rewardspage/RewardsPage";
 import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../lib/api";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 
@@ -27,8 +26,8 @@ export default function Map() {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const lastRouteSelectionRef = useRef(null);
 
-    // const [location, setLocation] = useState(null); // We will use the UserLocation Ref
     const [cumulativeDistance, setCumulativeDistance] = useState(0);
+    const prevLocationRef = useRef(null);
     let locationPollingData = useRef(null);
     let lastUpdateTimeRef = useRef(0);
     const routeCacheRef = useRef(new globalThis.Map());
@@ -82,7 +81,7 @@ export default function Map() {
             console.log("Location Polling Data Ref:", locationPollingData);
 
             if (!navigator.geolocation) {
-                setLocation(mockLocation);
+                prevLocationRef.current = mockLocation;
                 console.log('Geolocation is not supported by your browser');
                 return;
             }
@@ -90,40 +89,45 @@ export default function Map() {
             // Success handler: updates the state with the new position
             const successHandler = (position) => {
                 const now = Date.now();
-                // Only update if the specified interval has passed since the last update
-                if (now - lastUpdateTimeRef.current >= locationPollingData.current?.pollingInterval) {
-                    let newLocation = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        accuracy: position.coords.accuracy,
-                        timestamp: position.timestamp,
-                    };
-                    let distance = 0;
-                    if (location) {
-                        distance = google.maps.geometry.spherical.computeDistanceBetween(
-                            new google.maps.LatLng(location.latitude, location.longitude), 
-                            new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
-                        );
-                    }
-                    // Use functional update to avoid stale state
-                    setCumulativeDistance((prev) => prev + distance);
+                if (now - lastUpdateTimeRef.current < locationPollingData.current?.pollingInterval) return;
 
-                    // Persist the delta to the backend (if authenticated)
-                    if (isAuthenticated() && distance > 0) {
-                        // fire-and-forget; log errors but don't block location handling
-                        (async () => {
-                            try {
-                                await apiPost("/user/distance/", { distance_m: distance });
-                            } catch (err) {
-                                console.error("Failed to persist cumulative distance:", err);
-                            }
-                        })();
-                    }
-                    setLocation(newLocation);
-                    lastUpdateTimeRef.current = now;
-                    console.log("Distance moved (m):", distance);
-                    console.log("Location updated:", newLocation);
+                const newLocation = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy,
+                    timestamp: position.timestamp,
+                };
+
+                const prev = prevLocationRef.current;
+                let distance = 0;
+
+                if (prev) {
+                    distance = google.maps.geometry.spherical.computeDistanceBetween(
+                    new google.maps.LatLng(prev.latitude, prev.longitude),
+                    new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
+                    );
                 }
+
+                // update "previous" immediately
+                prevLocationRef.current = newLocation;
+
+                // filter jitter + jumps
+                const MIN_MOVE_M = 10;
+                const MAX_MOVE_M = 500;
+
+                if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
+                    setCumulativeDistance((prevDist) => prevDist + distance);
+
+                    if (isAuthenticated()) {
+                    apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
+                        console.error("Failed to persist distance:", err)
+                    );
+                    }
+                }
+
+                lastUpdateTimeRef.current = now;
+                console.log("Distance moved (m):", distance);
+                console.log("Location updated:", newLocation);
             };
 
             // Error handler: updates the error state
@@ -132,7 +136,7 @@ export default function Map() {
                     code: err.code,
                     message: err.message,
                 });
-                setLocation(mockLocation);
+                prevLocationRef.current = mockLocation;
                 console.log("Location updated:", mockLocation);
             };
 
@@ -1037,6 +1041,26 @@ export default function Map() {
                     </div>
                 )}
             </div>
+
+            <button
+                style={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999 }}
+                onClick={async () => {
+                    const distance = 1000; // meters
+                    setCumulativeDistance((prev) => prev + distance);
+
+                    if (isAuthenticated()) {
+                    try {
+                        const res = await apiPost("/user/distance/", { distance_m: distance });
+                        console.log("Backend updated:", res);
+                    } catch (e) {
+                        console.error("Backend update failed:", e);
+                    }
+                    }
+                }}
+                >
+                Simulate +1km
+            </button>
+
 
             {/* Error Popup */}
             {showErrorPopup && (
