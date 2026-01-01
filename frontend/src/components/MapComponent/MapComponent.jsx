@@ -9,8 +9,6 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, showUserLo
     const userAccuracyCircleRef = useRef(null);
     const geoWatchIdRef = useRef(null);
     const hasCenteredRef = useRef(false);
-    const latestFixRef = useRef(null);
-    const uiTickIntervalRef = useRef(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -39,9 +37,8 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, showUserLo
                 const g = window.google;
                 if (!g?.maps) return;
 
-                const updateUserLocation = (lat, lng, accuracyMeters, timestamp, emit = true) => {
+                const updateUserLocation = (lat, lng, accuracyMeters) => {
                     const pos = { lat, lng };
-                    latestFixRef.current = { lat, lng, accuracyMeters, timestamp };
 
                     if (!userMarkerRef.current) {
                         userMarkerRef.current = new g.maps.Marker({
@@ -87,9 +84,7 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, showUserLo
                         map.setZoom(14);
                     }
 
-                    if (emit && typeof onUserLocation === "function") {
-                        onUserLocation({ lat, lng, accuracyMeters, timestamp });
-                    }
+                    if (typeof onUserLocation === "function") onUserLocation({ lat, lng, accuracyMeters });
                 };
 
                 geoWatchIdRef.current = navigator.geolocation.watchPosition(
@@ -99,26 +94,13 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, showUserLo
                         const lng = Number(pos?.coords?.longitude);
                         const acc = Number(pos?.coords?.accuracy);
                         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-                        updateUserLocation(lat, lng, acc, pos?.timestamp, true);
+                        updateUserLocation(lat, lng, acc);
                     },
                     () => {
                         // ignore; user might deny location
                     },
                     { enableHighAccuracy: true, maximumAge: 15000, timeout: 8000 }
                 );
-
-                uiTickIntervalRef.current = setInterval(() => {
-                    if (!isMounted) return;
-                    const latest = latestFixRef.current;
-                    if (!latest) return;
-                    updateUserLocation(
-                        latest.lat,
-                        latest.lng,
-                        latest.accuracyMeters,
-                        latest.timestamp,
-                        false
-                    );
-                }, 1000);
             }
         })
         .catch((err) => {
@@ -130,10 +112,6 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, showUserLo
             if (geoWatchIdRef.current != null && navigator?.geolocation) {
                 navigator.geolocation.clearWatch(geoWatchIdRef.current);
                 geoWatchIdRef.current = null;
-            }
-            if (uiTickIntervalRef.current) {
-                clearInterval(uiTickIntervalRef.current);
-                uiTickIntervalRef.current = null;
             }
             if (userMarkerRef.current) {
                 userMarkerRef.current.setMap(null);
