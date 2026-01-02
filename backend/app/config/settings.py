@@ -111,9 +111,9 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Location configs
-pollingInterval = 20
-enableHighAccuracy = True
-timeout = 20000
-maximumAge = 10
+POLLING_INTERVAL = 20
+ENABLE_HIGH_ACCURACY = True
+TIMEOUT = 20000
+MAXIMUM_AGE = 10
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
