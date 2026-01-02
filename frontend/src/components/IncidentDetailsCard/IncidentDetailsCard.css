@@ -1,0 +1,317 @@
+/* IncidentDetailsCard.jsx inline styles */
+
+/* Main card container - uses dynamic border color via inline style */
+.incident-card {
+    width: 100%;
+    max-height: 88vh;
+    background-color: #FFFFFF;
+    border: 1px solid var(--theme-border, #E5E7EB);
+    border-left: 8px solid var(--theme-border, #E5E7EB);
+    border-radius: 18px;
+    box-shadow: 0 14px 40px rgba(17, 24, 39, 0.14);
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 18px 18px 16px 18px;
+    font-size: 1rem;
+    color: #1E1E1E;
+    gap: 14px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Accent bar at top - gradient uses dynamic theme border color */
+.incident-card-accent {
+    height: 10px;
+    margin: -18px -18px 0 -18px;
+    background: linear-gradient(90deg, var(--theme-border, #E5E7EB) 0%, rgba(255,255,255,0) 70%);
+}
+
+/* Header section */
+.incident-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.incident-header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.incident-title {
+    font-weight: 850;
+    font-size: 1.35rem;
+    color: #111827;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.incident-badges {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Close button */
+.incident-close-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid #E5E7EB;
+    background: #FFFFFF;
+    cursor: pointer;
+    color: #111827;
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(17, 24, 39, 0.10);
+}
+
+/* Info cards grid */
+.incident-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.incident-info-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 12px 12px;
+    color: #111827;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.incident-reporter-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 850;
+    flex: 0 0 auto;
+}
+
+.incident-reporter-info {
+    min-width: 0;
+}
+
+.incident-reporter-label {
+    font-size: 0.8rem;
+    font-weight: 750;
+    color: #6B7280;
+    margin-bottom: 4px;
+}
+
+.incident-reporter-name {
+    font-size: 0.95rem;
+    font-weight: 750;
+    color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.incident-time-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 12px 12px;
+    color: #111827;
+}
+
+.incident-time-label {
+    font-size: 0.8rem;
+    font-weight: 750;
+    color: #6B7280;
+    margin-bottom: 6px;
+}
+
+.incident-time-value {
+    font-size: 0.95rem;
+    font-weight: 650;
+    color: #111827;
+}
+
+/* Location section */
+.incident-location-section {
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 12px 12px;
+    color: #111827;
+}
+
+.incident-location-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.incident-location-title {
+    font-size: 0.85rem;
+    font-weight: 850;
+    color: #374151;
+}
+
+.incident-location-coords {
+    font-size: 0.8rem;
+    color: #6B7280;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+.incident-location-address {
+    margin-top: 6px;
+    font-size: 0.95rem;
+    color: #111827;
+    font-weight: 650;
+}
+
+.incident-location-distance {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #6B7280;
+}
+
+/* Details section */
+.incident-details-section {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 12px 12px;
+    color: #111827;
+}
+
+.incident-details-title {
+    font-size: 0.85rem;
+    font-weight: 850;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.incident-details-content {
+    font-size: 0.95rem;
+    color: #111827;
+    white-space: pre-wrap;
+    line-height: 1.45;
+}
+
+/* Verification section */
+.incident-verification-section {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+    padding: 14px 14px;
+    color: #111827;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.incident-verification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.incident-verification-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.incident-verification-title {
+    font-size: 0.9rem;
+    font-weight: 850;
+    color: #111827;
+}
+
+.incident-verification-votes {
+    font-size: 0.85rem;
+    color: #6B7280;
+}
+
+.incident-verification-status {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.incident-verification-status-verified {
+    color: #065F46;
+}
+
+.incident-verification-status-rejected {
+    color: #991B1B;
+}
+
+/* Vote buttons */
+.incident-vote-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.incident-vote-button {
+    flex: 1 1 160px;
+    border-radius: 12px;
+    padding: 11px 12px;
+    font-weight: 800;
+}
+
+.incident-vote-button-confirm {
+    border: 1px solid #A7F3D0;
+    background: #ECFDF5;
+    color: #065F46;
+}
+
+.incident-vote-button-reject {
+    border: 1px solid #FECACA;
+    background: #FEF2F2;
+    color: #991B1B;
+}
+
+.incident-vote-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.incident-vote-button:not(:disabled) {
+    cursor: pointer;
+}
+
+/* Disabled verification section */
+.incident-verification-disabled {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+    padding: 14px 14px;
+    color: #111827;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.incident-verification-disabled-title {
+    font-size: 0.9rem;
+    font-weight: 850;
+    color: #111827;
+}
+
+.incident-verification-disabled-text {
+    font-size: 0.85rem;
+    color: #6B7280;
+}

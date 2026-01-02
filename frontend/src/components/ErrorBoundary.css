@@ -1,0 +1,29 @@
+/* ErrorBoundary.jsx styles */
+.error-boundary-container {
+  padding: 24px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.error-boundary-heading {
+  margin: 0;
+  font-size: 20px;
+}
+
+.error-boundary-message {
+  color: #4b5563;
+}
+
+.error-boundary-stack {
+  background: #f3f4f6;
+  padding: 12px;
+  border-radius: 8px;
+  overflow: auto;
+}
+
+.error-boundary-component-stack {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 8px;
+  overflow: auto;
+  margin-top: 12px;
+}

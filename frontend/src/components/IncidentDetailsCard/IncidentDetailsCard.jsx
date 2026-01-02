@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import "./IncidentDetailsCard.css";
 
 let lastKnownLocation = null; // { lat, lng, accuracyMeters }
 let lastKnownLocationAtMs = 0;
@@ -357,178 +358,108 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated, 
 
   return (
     <div
-      className="mapholder"
+      className="incident-card"
       style={{
-        width: "100%",
-        maxHeight: "88vh",
-        backgroundColor: "#FFFFFF",
         border: `1px solid ${theme.border}`,
         borderLeft: `8px solid ${theme.border}`,
-        borderRadius: "18px",
-        boxShadow: "0 14px 40px rgba(17, 24, 39, 0.14)",
-        display: "flex",
-        justifyContent: "flex-start",
-        flexDirection: "column",
-        alignItems: "stretch",
-        padding: "18px 18px 16px 18px",
-        fontSize: "1rem",
-        color: "#1E1E1E",
-        gap: "14px",
-        overflowY: "auto",
-        overflowX: "hidden",
       }}
     >
       <div
         aria-hidden="true"
+        className="incident-card-accent"
         style={{
-          height: "10px",
-          margin: "-18px -18px 0 -18px",
           background: `linear-gradient(90deg, ${theme.border} 0%, rgba(255,255,255,0) 70%)`,
         }}
       />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: 0, flex: "1 1 auto" }}>
-          <h1 style={{ fontWeight: 850, fontSize: "1.35rem", color: "#111827", margin: 0, lineHeight: 1.2 }}>
+      <div className="incident-header">
+        <div className="incident-header-content">
+          <h1 className="incident-title">
             Incident details
           </h1>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <span
-            style={{
-              background: theme.badgeBg,
-              color: theme.badgeText,
-              border: `1px solid ${theme.border}`,
-              padding: "4px 10px",
-              borderRadius: "999px",
-              fontSize: "0.85rem",
-              fontWeight: 650,
-            }}
-          >
-            {typeLabel}
-          </span>
-          {verificationBadge ? (
+          <div className="incident-badges">
             <span
               style={{
-                background: verificationBadge.bg,
-                color: verificationBadge.fg,
-                border: `1px solid ${verificationBadge.border}`,
+                background: theme.badgeBg,
+                color: theme.badgeText,
+                border: `1px solid ${theme.border}`,
                 padding: "4px 10px",
                 borderRadius: "999px",
                 fontSize: "0.85rem",
                 fontWeight: 650,
               }}
             >
-              {verificationBadge.text}
+              {typeLabel}
             </span>
-          ) : null}
+            {verificationBadge ? (
+              <span
+                style={{
+                  background: verificationBadge.bg,
+                  color: verificationBadge.fg,
+                  border: `1px solid ${verificationBadge.border}`,
+                  padding: "4px 10px",
+                  borderRadius: "999px",
+                  fontSize: "0.85rem",
+                  fontWeight: 650,
+                }}
+              >
+                {verificationBadge.text}
+              </span>
+            ) : null}
           </div>
         </div>
         <button
           type="button"
           onClick={() => typeof onClose === "function" && onClose()}
           aria-label="Close incident details"
-          style={{
-            width: "34px",
-            height: "34px",
-            borderRadius: "10px",
-            border: "1px solid #E5E7EB",
-            background: "#FFFFFF",
-            cursor: "pointer",
-            color: "#111827",
-            fontSize: "18px",
-            lineHeight: "1",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 2px 8px rgba(17, 24, 39, 0.10)",
-          }}
+          className="incident-close-btn"
         >
           ×
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <div
-          style={{
-            background: "#FFFFFF",
-            border: "1px solid #E5E7EB",
-            borderRadius: "12px",
-            padding: "12px 12px",
-            color: "#111827",
-            display: "flex",
-            gap: "10px",
-            alignItems: "center",
-          }}
-        >
+      <div className="incident-info-grid">
+        <div className="incident-info-card">
           <div
             aria-hidden="true"
+            className="incident-reporter-avatar"
             style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "999px",
               background: theme.badgeBg,
               border: `1px solid ${theme.border}`,
               color: theme.badgeText,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 850,
-              flex: "0 0 auto",
             }}
           >
             {reporterInitial}
           </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: "0.8rem", fontWeight: 750, color: "#6B7280", marginBottom: "4px" }}>
+          <div className="incident-reporter-info">
+            <div className="incident-reporter-label">
               Reported by
             </div>
-            <div style={{ fontSize: "0.95rem", fontWeight: 750, color: "#111827", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div className="incident-reporter-name">
               {reporterName}
             </div>
           </div>
         </div>
-        <div
-          style={{
-            background: "#FFFFFF",
-            border: "1px solid #E5E7EB",
-            borderRadius: "12px",
-            padding: "12px 12px",
-            color: "#111827",
-          }}
-        >
-          <div style={{ fontSize: "0.8rem", fontWeight: 750, color: "#6B7280", marginBottom: "6px" }}>Reported at</div>
-          <div style={{ fontSize: "0.95rem", fontWeight: 650, color: "#111827" }}>
+        <div className="incident-time-card">
+          <div className="incident-time-label">Reported at</div>
+          <div className="incident-time-value">
             {formatAustraliaDateTime(report.created_at)}
           </div>
         </div>
       </div>
 
-      <div
-        style={{
-          background: "#F9FAFB",
-          border: "1px solid #E5E7EB",
-          borderRadius: "12px",
-          padding: "12px 12px",
-          color: "#111827",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px" }}>
-          <div style={{ fontSize: "0.85rem", fontWeight: 850, color: "#374151" }}>Location</div>
-          <div
-            style={{
-              fontSize: "0.8rem",
-              color: "#6B7280",
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-            }}
-          >
+      <div className="incident-location-section">
+        <div className="incident-location-header">
+          <div className="incident-location-title">Location</div>
+          <div className="incident-location-coords">
             {Number.isFinite(Number(report.latitude)) && Number.isFinite(Number(report.longitude))
               ? `${Number(report.latitude).toFixed(6)}, ${Number(report.longitude).toFixed(6)}`
               : "-"}
           </div>
         </div>
-        <div style={{ marginTop: "6px", fontSize: "0.95rem", color: "#111827", fontWeight: 650 }}>
+        <div className="incident-location-address">
           {address || "Looking up address..."}
         </div>
-        <div style={{ marginTop: "8px", fontSize: "0.85rem", color: "#6B7280" }}>
+        <div className="incident-location-distance">
           {distanceToReportLabel
             ? `Distance from you: ${distanceToReportLabel}`
             : locationStatus === "denied"
@@ -539,143 +470,101 @@ export default function IncidentDetailsCard({ report, onClose, onReportUpdated, 
         </div>
       </div>
 
-      <div
-        style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "12px",
-          padding: "12px 12px",
-          color: "#111827",
-        }}
-      >
-        <div style={{ fontSize: "0.85rem", fontWeight: 850, color: "#374151", marginBottom: "6px" }}>Details</div>
-        <div style={{ fontSize: "0.95rem", color: "#111827", whiteSpace: "pre-wrap", lineHeight: 1.45 }}>
+      <div className="incident-details-section">
+        <div className="incident-details-title">Details</div>
+        <div className="incident-details-content">
           {report.description || "No additional details provided."}
         </div>
       </div>
 
       {isHazard ? (
         canViewAndVoteByDistance ? (
-        <div
-          style={{
-            background: "#FFFFFF",
-            border: "1px solid #E5E7EB",
-            borderRadius: "14px",
-            padding: "14px 14px",
-            color: "#111827",
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              <div style={{ fontSize: "0.9rem", fontWeight: 850, color: "#111827" }}>Community verification</div>
-            </div>
-            <span
-              style={{
-                background: verificationBadge?.bg || "#F3F4F6",
-                color: verificationBadge?.fg || "#374151",
-                border: `1px solid ${verificationBadge?.border || "#E5E7EB"}`,
-                padding: "4px 10px",
-                borderRadius: "999px",
-                fontSize: "0.8rem",
-                fontWeight: 750,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {verificationBadge?.text || "Open"}
-            </span>
-          </div>
-
-          <div style={{ fontSize: "0.85rem", color: "#6B7280" }}>
-            Yes {report.yes_votes ?? 0} • No {report.no_votes ?? 0}
-          </div>
-
-          {hazardVerified ? (
-            <div style={{ fontSize: "0.95rem", color: "#065F46", fontWeight: 700 }}>
-              Verified hazard.
-            </div>
-          ) : hazardRejected ? (
-            <div style={{ fontSize: "0.95rem", color: "#991B1B", fontWeight: 700 }}>
-              Rejected report.
-            </div>
-          ) : null}
-
-          {voteMessage ? (
-            <div
-              style={{
-                background: voteMessage.type === "error" ? "#FEF2F2" : "#ECFDF5",
-                border: `1px solid ${voteMessage.type === "error" ? "#FECACA" : "#A7F3D0"}`,
-                color: voteMessage.type === "error" ? "#991B1B" : "#065F46",
-                padding: "10px 12px",
-                borderRadius: "12px",
-              }}
-              role="status"
-              aria-live="polite"
-            >
-              {voteMessage.message}
-            </div>
-          ) : null}
-
-          {hazardVoteOpen ? (
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={() => submitVote("YES")}
-                disabled={!isLoggedIn || isReporter || isVoting || hasVoted}
+          <div className="incident-verification-section">
+            <div className="incident-verification-header">
+              <div className="incident-verification-title-group">
+                <div className="incident-verification-title">Community verification</div>
+              </div>
+              <span
                 style={{
-                  flex: "1 1 160px",
-                  borderRadius: "12px",
-                  border: "1px solid #A7F3D0",
-                  background: "#ECFDF5",
-                  color: "#065F46",
-                  padding: "11px 12px",
-                  fontWeight: 800,
-                  cursor: !isLoggedIn || isReporter || isVoting || hasVoted ? "not-allowed" : "pointer",
-                  opacity: !isLoggedIn || isReporter || isVoting || hasVoted ? 0.6 : 1,
+                  background: verificationBadge?.bg || "#F3F4F6",
+                  color: verificationBadge?.fg || "#374151",
+                  border: `1px solid ${verificationBadge?.border || "#E5E7EB"}`,
+                  padding: "4px 10px",
+                  borderRadius: "999px",
+                  fontSize: "0.8rem",
+                  fontWeight: 750,
+                  whiteSpace: "nowrap",
                 }}
               >
-                Confirm hazard
-              </button>
-              <button
-                type="button"
-                onClick={() => submitVote("NO")}
-                disabled={!isLoggedIn || isReporter || isVoting || hasVoted}
-                style={{
-                  flex: "1 1 160px",
-                  borderRadius: "12px",
-                  border: "1px solid #FECACA",
-                  background: "#FEF2F2",
-                  color: "#991B1B",
-                  padding: "11px 12px",
-                  fontWeight: 800,
-                  cursor: !isLoggedIn || isReporter || isVoting || hasVoted ? "not-allowed" : "pointer",
-                  opacity: !isLoggedIn || isReporter || isVoting || hasVoted ? 0.6 : 1,
-                }}
-              >
-                Not a hazard
-              </button>
+                {verificationBadge?.text || "Open"}
+              </span>
             </div>
-          ) : null}
 
-          {/* Intentionally keep this section minimal (no extra guidance text). */}
-        </div>
+            <div className="incident-verification-votes">
+              Yes {report.yes_votes ?? 0} • No {report.no_votes ?? 0}
+            </div>
+
+            {hazardVerified ? (
+              <div className="incident-verification-status incident-verification-status-verified">
+                Verified hazard.
+              </div>
+            ) : hazardRejected ? (
+              <div className="incident-verification-status incident-verification-status-rejected">
+                Rejected report.
+              </div>
+            ) : null}
+
+            {voteMessage ? (
+              <div
+                style={{
+                  background: voteMessage.type === "error" ? "#FEF2F2" : "#ECFDF5",
+                  border: `1px solid ${voteMessage.type === "error" ? "#FECACA" : "#A7F3D0"}`,
+                  color: voteMessage.type === "error" ? "#991B1B" : "#065F46",
+                  padding: "10px 12px",
+                  borderRadius: "12px",
+                }}
+                role="status"
+                aria-live="polite"
+              >
+                {voteMessage.message}
+              </div>
+            ) : null}
+
+            {hazardVoteOpen ? (
+              <div className="incident-vote-buttons">
+                <button
+                  type="button"
+                  onClick={() => submitVote("YES")}
+                  disabled={!isLoggedIn || isReporter || isVoting || hasVoted}
+                  className="incident-vote-button incident-vote-button-confirm"
+                  style={{
+                    cursor: !isLoggedIn || isReporter || isVoting || hasVoted ? "not-allowed" : "pointer",
+                    opacity: !isLoggedIn || isReporter || isVoting || hasVoted ? 0.6 : 1,
+                  }}
+                >
+                  Confirm hazard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => submitVote("NO")}
+                  disabled={!isLoggedIn || isReporter || isVoting || hasVoted}
+                  className="incident-vote-button incident-vote-button-reject"
+                  style={{
+                    cursor: !isLoggedIn || isReporter || isVoting || hasVoted ? "not-allowed" : "pointer",
+                    opacity: !isLoggedIn || isReporter || isVoting || hasVoted ? 0.6 : 1,
+                  }}
+                >
+                  Not a hazard
+                </button>
+              </div>
+            ) : null}
+
+            {/* Intentionally keep this section minimal (no extra guidance text). */}
+          </div>
         ) : (
-          <div
-            style={{
-              background: "#FFFFFF",
-              border: "1px solid #E5E7EB",
-              borderRadius: "14px",
-              padding: "14px 14px",
-              color: "#111827",
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-            }}
-          >
-            <div style={{ fontSize: "0.9rem", fontWeight: 850, color: "#111827" }}>Community verification</div>
-            <div style={{ fontSize: "0.85rem", color: "#6B7280" }}>
+          <div className="incident-verification-disabled">
+            <div className="incident-verification-disabled-title">Community verification</div>
+            <div className="incident-verification-disabled-text">
               {locationStatus === "denied"
                 ? "Enable location services to vote on this hazard report."
                 : `Only users within ${Math.round(voteRadiusMeters)}m of the hazard can vote.`}

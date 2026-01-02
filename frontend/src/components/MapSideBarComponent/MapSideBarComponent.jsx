@@ -7,58 +7,35 @@ import ReportIcon from "../../assets/report.png";
 import SearchIcon from "../../assets/search.png";
 import GoIcon from "../../assets/go.png";
 
-import { useNavigate } from "react-router";
-
 
 export default function MapPage({ onSearch }) {
-  const navigate = useNavigate();   // hook gives you a navigation function
-  
+
   return (
     <div className="overlay"> {/* <- positioned and non-blocking by default */}
       <div className="map-page">
         <div className="sidebar">
-          <span style={{ fontSize: "40px" }}>🚦</span>
+          <span className="sidebar-emoji">🚦</span>
 
-        <button className="sidebar-button"  
-            onClick={() => (window.location.href = "/map")}  
-            // Now you can click this to go to the Emergency button screen
-            style={{
-              pointerEvents: "auto", // allow this button to receive clicks
-            }} >
+          <button className="sidebar-button sidebar-button-clickable"
+            onClick={() => (window.location.href = "/map")}>
             <img src={MapIcon} alt="Map" />
             <span>Map</span>
           </button>
 
-            <button className="sidebar-button"  
-            onClick={() => (window.location.href = "/navigate")}  
-            // Now you can click this to go to the Emergency button screen
-            style={{
-              pointerEvents: "auto", // allow this button to receive clicks
-            }} >
+          <button className="sidebar-button sidebar-button-clickable"
+            onClick={() => (window.location.href = "/navigate")}>
             <img src={RouteIcon} alt="Navigate" />
             <span>Navigate</span>
           </button>
 
-          
-          <button className="sidebar-button"  
-            onClick={() => (window.location.href = "/Emergency")}  
-            // Now you can click this to go to the Emergency button screen
-            style={{
-              pointerEvents: "auto", // allow this button to receive clicks
-            }} >
-            
+          <button className="sidebar-button sidebar-button-clickable"
+            onClick={() => (window.location.href = "/Emergency")}>
             <img src={PhoneCallIcon} alt="Emergency" />
-            <span>
-            Emergency</span>
-            
+            <span>Emergency</span>
           </button>
 
-        <button className="sidebar-button"  
-            onClick={() => (window.location.href = "/report")}  
-            // Now you can click this to go to the Emergency button screen
-            style={{
-              pointerEvents: "auto", // allow this button to receive clicks
-            }} >
+          <button className="sidebar-button sidebar-button-clickable"
+            onClick={() => (window.location.href = "/report")}>
             <img src={ReportIcon} alt="Reports" />
             <span>Reports</span>
           </button>
@@ -86,5 +63,4 @@ export default function MapPage({ onSearch }) {
     </div>
   );
 }
-
 

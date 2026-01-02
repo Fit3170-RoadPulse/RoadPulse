@@ -1,0 +1,72 @@
+/* Report.jsx inline styles */
+
+.report-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+.report-toast {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    padding: 10px 14px;
+    border-radius: 10px;
+    pointer-events: none;
+    max-width: 70vw;
+    text-align: center;
+}
+
+.report-toast-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+.report-toast-success {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+}
+
+.report-map-wrapper {
+    position: absolute;
+    top: 0;
+    left: 100px;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    pointer-events: auto;
+}
+
+.report-sidebar-container {
+    position: absolute;
+    top: 0;
+    left: 60vw;
+    width: 35vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+}
+
+.report-sidebar-container-active {
+    z-index: 10;
+}
+
+.report-sidebar-container-inactive {
+    z-index: 0;
+}
+
+.report-sidebar-content {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+}
+
+.report-overlay-ui {
+    pointer-events: none;
+}

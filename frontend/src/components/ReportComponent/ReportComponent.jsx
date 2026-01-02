@@ -193,7 +193,7 @@ export default function ReportComponent({ location, onClose, onSubmitted }) {
             <div className="rp-report-accent" aria-hidden="true" />
 
             <div className="rp-report-header">
-                <div style={{ minWidth: 0 }}>
+                <div className="rp-report-header-content">
                     <h1 className="rp-report-title">New incident report</h1>
                     <div className="rp-report-subtitle">
                         Submit a report to help keep other drivers informed.

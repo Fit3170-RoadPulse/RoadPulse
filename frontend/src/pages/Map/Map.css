@@ -418,3 +418,239 @@
 .logout-box button:last-of-type:hover {
     background: #b91c1c;
 }
+
+/* Map.jsx inline styles */
+
+/* Main map container */
+.map-page-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+/* Map wrapper */
+.map-wrapper {
+    position: absolute;
+    top: 0;
+    left: 100px;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    pointer-events: auto;
+}
+
+/* Overlay UI container */
+.map-overlay-ui {
+    pointer-events: none;
+}
+
+/* Profile dropdown */
+.profile-dropdown {
+    position: absolute;
+    top: 130px;
+    right: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    width: 240px;
+    z-index: 1001;
+    overflow: hidden;
+}
+
+.profile-dropdown-header {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.profile-dropdown-header p:first-of-type {
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.profile-dropdown-header p:last-of-type {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+.profile-dropdown-menu {
+    padding: 8px;
+}
+
+.profile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    border-radius: 8px;
+    transition: all 0.2s;
+    color: #1f2937;
+}
+
+.profile-menu-item:hover {
+    background: #f3f4f6;
+}
+
+.profile-menu-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.profile-menu-item-icon.profile-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.profile-menu-item-icon.rewards-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.profile-menu-item-icon.settings-icon {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.profile-menu-item-icon.logout-icon {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.profile-menu-item-text {
+    font-size: 14px;
+}
+
+.profile-menu-item-text.profile-text {
+    flex: 1;
+}
+
+.profile-menu-item-text.rewards-text {
+    flex: 1;
+    font-weight: 500;
+}
+
+.profile-menu-item-text.settings-text {
+    flex: 1;
+}
+
+.profile-menu-item-text.logout-text {
+    flex: 1;
+}
+
+.profile-menu-divider {
+    border-top: 1px solid #e5e7eb;
+    margin-top: 8px;
+}
+
+/* Emergency button */
+.emergency-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+/* Incident details sidebar panel */
+.map-incident-panel {
+    position: absolute;
+    top: 0;
+    left: 60vw;
+    width: 35vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.map-incident-panel-active {
+    z-index: 10;
+}
+
+.map-incident-panel-inactive {
+    z-index: 0;
+}
+
+.map-incident-panel-content {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+}
+
+/* Logout confirmation overlay */
+.map-logout-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.map-logout-box {
+    background: white;
+    padding: 32px 24px;
+    border-radius: 12px;
+    width: 320px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.map-logout-box h3 {
+    margin: 0 0 12px 0;
+    font-size: 20px;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.map-logout-box p {
+    font-size: 16px;
+    color: #1f2937;
+    margin-bottom: 24px;
+    font-weight: 500;
+}
+
+.map-logout-box button {
+    margin: 0 6px;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.map-logout-box button:first-of-type {
+    background: #e5e7eb;
+    color: #1f2937;
+}
+
+.map-logout-box button:first-of-type:hover {
+    background: #d1d5db;
+}
+
+.map-logout-box button:last-of-type {
+    background: #dc2626;
+    color: white;
+}
+
+.map-logout-box button:last-of-type:hover {
+    background: #b91c1c;
+}

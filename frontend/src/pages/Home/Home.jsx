@@ -14,7 +14,7 @@ function Home() {
     }, [])
 
     return (
-        <div style={{ padding: 24 }}>
+        <div className="home-container">
             <h1>RoadPulse</h1>
             <h2>API Health</h2>
             <pre>{JSON.stringify(health, null, 2)}</pre>

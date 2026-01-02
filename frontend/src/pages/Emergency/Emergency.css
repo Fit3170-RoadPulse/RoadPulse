@@ -1,0 +1,238 @@
+/* Emergency.jsx inline styles */
+
+/* Contacts page container */
+.emergency-contacts-page {
+    background-color: #ff9999;
+    min-height: 100vh;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+/* Back button (contacts page) */
+.emergency-back-button {
+    background-color: transparent;
+    border: 2px solid white;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Emergency contacts grid */
+.emergency-contacts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* Contact category card */
+.emergency-contact-card {
+    background-color: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Category header */
+.emergency-category-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    color: #ff4444;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.emergency-category-icon {
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+/* Individual contact row */
+.emergency-contact-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    gap: 10px;
+}
+
+.emergency-contact-row-with-border {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.emergency-contact-name {
+    color: #333;
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+}
+
+.emergency-contact-number-button {
+    background-color: transparent;
+    border: none;
+    color: #333;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: underline;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Safety tips section */
+.emergency-safety-tips {
+    background-color: white;
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.emergency-safety-tips-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    color: #333;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.emergency-safety-tip {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 8px;
+    padding-left: 8px;
+}
+
+/* Main emergency page container */
+.emergency-main-page {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    background-color: #f9f9f9;
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* Back button (main page) */
+.emergency-main-back-button {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background-color: beige;
+    border: 2px solid grey;
+    color: black;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    z-index: 1000;
+}
+
+/* Emergency call button (big red circle) */
+.emergency-call-button {
+    width: 60vw;
+    height: 60vw;
+    max-width: 280px;
+    max-height: 280px;
+    border-radius: 50%;
+    background-color: red;
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.4;
+    white-space: pre-line;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+.emergency-call-button-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.emergency-call-button-title {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.emergency-call-button-subtitle {
+    font-size: 16px;
+    font-weight: normal;
+}
+
+/* Bottom contact card */
+.emergency-bottom-card {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    padding: 20px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 320px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid #e0e0e0;
+}
+
+.emergency-bottom-card-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.emergency-bottom-card-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.emergency-bottom-card-text {
+    flex: 1;
+}
+
+.emergency-bottom-card-label {
+    color: #ff4444;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.emergency-bottom-card-number {
+    color: #333;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.emergency-view-all-button {
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+}

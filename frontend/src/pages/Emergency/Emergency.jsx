@@ -63,78 +63,31 @@ function Emergency() {
 
   if (showContactsPage) {
     return (
-      <div style={{
-        backgroundColor: "#ff9999",
-        minHeight: "100vh",
-        padding: "20px",
-        fontFamily: "Arial, sans-serif"
-      }}>
+      <div className="emergency-contacts-page">
         {/* Back button */}
         <button
           onClick={() => setShowContactsPage(false)}
-          style={{
-            backgroundColor: "transparent",
-            border: "2px solid white",
-            color: "white",
-            padding: "8px 16px",
-            borderRadius: "20px",
-            marginBottom: "20px",
-            cursor: "pointer",
-            fontWeight: "bold"
-          }}
+          className="emergency-back-button"
         >
           ← Back
         </button>
 
         {/* Emergency contacts grid */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-          gap: "20px",
-          marginBottom: "20px"
-        }}>
+        <div className="emergency-contacts-grid">
           {emergencyContacts.map((section, index) => (
-            <div key={index} style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "20px",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: "16px",
-                color: "#ff4444",
-                fontSize: "16px",
-                fontWeight: "bold"
-              }}>
-                <span style={{ marginRight: "8px", fontSize: "18px" }}>📞</span>
+            <div key={index} className="emergency-contact-card">
+              <div className="emergency-category-header">
+                <span className="emergency-category-icon">📞</span>
                 {section.category}
               </div>
               {section.contacts.map((contact, contactIndex) => (
-                <div key={contactIndex} style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "8px 0",
-                  borderBottom: contactIndex < section.contacts.length - 1 ? "1px solid #f0f0f0" : "none",
-                  gap: "10px"
-                }}>
-                  <span style={{ color: "#333", fontWeight: "500", flex: "1", minWidth: "0" }}>
+                <div key={contactIndex} className={`emergency-contact-row ${contactIndex < section.contacts.length - 1 ? 'emergency-contact-row-with-border' : ''}`}>
+                  <span className="emergency-contact-name">
                     {contact.name}
                   </span>
                   <button
                     onClick={() => handleContactCall(contact.number)}
-                    style={{
-                      backgroundColor: "transparent",
-                      border: "none",
-                      color: "#333",
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                      textDecoration: "underline",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0
-                    }}
+                    className="emergency-contact-number-button"
                   >
                     {contact.number}
                   </button>
@@ -145,31 +98,13 @@ function Emergency() {
         </div>
 
         {/* Safety tips */}
-        <div style={{
-          backgroundColor: "white",
-          borderRadius: "12px",
-          padding: "20px",
-          maxWidth: "600px",
-          margin: "0 auto"
-        }}>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            marginBottom: "16px",
-            color: "#333",
-            fontSize: "16px",
-            fontWeight: "bold"
-          }}>
-            <span style={{ marginRight: "8px", fontSize: "18px" }}>ℹ️</span>
+        <div className="emergency-safety-tips">
+          <div className="emergency-safety-tips-header">
+            <span className="emergency-category-icon">ℹ️</span>
             Australian Highway Safety Tips
           </div>
           {safetyTips.map((tip, index) => (
-            <div key={index} style={{
-              color: "#666",
-              fontSize: "14px",
-              marginBottom: "8px",
-              paddingLeft: "8px"
-            }}>
+            <div key={index} className="emergency-safety-tip">
               • {tip}
             </div>
           ))}
@@ -179,140 +114,59 @@ function Emergency() {
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        width: "100vw",
-        margin: 0,
-        padding: 0,
-        backgroundColor: "#f9f9f9",
-        boxSizing: "border-box",
-        position: "relative",
-      }}
-    >
-    {/* Copied Back button */}
-        <button
-            onClick={() => (window.location.href = "/map")}
-            style={{
-                position: "absolute",        // makes it float on the screen
-                top: "20px",                 // distance from top
-                left: "20px",               // distance from right
-                backgroundColor: "beige",    // beige background
-                border: "2px solid grey",    // grey border
-                color: "black",              // text color
-                padding: "8px 16px",
-                borderRadius: "20px",
-                cursor: "pointer",
-                fontWeight: "bold",
-                zIndex: 1000                 // ensure it stays above the map
-            }}
-            >
-            ← Back
-        </button>
+    <div className="emergency-main-page">
+      {/* Copied Back button */}
+      <button
+        onClick={() => (window.location.href = "/map")}
+        style={{
+          position: "absolute",        // makes it float on the screen
+          top: "20px",                 // distance from top
+          left: "20px",               // distance from right
+          backgroundColor: "beige",    // beige background
+          border: "2px solid grey",    // grey border
+          color: "black",              // text color
+          padding: "8px 16px",
+          borderRadius: "20px",
+          cursor: "pointer",
+          fontWeight: "bold",
+          zIndex: 1000                 // ensure it stays above the map
+        }}
+      >
+        ← Back
+      </button>
 
       {/* Emergency Call Button */}
       <button
-        style={{
-          width: "60vw",
-          height: "60vw",
-          maxWidth: "280px",
-          maxHeight: "280px",
-          borderRadius: "50%",
-          backgroundColor: "red",
-          color: "white",
-          fontSize: "22px",
-          fontWeight: "bold",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-          lineHeight: "1.4",
-          whiteSpace: "pre-line",
-          boxShadow: "0 6px 12px rgba(0,0,0,0.2)",
-        }}
+        className="emergency-call-button"
         onClick={handleEmergencyCall}
       >
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "8px" }}>
+        <div className="emergency-call-button-content">
+          <div className="emergency-call-button-title">
             ⚠️ Emergency
           </div>
-          <div style={{ fontSize: "16px", fontWeight: "normal" }}>
+          <div className="emergency-call-button-subtitle">
             Press for help
           </div>
         </div>
       </button>
 
       {/* Emergency Contacts Rectangle at Bottom */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "40px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          backgroundColor: "white",
-          padding: "20px",
-          borderRadius: "12px",
-          width: "90%",
-          maxWidth: "320px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          border: "1px solid #e0e0e0",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div
-            style={{
-              width: "24px",
-              height: "24px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontSize: "14px",
-              flexShrink: 0,
-            }}
-          >
+      <div className="emergency-bottom-card">
+        <div className="emergency-bottom-card-content">
+          <div className="emergency-bottom-card-icon">
             📞
           </div>
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                color: "#ff4444",
-                fontSize: "14px",
-                fontWeight: "600",
-                marginBottom: "2px",
-              }}
-            >
+          <div className="emergency-bottom-card-text">
+            <div className="emergency-bottom-card-label">
               Emergency Contacts
             </div>
-            <div
-              style={{
-                color: "#333",
-                fontSize: "16px",
-                fontWeight: "bold",
-              }}
-            >
+            <div className="emergency-bottom-card-number">
               {emergencyNumber}
             </div>
           </div>
           <button
             onClick={() => setShowContactsPage(true)}
-            style={{
-              backgroundColor: "#ff4444",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              padding: "6px 12px",
-              fontSize: "12px",
-              cursor: "pointer",
-              fontWeight: "600"
-            }}
+            className="emergency-view-all-button"
           >
             View All
           </button>

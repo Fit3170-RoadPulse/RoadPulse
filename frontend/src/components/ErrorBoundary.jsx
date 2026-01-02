@@ -1,4 +1,5 @@
 import React from "react";
+import "./ErrorBoundary.css";
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -18,14 +19,14 @@ export default class ErrorBoundary extends React.Component {
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif" }}>
-          <h1 style={{ margin: 0, fontSize: 20 }}>Something went wrong</h1>
-          <p style={{ color: "#4b5563" }}>Open DevTools Console for the full error.</p>
-          <pre style={{ background: "#f3f4f6", padding: 12, borderRadius: 8, overflow: "auto" }}>
+        <div className="error-boundary-container">
+          <h1 className="error-boundary-heading">Something went wrong</h1>
+          <p className="error-boundary-message">Open DevTools Console for the full error.</p>
+          <pre className="error-boundary-stack">
             {String(this.state.error?.stack || this.state.error?.message || this.state.error)}
           </pre>
           {this.state.errorInfo?.componentStack ? (
-            <pre style={{ background: "#f9fafb", padding: 12, borderRadius: 8, overflow: "auto", marginTop: 12 }}>
+            <pre className="error-boundary-component-stack">
               {this.state.errorInfo.componentStack.trim()}
             </pre>
           ) : null}
