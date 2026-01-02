@@ -5,7 +5,6 @@ import { User, Award, Settings, LogOut, X, AlertTriangle } from "lucide-react";
 import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import "./Map.css"
-import RewardsPage from "../rewardspage/RewardsPage";
 import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../lib/api";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 
@@ -19,17 +18,20 @@ export default function Map() {
     const [mapMarkers, setMapMarkers] = useState({ origin: null, destination: null });
     const [mapPolylines, setMapPolylines] = useState([]);
     const [availableTimes, setAvailableTimes] = useState([]);
-    const [selectedTimeIndex, setSelectedTimeIndex] = useState(0);
+    const [selectedOffsetMinutes, setSelectedOffsetMinutes] = useState(1);
     const [showTimeSelector, setShowTimeSelector] = useState(false);
     const [isLoadingRoute, setIsLoadingRoute] = useState(false);
     const [mapRef, setMapRef] = useState(null);
     const [showErrorPopup, setShowErrorPopup] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const lastRouteSelectionRef = useRef(null);
 
-    // const [location, setLocation] = useState(null); // We will use the UserLocation Ref
     const [cumulativeDistance, setCumulativeDistance] = useState(0);
+    const prevLocationRef = useRef(null);
     let locationPollingData = useRef(null);
     let lastUpdateTimeRef = useRef(0);
+    const routeCacheRef = useRef(new globalThis.Map());
+    const activeRouteRequestRef = useRef(null);
 
     // Fallback mock location (used if real geolocation fails)
     const mockLocation = {
@@ -79,7 +81,7 @@ export default function Map() {
             console.log("Location Polling Data Ref:", locationPollingData);
 
             if (!navigator.geolocation) {
-                setLocation(mockLocation);
+                prevLocationRef.current = mockLocation;
                 console.log('Geolocation is not supported by your browser');
                 return;
             }
@@ -87,40 +89,45 @@ export default function Map() {
             // Success handler: updates the state with the new position
             const successHandler = (position) => {
                 const now = Date.now();
-                // Only update if the specified interval has passed since the last update
-                if (now - lastUpdateTimeRef.current >= locationPollingData.current?.pollingInterval) {
-                    let newLocation = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        accuracy: position.coords.accuracy,
-                        timestamp: position.timestamp,
-                    };
-                    let distance = 0;
-                    if (location) {
-                        distance = google.maps.geometry.spherical.computeDistanceBetween(
-                            new google.maps.LatLng(location.latitude, location.longitude), 
-                            new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
-                        );
-                    }
-                    // Use functional update to avoid stale state
-                    setCumulativeDistance((prev) => prev + distance);
+                if (now - lastUpdateTimeRef.current < locationPollingData.current?.pollingInterval) return;
 
-                    // Persist the delta to the backend (if authenticated)
-                    if (isAuthenticated() && distance > 0) {
-                        // fire-and-forget; log errors but don't block location handling
-                        (async () => {
-                            try {
-                                await apiPost("/user/distance/", { distance_m: distance });
-                            } catch (err) {
-                                console.error("Failed to persist cumulative distance:", err);
-                            }
-                        })();
-                    }
-                    setLocation(newLocation);
-                    lastUpdateTimeRef.current = now;
-                    console.log("Distance moved (m):", distance);
-                    console.log("Location updated:", newLocation);
+                const newLocation = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy,
+                    timestamp: position.timestamp,
+                };
+
+                const prev = prevLocationRef.current;
+                let distance = 0;
+
+                if (prev) {
+                    distance = google.maps.geometry.spherical.computeDistanceBetween(
+                    new google.maps.LatLng(prev.latitude, prev.longitude),
+                    new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
+                    );
                 }
+
+                // update "previous" immediately
+                prevLocationRef.current = newLocation;
+
+                // filter jitter + jumps
+                const MIN_MOVE_M = 10;
+                const MAX_MOVE_M = 500;
+
+                if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
+                    setCumulativeDistance((prevDist) => prevDist + distance);
+
+                    if (isAuthenticated()) {
+                    apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
+                        console.error("Failed to persist distance:", err)
+                    );
+                    }
+                }
+
+                lastUpdateTimeRef.current = now;
+                console.log("Distance moved (m):", distance);
+                console.log("Location updated:", newLocation);
             };
 
             // Error handler: updates the error state
@@ -129,7 +136,7 @@ export default function Map() {
                     code: err.code,
                     message: err.message,
                 });
-                setLocation(mockLocation);
+                prevLocationRef.current = mockLocation;
                 console.log("Location updated:", mockLocation);
             };
 
@@ -319,14 +326,36 @@ export default function Map() {
         setRouteInfo(null);
         setShowTimeSelector(false);
         setAvailableTimes([]);
-        setSelectedTimeIndex(0);
+        setSelectedOffsetMinutes(1);
     };
+
+    useEffect(() => {
+        if (!showTimeSelector) return;
+        let cancelled = false;
+
+        const refreshTimes = () => {
+            if (cancelled) return;
+            const times = generateStartTimes();
+            setAvailableTimes(times);
+            if (!selectedOffsetMinutes) {
+                setSelectedOffsetMinutes(times[0]?.offsetMinutes ?? 1);
+            }
+        };
+
+        refreshTimes();
+        const intervalId = setInterval(refreshTimes, 30000);
+        return () => {
+            cancelled = true;
+            clearInterval(intervalId);
+        };
+    }, [showTimeSelector, selectedOffsetMinutes]);
 
     const setMarker = useCallback(async (map) => {
         if (mapReadyRef.current) return;
         mapReadyRef.current = true;
         mapInstanceRef.current = map;
         setMapReady(true);
+        setMapRef(map);
 
         let originMarker = mapMarkers.origin;
         let destinationMarker = mapMarkers.destination;
@@ -370,11 +399,11 @@ export default function Map() {
                 // Generate available times and show selector
                 const times = generateStartTimes();
                 setAvailableTimes(times);
-                setSelectedTimeIndex(0);
+                setSelectedOffsetMinutes(times[0]?.offsetMinutes ?? 1);
                 setShowTimeSelector(true);
 
                 // Fetch route for first time option
-                fetchRoute(originMarker.position, destinationMarker.position, times[0].time, map);
+                fetchRoute(originMarker.position, destinationMarker.position, times[0].offsetMinutes, map);
             } else {
                 // Clear previous markers
                 originMarker.map = null;
@@ -391,7 +420,7 @@ export default function Map() {
                 setRouteInfo(null);
                 setShowTimeSelector(false);
                 setAvailableTimes([]);
-                setSelectedTimeIndex(0);
+                setSelectedOffsetMinutes(1);
 
                 // Start new route
                 originMarker = new AdvancedMarkerElement({
@@ -406,10 +435,12 @@ export default function Map() {
     }, [createIncidentPinContent, reportTypeLabel]);
     
     const handleTimeChange = async (index) => {
-        if (!mapMarkers.origin || !mapMarkers.destination || !availableTimes[index] || !mapRef) return;
+        const map = mapRef || mapInstanceRef.current;
+        if (!mapMarkers.origin || !mapMarkers.destination || !availableTimes[index] || !map) return;
 
-        // Get the selected time before refreshing
-        const selectedTime = availableTimes[index].time;
+        const selectedOffset = availableTimes[index].offsetMinutes;
+        if (isLoadingRoute) return;
+        if (selectedOffsetMinutes === selectedOffset && routeInfo) return;
 
         setIsLoadingRoute(true);
 
@@ -420,44 +451,61 @@ export default function Map() {
         setMapPolylines([]);
 
         // Fetch new route for selected time
-        await fetchRoute(mapMarkers.origin.position, mapMarkers.destination.position, selectedTime, mapRef);
-
-        // Regenerate time slots based on CURRENT time for next selection
-        const refreshedTimes = generateStartTimes();
-        setAvailableTimes(refreshedTimes);
-
-        // Find which index in the new times is closest to the selected time
-        // This keeps the same selection highlighted after refresh
-        const selectedDate = new Date(selectedTime);
-        let closestIndex = 0;
-        let minDiff = Infinity;
-
-        refreshedTimes.forEach((timeSlot, i) => {
-            const diff = Math.abs(new Date(timeSlot.time) - selectedDate);
-            if (diff < minDiff) {
-                minDiff = diff;
-                closestIndex = i;
-            }
-        });
-
-        setSelectedTimeIndex(closestIndex);
+        await fetchRoute(mapMarkers.origin.position, mapMarkers.destination.position, selectedOffset, map);
+        setSelectedOffsetMinutes(selectedOffset);
     };
 
-    async function fetchRoute(origin, destination, selectedTime, map) {
+    function normalizeLatLng(pos) {
+        const lat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
+        const lng = typeof pos.lng === "function" ? pos.lng() : pos.lng;
+        return { lat, lng };
+    }
+
+    function buildRouteCacheKey(origin, destination, departureTime) {
+        const originPos = normalizeLatLng(origin);
+        const destPos = normalizeLatLng(destination);
+        return `${originPos.lat},${originPos.lng}:${destPos.lat},${destPos.lng}:${departureTime}`;
+    }
+
+    async function fetchRoute(origin, destination, selectedOffset, map) {
         setIsLoadingRoute(true);
         const base = import.meta.env.VITE_API_URL;
+        const departureDate = new Date(Date.now() + selectedOffset * 60000);
+        const departureTime = departureDate.toISOString();
+        const cacheKey = buildRouteCacheKey(origin, destination, departureTime);
+        if (lastRouteSelectionRef.current === cacheKey && routeInfo) {
+            setIsLoadingRoute(false);
+            return;
+        }
 
         try {
-            const response = await axios.post(`${base}/api/map/compute-route/`, {
-                origin: { latitude: origin.lat, longitude: origin.lng },
-                destination: { latitude: destination.lat, longitude: destination.lng },
-                startTimes: [selectedTime], // Send as array with single time
-            });
+            const cached = routeCacheRef.current.get(cacheKey);
+            let routeData = cached;
+            const originPos = normalizeLatLng(origin);
+            const destPos = normalizeLatLng(destination);
 
-            console.log("Route response:", response.data);
+            if (!routeData) {
+                activeRouteRequestRef.current?.abort?.();
+                const controller = new AbortController();
+                activeRouteRequestRef.current = controller;
 
-            if (response.data && response.data.length > 0) {
-                const routeData = response.data[0];
+                const response = await axios.post(`${base}/api/map/compute-route/`, {
+                    origin: { latitude: originPos.lat, longitude: originPos.lng },
+                    destination: { latitude: destPos.lat, longitude: destPos.lng },
+                    startTimes: [departureTime], // Send as array with single time
+                }, {
+                    signal: controller.signal,
+                });
+
+                console.log("Route response:", response.data);
+
+                if (response.data && response.data.length > 0) {
+                    routeData = response.data[0];
+                    routeCacheRef.current.set(cacheKey, routeData);
+                }
+            }
+
+            if (routeData) {
                 const polyline = await drawPolyLine(map, routeData.polyline);
 
                 // Update polylines state via callback to get current value
@@ -466,19 +514,26 @@ export default function Map() {
                 });
 
                 const distanceKm = formatDistance(routeData.distance_meters);
-                const eta = formatDuration(routeData.duration);
-                const starting_time = formatDate(routeData.starting_time);
+                const durationInfo = formatDurationInfo(routeData.duration);
+                const eta = durationInfo.text;
+                const baseDeparture = departureTime;
+                const starting_time = formatDate(baseDeparture);
+                const arrival_time = formatEtaTimeByMinutes(baseDeparture, durationInfo.totalMinutes);
 
                 setRouteInfo({
                     distanceKm,
                     eta,
                     starting_time,
+                    arrival_time,
                     distance_meters: routeData.distance_meters,
                     duration: routeData.duration
                 });
+                lastRouteSelectionRef.current = cacheKey;
             }
         } catch (error) {
-            console.error("Error fetching route:", error);
+            if (error?.name !== "CanceledError" && error?.code !== "ERR_CANCELED") {
+                console.error("Error fetching route:", error);
+            }
             setRouteInfo(null);
             if (error.response && error.response.status === 502) {
                 setShowErrorPopup(true);
@@ -520,7 +575,6 @@ export default function Map() {
             const displayHours = hours % 12 || 12;
 
             times.push({
-                time: futureTime.toISOString(),
                 label: i === 0 ? 'Now' : `+${offsetMinutes} min`,
                 displayTime: `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`,
                 offsetMinutes: offsetMinutes
@@ -529,14 +583,25 @@ export default function Map() {
         return times;
     }
 
-    function formatDuration(seconds) {
-        if (!seconds || isNaN(seconds)) return "N/A";
+    function parseDurationSeconds(durationSeconds) {
+        let duration = durationSeconds;
+        if (typeof duration === "string") {
+            duration = duration.replace("s", "");
+        }
+        duration = Number(duration);
+        return Number.isFinite(duration) ? duration : null;
+    }
 
-        const hrs = Math.floor(seconds / 3600);
-        const mins = Math.round((seconds % 3600) / 60);
-
-        if (hrs > 0) return `${hrs} hr ${mins} min`;
-        return `${mins} min`;
+    function formatDurationInfo(durationSeconds) {
+        const duration = parseDurationSeconds(durationSeconds);
+        if (duration === null) {
+            return { text: "N/A", totalMinutes: null };
+        }
+        const totalMinutes = Math.max(0, Math.round(duration / 60));
+        const hrs = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        const text = hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`;
+        return { text, totalMinutes };
     }
 
     function formatDistance(meters) {
@@ -544,9 +609,41 @@ export default function Map() {
         return (meters / 1000).toFixed(1);
     }
 
+    function parseDepartureDate(value) {
+        if (!value) return null;
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? null : value;
+        }
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) return parsed;
+
+        const text = String(value).trim();
+        const match = text.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+        if (!match) return null;
+
+        let hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        const ampm = match[3]?.toUpperCase();
+        if (ampm) {
+            if (ampm === "PM" && hours < 12) hours += 12;
+            if (ampm === "AM" && hours === 12) hours = 0;
+        }
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+        return date;
+    }
+
     function formatDate(dateString) {
-        const date = new Date(dateString);
+        const date = parseDepartureDate(dateString);
+        if (!date) return "N/A";
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatEtaTimeByMinutes(departureTime, totalMinutes) {
+        const departure = parseDepartureDate(departureTime);
+        if (!departure || !Number.isFinite(totalMinutes)) return "N/A";
+        const arrival = new Date(departure.getTime() + totalMinutes * 60000);
+        return arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
     useEffect(() => {
@@ -685,7 +782,7 @@ export default function Map() {
                                     key={index}
                                     onClick={() => handleTimeChange(index)}
                                     disabled={isLoadingRoute}
-                                    className={`time-slot-button ${selectedTimeIndex === index ? 'selected' : ''}`}
+                                    className={`time-slot-button ${selectedOffsetMinutes === timeSlot.offsetMinutes ? 'selected' : ''}`}
                                 >
                                     <div className="time-slot-info">
                                         <div className="time-slot-display-time">
@@ -695,7 +792,7 @@ export default function Map() {
                                             {timeSlot.label}
                                         </div>
                                     </div>
-                                    {selectedTimeIndex === index && (
+                                    {selectedOffsetMinutes === timeSlot.offsetMinutes && (
                                         <div className="time-slot-checkmark">
                                             <span style={{ fontSize: '14px' }}>✓</span>
                                         </div>
@@ -737,17 +834,6 @@ export default function Map() {
                                 </div>
                             </div>
 
-                            {/* Duration */}
-                            <div className="route-info-item">
-                                <div className="route-info-icon duration">
-                                    <span>⏱️</span>
-                                </div>
-                                <div>
-                                    <div className="route-info-label">Travel Time</div>
-                                    <div className="route-info-value">{routeInfo.eta}</div>
-                                </div>
-                            </div>
-
                             {/* Departure Time */}
                             <div className="route-info-item">
                                 <div className="route-info-icon departure">
@@ -756,6 +842,28 @@ export default function Map() {
                                 <div>
                                     <div className="route-info-label">Departure</div>
                                     <div className="route-info-value">{routeInfo.starting_time}</div>
+                                </div>
+                            </div>
+
+                            {/* ETA */}
+                            <div className="route-info-item">
+                                <div className="route-info-icon duration">
+                                    <span>🕒</span>
+                                </div>
+                                <div>
+                                    <div className="route-info-label">ETA</div>
+                                    <div className="route-info-value">{routeInfo.arrival_time ?? "N/A"}</div>
+                                </div>
+                            </div>
+
+                            {/* Duration */}
+                            <div className="route-info-item">
+                                <div className="route-info-icon duration">
+                                    <span>⏱️</span>
+                                </div>
+                                <div>
+                                    <div className="route-info-label">Travel Time</div>
+                                    <div className="route-info-value">{routeInfo.eta}</div>
                                 </div>
                             </div>
                         </div>
@@ -933,6 +1041,27 @@ export default function Map() {
                     </div>
                 )}
             </div>
+
+            {/* Testing button to check if distance and points gets updated correctly */}
+            {/* <button
+                style={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999 }}
+                onClick={async () => {
+                    const distance = 1000; // meters
+                    setCumulativeDistance((prev) => prev + distance);
+
+                    if (isAuthenticated()) {
+                    try {
+                        const res = await apiPost("/user/distance/", { distance_m: distance });
+                        console.log("Backend updated:", res);
+                    } catch (e) {
+                        console.error("Backend update failed:", e);
+                    }
+                    }
+                }}
+                >
+                Simulate +1km
+            </button> */}
+
 
             {/* Error Popup */}
             {showErrorPopup && (

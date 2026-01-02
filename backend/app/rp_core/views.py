@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
@@ -35,6 +36,7 @@ from .serializers import RegisterSerializer, ChangePasswordSerializer
 from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption
 
 
+import hashlib
 import json
 import requests
 
@@ -67,6 +69,8 @@ def compute_route(request):
 
     if not origin or not destination:
         return Response({"detail":"You must provide the origin and the destination"},status=status.HTTP_400_BAD_REQUEST)
+    if not isinstance(startTimes, list) or not startTimes:
+        return Response({"detail": "You must provide a list of departure times."}, status=status.HTTP_400_BAD_REQUEST)
     
     headers = {
         'Content-Type': 'application/json',
@@ -74,7 +78,27 @@ def compute_route(request):
         'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
     }
 
+    def build_cache_key(origin_data, destination_data, departure_time):
+        payload = {
+            "origin": origin_data,
+            "destination": destination_data,
+            "departureTime": departure_time,
+        }
+        serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+        digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+        return f"routes:compute:{digest}"
+
+    seen_times = set()
     for time in startTimes:
+        if time in seen_times:
+            continue
+        seen_times.add(time)
+        cache_key = build_cache_key(origin, destination, time)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            responseMatrix.append(cached)
+            continue
+
         request_body = {
             "origin":{
                 "location":{
@@ -101,7 +125,8 @@ def compute_route(request):
             google_response = requests.post(
                 url,
                 headers=headers,
-                json=request_body
+                json=request_body,
+                timeout=10
             )
             google_response.raise_for_status()
         except requests.RequestException as e:
@@ -112,12 +137,14 @@ def compute_route(request):
         
         data = google_response.json()
         route = data["routes"][0]
-        responseMatrix.append({
+        result = {
             "starting_time":time,
             "distance_meters":route["distanceMeters"],
             "duration":int((route["duration"]).replace("s","")),
             "polyline":route["polyline"]["encodedPolyline"]
-        })
+        }
+        cache.set(cache_key, result, timeout=getattr(settings, "GOOGLE_ROUTES_CACHE_TTL", 300))
+        responseMatrix.append(result)
 
     return Response(responseMatrix)
     
