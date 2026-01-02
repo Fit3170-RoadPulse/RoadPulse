@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { User, Award, Settings, LogOut, X, AlertTriangle } from "lucide-react";
@@ -35,7 +35,7 @@ export default function Map() {
 
     // Fallback mock location (used if real geolocation fails)
     const mockLocation = {
-        latitude: -37.813904798147796, 
+        latitude: -37.813904798147796,
         longitude: 144.98810008133233,
         accuracy: 50,
         timestamp: Date.now(),
@@ -47,7 +47,7 @@ export default function Map() {
     const mapReadyRef = useRef(false);
     const mapInstanceRef = useRef(null);
     const reportMarkersRef = useRef(new globalThis.Map()); // id -> AdvancedMarkerElement
-    const trafficLayerRef = useRef(null); 
+    const trafficLayerRef = useRef(null);
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -103,8 +103,8 @@ export default function Map() {
 
                 if (prev) {
                     distance = google.maps.geometry.spherical.computeDistanceBetween(
-                    new google.maps.LatLng(prev.latitude, prev.longitude),
-                    new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
+                        new google.maps.LatLng(prev.latitude, prev.longitude),
+                        new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
                     );
                 }
 
@@ -119,9 +119,9 @@ export default function Map() {
                     setCumulativeDistance((prevDist) => prevDist + distance);
 
                     if (isAuthenticated()) {
-                    apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
-                        console.error("Failed to persist distance:", err)
-                    );
+                        apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
+                            console.error("Failed to persist distance:", err)
+                        );
                     }
                 }
 
@@ -168,48 +168,20 @@ export default function Map() {
             axios
                 .get(`${base}/api/incident-reports/`)
                 .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
-                .catch(() => {});
+                .catch(() => { });
 
-        fetchReports();
-        const t = setInterval(fetchReports, 15000);
-        return () => clearInterval(t);
-    }, []);
-    
-    useEffect(() => {
-        const base = import.meta.env.VITE_API_URL || "";
-        const fetchReports = () =>
-            axios
-                .get(`${base}/api/incident-reports/`)
-                .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
-                .catch(() => {});
+        fetchReports(); // Initial fetch
+        const interval = setInterval(fetchReports, 15000); // Poll every 15 seconds
+
+        // Re-fetch when auth changes
         const onAuthChanged = () => fetchReports();
         window.addEventListener("rp:auth-changed", onAuthChanged);
-        return () => window.removeEventListener("rp:auth-changed", onAuthChanged);
-    }, []);
-    // useEffect(() => {
-    //     const base = import.meta.env.VITE_API_URL || "";
-    //     const fetchReports = () =>
-    //         axios
-    //             .get(`${base}/api/incident-reports/`)
-    //             .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
-    //             .catch(() => {});
 
-    //     fetchReports();
-    //     const t = setInterval(fetchReports, 15000);
-    //     return () => clearInterval(t);
-    // }, []);
-    // useEffect(() => {
-    //     const base = import.meta.env.VITE_API_URL || "";
-    //     const fetchReports = () =>
-    //         axios
-    //             .get(`${base}/api/incident-reports/`)
-    //             .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
-    //             .catch(() => {});
-    //     const onAuthChanged = () => fetchReports();
-    //     window.addEventListener("rp:auth-changed", onAuthChanged);
-    //     return () => window.removeEventListener("rp:auth-changed", onAuthChanged);
-    // }, []);
-    console.log(mapData);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener("rp:auth-changed", onAuthChanged);
+        };
+    }, []);
 
     const reportTypeLabel = useMemo(() => {
         return {
@@ -359,7 +331,7 @@ export default function Map() {
 
         let originMarker = mapMarkers.origin;
         let destinationMarker = mapMarkers.destination;
-        
+
         const g = window.google;
         if (!g?.maps?.importLibrary) return;
         const { AdvancedMarkerElement } = await g.maps.importLibrary("marker");
@@ -367,8 +339,8 @@ export default function Map() {
         // trafficLayer = new g.maps.TrafficLayer();
         // trafficLayer.setMap(map);
         if (!trafficLayerRef.current) {
-        trafficLayerRef.current = new g.maps.TrafficLayer();
-        trafficLayerRef.current.setMap(map);
+            trafficLayerRef.current = new g.maps.TrafficLayer();
+            trafficLayerRef.current.setMap(map);
         }
 
         //directionsRenderer = new google.maps.DirectionsRenderer();
@@ -378,21 +350,21 @@ export default function Map() {
             setSelectedReport(null);
         });
 
-        map.addListener("click", (e) =>{
+        map.addListener("click", (e) => {
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
 
-            if (!originMarker){
+            if (!originMarker) {
                 originMarker = new AdvancedMarkerElement({
                     map: map,
                     position: clicked,
-                    title:"A",
+                    title: "A",
                 });
                 // directionsRenderer.setDirections(null);
-            }else if (!destinationMarker){
+            } else if (!destinationMarker) {
                 destinationMarker = new AdvancedMarkerElement({
                     map: map,
                     position: clicked,
-                    title:"B",
+                    title: "B",
                 });
                 setMapMarkers({ origin: originMarker, destination: destinationMarker });
 
@@ -433,7 +405,7 @@ export default function Map() {
             }
         });
     }, [createIncidentPinContent, reportTypeLabel]);
-    
+
     const handleTimeChange = async (index) => {
         const map = mapRef || mapInstanceRef.current;
         if (!mapMarkers.origin || !mapMarkers.destination || !availableTimes[index] || !map) return;
@@ -698,67 +670,42 @@ export default function Map() {
 
 
     return (
-        <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-            <div style={{
-                position: 'absolute',
-                top: 0,
-                left: '100px',
-                right: 0,
-                bottom: 0,
-                zIndex: 1,
-                pointerEvents: "auto"
-            }}>
+        <div className="map-page-container">
+            <div className="map-wrapper">
                 <MapComponent
-                        API_KEY={mapData?.GMAPS_KEY}
-                        MAP_ID={mapData?.GMAPS_ID}
-                        map_function={setMarker} 
-                        showUserLocation
-                        onUserLocation={setUserLocation}
-                    />
-                </div>
-
-                {/* Incident details panel (same UI as Report tab) */}
-                <div style={{
-                    zIndex: selectedReport ? 10 : 0,
-                    position: "absolute",
-                    top: 0,
-                    left: "60vw",
-                    width: "35vw",
-                    height: "100vh",
-                    display: "flex",
-                    justifyContent: "center",
-                    pointerEvents: "auto",
-                }}>
-                    <div style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        flexDirection: "column",
-                        width: "100%",
-                        height: "100%",
-                        pointerEvents: "auto",
-                    }}>
-                        {selectedReport ? (
-                            <IncidentDetailsCard
-                                report={selectedReport}
-                                onClose={() => setSelectedReport(null)}
-                                userLocation={userLocation}
-                                onReportUpdated={(updated) => {
-                                    if (!updated?.id) return;
-                                    setSelectedReport(updated);
-                                    setReports((prev) => {
-                                        const next = prev.map((r) => (r.id === updated.id ? updated : r));
-                                        return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
-                                    });
-                                }}
-                            />
-                        ) : null}
-                    </div>
+                    API_KEY={mapData?.GMAPS_KEY}
+                    MAP_ID={mapData?.GMAPS_ID}
+                    map_function={setMarker}
+                    showUserLocation
+                    onUserLocation={setUserLocation}
+                />
             </div>
 
-                {/* Overlay UI */}
-                <div className="overlay-ui" 
+            {/* Incident details panel (same UI as Report tab) */}
+            <div className={`map-incident-panel ${selectedReport ? "map-incident-panel-active" : "map-incident-panel-inactive"}`}>
+                <div className="map-incident-panel-content">
+                    {selectedReport ? (
+                        <IncidentDetailsCard
+                            report={selectedReport}
+                            onClose={() => setSelectedReport(null)}
+                            userLocation={userLocation}
+                            onReportUpdated={(updated) => {
+                                if (!updated?.id) return;
+                                setSelectedReport(updated);
+                                setReports((prev) => {
+                                    const next = prev.map((r) => (r.id === updated.id ? updated : r));
+                                    return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
+                                });
+                            }}
+                        />
+                    ) : null}
+                </div>
+            </div>
+
+            {/* Overlay UI */}
+            <div className="overlay-ui"
                 style={{
-                pointerEvents: "none"
+                    pointerEvents: "none"
                 }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
                 <MapPage onSearch={() => console.log("Search triggered!")} />
             </div>
@@ -1177,17 +1124,17 @@ export default function Map() {
                         }}
                     />
                 )}
-                {/* Logout Confirmation Modal */}
-                {showLogoutConfirm && (
-                    <div className="logout-modal">
-                        <div className="logout-box">
-                            <h3>Confirm Logout</h3>
-                            <p>Are you sure you want to log out?</p>
-                            <button onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
-                            <button onClick={handleLogout}>Log Out</button>
-                        </div>
+            {/* Logout Confirmation Modal */}
+            {showLogoutConfirm && (
+                <div className="logout-modal">
+                    <div className="logout-box">
+                        <h3>Confirm Logout</h3>
+                        <p>Are you sure you want to log out?</p>
+                        <button onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
+                        <button onClick={handleLogout}>Log Out</button>
                     </div>
-                )}
+                </div>
+            )}
 
 
         </div>

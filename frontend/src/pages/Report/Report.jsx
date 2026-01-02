@@ -6,7 +6,7 @@ import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import ReportComponent from "@/components/ReportComponent/ReportComponent";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 
-export default function Report(){
+export default function Report() {
     let [isClicked, setIsClicked] = useState(null);
     const [selectedLocation, setSelectedLocation] = useState(null);
     let [mapData, setMapData] = useState(null);
@@ -276,25 +276,11 @@ export default function Report(){
         });
     }, []);
 
-    return(
-        <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+    return (
+        <div className="report-container">
             {toast ? (
                 <div
-                    style={{
-                        position: "absolute",
-                        top: "16px",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        zIndex: 2000,
-                        background: toast.type === "error" ? "#fef2f2" : "#ecfdf5",
-                        border: `1px solid ${toast.type === "error" ? "#fecaca" : "#a7f3d0"}`,
-                        color: toast.type === "error" ? "#991b1b" : "#065f46",
-                        padding: "10px 14px",
-                        borderRadius: "10px",
-                        pointerEvents: "none",
-                        maxWidth: "70vw",
-                        textAlign: "center",
-                    }}
+                    className={`report-toast ${toast.type === "error" ? "report-toast-error" : "report-toast-success"}`}
                     role="status"
                     aria-live="polite"
                 >
@@ -302,40 +288,17 @@ export default function Report(){
                 </div>
             ) : null}
 
-            <div style={{ 
-                position: 'absolute', 
-                top: 0, 
-                left: '100px', 
-                right: 0, 
-                bottom: 0, 
-                zIndex: 1,
-                pointerEvents: "auto"
-                }}>
-                    <MapComponent
-                        API_KEY={mapData?.GMAPS_KEY}
-                        MAP_ID={mapData?.GMAPS_ID}
-                        map_function={ReportLocation}
-                        showUserLocation
-                        onUserLocation={setUserLocation}
-                    />
-                </div>
-            <div style = {{
-                zIndex: (isClicked || selectedReport) ? 10: 0,
-                position: "absolute", 
-                top: 0, 
-                left: "60vw", 
-                width: "35vw", 
-                height: "100vh", 
-                display: "flex",
-                justifyContent: "center",
-                }}> 
-                <div style = {{
-                    display: "flex",
-                    justifyContent:"center",
-                    flexDirection: "column",
-                    width:"100%",
-                    height:"100%"
-                }}>
+            <div className="report-map-wrapper">
+                <MapComponent
+                    API_KEY={mapData?.GMAPS_KEY}
+                    MAP_ID={mapData?.GMAPS_ID}
+                    map_function={ReportLocation}
+                    showUserLocation
+                    onUserLocation={setUserLocation}
+                />
+            </div>
+            <div className={`report-sidebar-container ${(isClicked || selectedReport) ? "report-sidebar-container-active" : "report-sidebar-container-inactive"}`}>
+                <div className="report-sidebar-content">
                     {selectedReport ? (
                         <IncidentDetailsCard
                             report={selectedReport}
@@ -368,14 +331,10 @@ export default function Report(){
                             }}
                         />
                     ) : null}
-                </div>              
+                </div>
             </div>
 
-            {/* Overlay UI */}
-            <div className="overlay-ui" 
-            style={{
-            pointerEvents: "none"
-            }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
+            <div className="overlay-ui report-overlay-ui">  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
                 <MapPage onSearch={() => console.log("Search triggered!")} />
             </div>
         </div>

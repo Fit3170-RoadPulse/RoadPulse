@@ -69,14 +69,14 @@ function RewardsPage() {
 
             {/* Loading State */}
             {loading && (
-                <div style={{ textAlign: "center", padding: "2rem" }}>
+                <div className="rewards-loading-container">
                     <p>Loading your rewards...</p>
                 </div>
             )}
 
             {/* Error State */}
             {error && (
-                <div style={{ textAlign: "center", padding: "2rem", color: "red" }}>
+                <div className="rewards-error-container">
                     <p>Error: {error}</p>
                 </div>
             )}
@@ -92,7 +92,7 @@ function RewardsPage() {
                                 type="button"
                                 onClick={() => setShowBarcodeModal(true)}
                                 aria-label="Open barcode"
-                                style={{ background: 'white', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer' }}
+                                className="rewards-barcode-button"
                             >
                                 <svg width="128" height="64" viewBox="0 0 128 64">
                                     <rect x="5" y="2" width="6" height="60" fill="black" />
@@ -119,7 +119,7 @@ function RewardsPage() {
                         <p className="points-amount">
                             {Number(points).toLocaleString(undefined, { maximumFractionDigits: 2 })} Points
                         </p>
-                        <p className="last-updated">Last updated {updatedDate}</p>                       
+                        <p className="last-updated">Last updated {updatedDate}</p>
                     </div>
                 </div>
             </div>
@@ -130,11 +130,11 @@ function RewardsPage() {
                 {loading ? (
                     <p className="text-sm text-gray-500">Loading distance…</p>
                 ) : distanceKm != null ? (
-                    <p className="text-sm" style={{ margin: 0 }}>
+                    <p className="text-sm rewards-distance-text">
                         Total distance travelled: <strong>{distanceKm.toLocaleString(undefined, { maximumFractionDigits: 1 })} km</strong>
                     </p>
                 ) : (
-                    <p className="text-sm text-gray-500" style={{ margin: 0 }}>No distance data available</p>
+                    <p className="text-sm text-gray-500 rewards-distance-text">No distance data available</p>
                 )}
             </div>
 
@@ -180,19 +180,17 @@ function RewardsPage() {
             {showBarcodeModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
                     <div
-                        className="absolute inset-0"
-                        onClick={() => setShowBarcodeModal(false)}
-                        style={{ backgroundColor: 'rgba(0,0,0,0.72)' }}
+                        className="absolute inset-0 rewards-modal-overlay"
                         aria-hidden
                     />
 
                     <div className="relative z-10 p-4 w-full max-w-[92vw]">
-                        <div className="rounded-lg bg-white p-6 shadow-lg mx-auto" style={{ maxWidth: 820 }}>
+                        <div className="rounded-lg bg-white p-6 shadow-lg mx-auto rewards-modal-content">
                             <div className="flex justify-end">
                                 <button
                                     onClick={() => setShowBarcodeModal(false)}
                                     aria-label="Close barcode"
-                                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 20 }}
+                                    className="rewards-modal-close-button"
                                 >
                                     ✕
                                 </button>

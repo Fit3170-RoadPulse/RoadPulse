@@ -1,6 +1,7 @@
 // src/App.jsx
 import { useEffect, useState } from "react";
 import axios from "axios";
+import "./App.css";
 
 export default function App() {
   const [health, setHealth] = useState(null);
@@ -13,7 +14,7 @@ export default function App() {
   }, []);
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="app-container">
       <h1>RoadPulse</h1>
 
       <h2>API Health</h2>
@@ -22,86 +23,28 @@ export default function App() {
       <h2>Samples</h2>
       <pre>{JSON.stringify(samples, null, 2)}</pre>
 
-      <hr style={{ margin: "24px 0" }} />
-
-      {/* <button
-        onClick={() => (window.location.href = "/login-page")}
-        style={{
-          marginBottom: 20,
-          padding: "8px 14px",
-          borderRadius: 8,
-          background: "#0b74de",
-          color: "white",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        Go to Login
-      </button> */}
+      <hr className="app-divider" />
 
       <button
         onClick={() => (window.location.href = "/registration-page")}
-        style={{
-          marginBottom: 20,
-          padding: "8px 14px",
-          borderRadius: 8,
-          background: "#0b74de",
-          color: "white",
-          border: "none",
-          cursor: "pointer",
-        }}
+        className="app-button"
       >
         Register Page
       </button>
 
-
       <button
         onClick={() => (window.location.href = "/setting-menu-page")}
-        style={{
-          marginBottom: 20,
-          padding: "8px 14px",
-          borderRadius: 8,
-          background: "#0b74de",
-          color: "white",
-          border: "none",
-          cursor: "pointer",
-        }}
+        className="app-button"
       >
         Go to Setting
       </button>
 
       <button
         onClick={() => (window.location.href = "/map")}
-        style={{
-          marginBottom: 20,
-          padding: "8px 14px",
-          borderRadius: 8,
-          background: "#0b74de",
-          color: "white",
-          border: "none",
-          cursor: "pointer",
-        }}
+        className="app-button"
       >
         Go to Map
       </button>
-      
-      {/* Below button for testing. Remove once not needed */}
-      <button
-        onClick={() => (window.location.href = "/demo")}
-        style={{
-          marginBottom: 20,
-          padding: "8px 14px",
-          borderRadius: 8,
-          background: "#0b74de",
-          color: "white",
-          border: "none",
-          cursor: "pointer",
-        }}
-        aria-label="Go to Demo"
-      >
-        Go to Point Widget Demo
-      </button>
-
     </div>
   );
 }

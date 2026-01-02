@@ -194,3 +194,8 @@
   transform: none;
   box-shadow: none;
 }
+
+/* ReportComponent.jsx inline styles */
+.rp-report-header-content {
+    min-width: 0;
+}

@@ -1,16 +1,9 @@
 /* Make the full-screen overlay non-blocking by default */
-/* * {
-    margin: 0;
-    padding: 0;
-} */
-
 
 .overlay {
   position: absolute;
   inset: 0;
   z-index: 2;          /* above the map visuals */
-  /* pointer-events: none; let clicks pass through*/
-  /* Removed this line because it will stop us from clicking on the buttons in the UI*/
 }
 
 .map-page {
@@ -29,6 +22,11 @@
     padding-top: 30px;
 }
 
+/* MapSideBarComponent.jsx inline styles */
+.sidebar-emoji {
+    font-size: 40px;
+}
+
 .sidebar-button {
     margin: 20px 0;
     cursor: pointer;
@@ -40,12 +38,15 @@
     background: transparent;
     font-size: 12px;
     color: black;
-    /* outline: none; */
-    
 }
+
 .sidebar-button:hover {
   background-color: #f3f4f6;
   outline: none;
+}
+
+.sidebar-button-clickable {
+    pointer-events: auto;
 }
 
 .sidebar-button img {

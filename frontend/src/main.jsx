@@ -3,16 +3,16 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import './index.css'
 import App from './App.jsx'
-import SettingMenu from './pages/settingpage/menu/SettingMenu.jsx';
-import ChangePassword from "./pages/settingpage/changepassword/ChangePassword.jsx";
+import SettingMenu from './pages/Settings/Menu/SettingMenu.jsx';
+import ChangePassword from "./pages/Settings/ChangePassword/ChangePassword.jsx";
 import Map from "./pages/Map/Map.jsx"
 import NotFound from "./pages/NotFound/NotFound.jsx"
 import Emergency from './pages/Emergency/Emergency.jsx';
 import Report from './pages/Report/Report.jsx';
-import RegistrationPage from './pages/registrationpage/RegistrationPage.jsx';
-import EmailVerification from './pages/emailverificationpage/EmailVerification.jsx';
+import RegistrationPage from './pages/Registration/RegistrationPage.jsx';
+import EmailVerification from './pages/EmailVerification/EmailVerification.jsx';
 import LoginPage from "./pages/loginpage/login.jsx";
-import RewardsPage from './pages/rewardspage/RewardsPage';
+import RewardsPage from './pages/Rewards/RewardsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
@@ -27,7 +27,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="/app" element={<App />} />
           <Route path="/registration-page" element={<RegistrationPage />} />
           <Route path="/email-verification" element={<EmailVerification />} />
-          
+
           {/* Protected Routes - Authentication required */}
           <Route path="/map" element={
             <ProtectedRoute>
@@ -59,7 +59,7 @@ createRoot(document.getElementById('root')).render(
               <Emergency />
             </ProtectedRoute>
           } />
-          
+
 
           {/* 404 Not Found - Must be last */}
           <Route path="*" element={<NotFound />} />

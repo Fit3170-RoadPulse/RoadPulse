@@ -103,9 +103,9 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, showUserLo
                 );
             }
         })
-        .catch((err) => {
-            console.error("Google Maps failed to load:", err);
-        });
+            .catch((err) => {
+                console.error("Google Maps failed to load:", err);
+            });
 
         return () => {
             isMounted = false;
@@ -126,11 +126,11 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, showUserLo
     }, [API_KEY, MAP_ID, map_function, showUserLocation, onUserLocation]);
 
     return (
-        <div className="mapholder" style={{ width: "100%", height: "100%" }}>
-        <div
-            ref={mapRef}
-            style={{ width: "100%", height: "100%", minHeight: "400px" }}
-        />
+        <div className="map-holder">
+            <div
+                ref={mapRef}
+                className="map-div"
+            />
         </div>
     );
 }
