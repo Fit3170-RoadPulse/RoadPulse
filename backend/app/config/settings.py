@@ -62,6 +62,9 @@ DATABASES = {
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", "roadpulse"),
         "HOST": os.getenv("POSTGRES_HOST", "db"),  # 'db' if backend runs in Docker
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "OPTIONS": {
+            "sslmode": os.getenv("POSTGRES_SSLMODE", "prefer"),
+        },
     }
 }
 
