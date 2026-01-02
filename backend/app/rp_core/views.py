@@ -16,8 +16,6 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.parsers import JSONParser
 
 from rp_core.services.points import deduct_points
 from rp_core.services.incident_reporting import (
@@ -32,7 +30,6 @@ from .incidentReport import (
     IncidentReportVoteCreateSerializer,
     RegisterSerializerIncidentReport,
 )
-from .serializers import RegisterSerializer, ChangePasswordSerializer
 from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption
 
 
@@ -310,10 +307,10 @@ def incident_report_vote(request, report_id: int):
 @api_view(["GET"])
 def locationData(_req):
     return JsonResponse({"status": "ok", 
-                         "pollingInterval": settings.pollingInterval,
-                         "enableHighAccuracy": settings.enableHighAccuracy,
-                         "timeout": settings.timeout,
-                         "maximumAge": settings.maximumAge,
+                         "pollingInterval": settings.POLLING_INTERVAL,
+                         "enableHighAccuracy": settings.ENABLE_HIGH_ACCURACY,
+                         "timeout": settings.TIMEOUT,
+                         "maximumAge": settings.MAXIMUM_AGE,
                          })
 
 class RegisterView(views.APIView):
