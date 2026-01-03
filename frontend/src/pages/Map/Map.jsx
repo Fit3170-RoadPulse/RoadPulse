@@ -48,7 +48,8 @@ export default function Map() {
     const mapInstanceRef = useRef(null);
     const reportMarkersRef = useRef(new globalThis.Map()); // id -> AdvancedMarkerElement
     const trafficLayerRef = useRef(null);
-    const [isAToB, setIsAToB] = useState(true);
+    const isAToBRef = useRef(true);
+    const [isAToBState, setIsAToBState] = useState(true);
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -323,6 +324,8 @@ export default function Map() {
         };
     }, [showTimeSelector, selectedOffsetMinutes]);
 
+
+    // MAP FUNCTIONS
     const setMarker = useCallback(async (map) => {
         if (mapReadyRef.current) return;
         mapReadyRef.current = true;
@@ -353,6 +356,18 @@ export default function Map() {
 
         map.addListener("click", (e) => {
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+            console.log(isAToBRef.current, "isAToB");
+            console.log("currentlocation ", prevLocationRef.current);
+
+            if (!isAToBRef.current && prevLocationRef.current) {
+                // Use current location as origin
+                console.log("Setting origin to user location:", prevLocationRef.current);
+                originMarker = new AdvancedMarkerElement({
+                    map: map,
+                    position: { lat: prevLocationRef.current.latitude, lng: prevLocationRef.current.longitude },
+                    title: "A",
+                });
+            }
 
             if (!originMarker) {
                 originMarker = new AdvancedMarkerElement({
@@ -396,16 +411,34 @@ export default function Map() {
                 setSelectedOffsetMinutes(1);
 
                 // Start new route
-                originMarker = new AdvancedMarkerElement({
-                    map: map,
-                    position: clicked,
-                    title: "A",
-                });
+
+                if (!isAToBRef.current && prevLocationRef.current) {
+                    // Use current location as origin
+                    console.log("Setting origin to user location:", prevLocationRef.current);
+                    originMarker = new AdvancedMarkerElement({
+                        map: map,
+                        position: { lat: prevLocationRef.current.latitude, lng: prevLocationRef.current.longitude },
+                        title: "A",
+                    });
+                }
+                else {
+                    originMarker = new AdvancedMarkerElement({
+                        map: map,
+                        position: clicked,
+                        title: "A",
+                    });
+                }
                 destinationMarker = null;
                 setMapMarkers({ origin: originMarker, destination: null });
             }
         });
     }, [createIncidentPinContent, reportTypeLabel]);
+
+    // Clears map when switching
+    useEffect(() => {
+        isAToBRef.current = isAToBState;
+        clearMap();
+    }, [isAToBState, isAToBRef]);
 
     const handleTimeChange = async (index) => {
         const map = mapRef || mapInstanceRef.current;
@@ -678,6 +711,8 @@ export default function Map() {
                     MAP_ID={mapData?.GMAPS_ID}
                     map_function={setMarker}
                     showUserLocation
+                    toggleSelectionType={isAToBRef}
+                    currentLocation={prevLocationRef}
                     onUserLocation={setUserLocation}
                 />
             </div>
@@ -712,21 +747,30 @@ export default function Map() {
             </div>
 
             {/* Selection mode toggle button */}
-            <div className="origin-toggle">
+            <div className="origin-toggle" style={{ pointerEvents: "auto" }}>
                 <div className="origin-toggle-container">
-                    <div className={`origin-toggle-slider ${isAToB ? "left" : "right"}`} />
+                    {/* Change to be usestate blah blah blah */}
+                    <div className={`origin-toggle-slider ${isAToBState ? "left" : "right"}`} />
 
                     <div className="origin-toggle-options">
                     <button
-                        className={`origin-toggle-option ${isAToB ? "active" : ""}`}
-                        onClick={() => setIsAToB(true)}
+                        className={`origin-toggle-option ${isAToBState ? "active" : ""}`}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsAToBState(true);
+                        }}
                     >
                         A to B
                     </button>
 
                     <button
-                        className={`origin-toggle-option ${!isAToB ? "active" : ""}`}
-                        onClick={() => setIsAToB(false)}
+                        className={`origin-toggle-option ${!isAToBState ? "active" : ""}`}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsAToBState(false);
+                        }}
                     >
                         Current location
                     </button>

@@ -2,7 +2,13 @@ import { useEffect, useRef } from "react";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import "./MapComponent.css";
 
-export default function MapComponent({ API_KEY, MAP_ID, map_function, showUserLocation = false, onUserLocation }) {
+export default function MapComponent({ API_KEY, MAP_ID, map_function, toggleSelectionType = true,    
+    currentLocation = {
+        latitude: -37.813904798147796,
+        longitude: 144.98810008133233,
+        accuracy: 50,
+        timestamp: Date.now(),
+    }, showUserLocation = false, onUserLocation }) {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const userMarkerRef = useRef(null);
@@ -123,7 +129,7 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, showUserLo
             }
             hasCenteredRef.current = false;
         };
-    }, [API_KEY, MAP_ID, map_function, showUserLocation, onUserLocation]);
+    }, [API_KEY, MAP_ID, map_function, showUserLocation, onUserLocation, toggleSelectionType, currentLocation]);
 
     return (
         <div className="map-holder">
