@@ -48,6 +48,7 @@ export default function Map() {
     const mapInstanceRef = useRef(null);
     const reportMarkersRef = useRef(new globalThis.Map()); // id -> AdvancedMarkerElement
     const trafficLayerRef = useRef(null);
+    const [isAToB, setIsAToB] = useState(true);
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -708,6 +709,29 @@ export default function Map() {
                     pointerEvents: "none"
                 }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
                 <MapPage onSearch={() => console.log("Search triggered!")} />
+            </div>
+
+            {/* Selection mode toggle button */}
+            <div className="origin-toggle">
+                <div className="origin-toggle-container">
+                    <div className={`origin-toggle-slider ${isAToB ? "left" : "right"}`} />
+
+                    <div className="origin-toggle-options">
+                    <button
+                        className={`origin-toggle-option ${isAToB ? "active" : ""}`}
+                        onClick={() => setIsAToB(true)}
+                    >
+                        A to B
+                    </button>
+
+                    <button
+                        className={`origin-toggle-option ${!isAToB ? "active" : ""}`}
+                        onClick={() => setIsAToB(false)}
+                    >
+                        Current location
+                    </button>
+                    </div>
+                </div>
             </div>
 
             {/* Time Selector - Scrollable Picker */}
