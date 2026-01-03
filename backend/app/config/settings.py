@@ -111,13 +111,11 @@ USE_I18N = True
 USE_TZ = True
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 GOOGLE_MAPS_ID = os.getenv("GOOGLE_MAPS_ID")
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Location configs
