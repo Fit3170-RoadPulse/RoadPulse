@@ -14,5 +14,7 @@ COPY app/ .
 # Expose HTTP port
 EXPOSE 8000
 
+RUN python manage.py collectstatic --noinput
+
 # Run migrations and start Gunicorn (adjust WSGI path)
 CMD ["sh", "-c", "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:8000"]
