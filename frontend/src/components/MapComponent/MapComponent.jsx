@@ -34,6 +34,7 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, toggleSele
                 center: { lat: -34.397, lng: 150.644 },
                 zoom: 8,
                 mapId: MAP_ID,
+                renderingType: google.maps.RenderingType.VECTOR,
             });
 
             mapInstance.current = map;
