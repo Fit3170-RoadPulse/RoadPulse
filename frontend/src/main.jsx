@@ -11,7 +11,7 @@ import Emergency from './pages/Emergency/Emergency.jsx';
 import Report from './pages/Report/Report.jsx';
 import RegistrationPage from './pages/Registration/RegistrationPage.jsx';
 import EmailVerification from './pages/EmailVerification/EmailVerification.jsx';
-import LoginPage from "./pages/loginpage/login.jsx";
+import LoginPage from "./pages/LoginPage/Login.jsx";
 import RewardsPage from './pages/Rewards/RewardsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
