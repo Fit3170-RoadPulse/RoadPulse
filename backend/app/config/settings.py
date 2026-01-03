@@ -10,10 +10,9 @@ ROOT_DIR = BASE_DIR.parent.parent                       # .../RoadPulse
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 DEBUG = os.getenv("DJANGO_DEBUG") == "1"
 
-#ALLOWED_HOSTS = os.getenv(
-#    "DJANGO_ALLOWED_HOSTS", ""
-#).split(",")
-ALLOWED_HOSTS = ["roadpulsebackend.onrender.com"]
+ALLOWED_HOSTS = os.getenv(
+    "DJANGO_ALLOWED_HOSTS", ""
+).split(",")
 
 INSTALLED_APPS = [
     "rp_core",
