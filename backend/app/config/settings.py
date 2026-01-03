@@ -1,15 +1,18 @@
 from pathlib import Path
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent       # .../backend/app
 ROOT_DIR = BASE_DIR.parent.parent                       # .../RoadPulse
-load_dotenv(ROOT_DIR / ".env")
+# load_dotenv(ROOT_DIR / ".env")
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret")
-DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+DEBUG = os.getenv("DJANGO_DEBUG") == "1"
+
+ALLOWED_HOSTS = os.getenv(
+    "DJANGO_ALLOWED_HOSTS", ""
+).split(",")
 
 INSTALLED_APPS = [
     "rp_core",
@@ -26,6 +29,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -60,7 +64,7 @@ DATABASES = {
         "NAME": os.getenv("POSTGRES_DB", "roadpulse"),
         "USER": os.getenv("POSTGRES_USER", "roadpulse"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", "roadpulse"),
-        "HOST": os.getenv("POSTGRES_HOST", "db"),  # 'db' if backend runs in Docker
+        "HOST": os.getenv("POSTGRES_HOST"),  # 'db' if backend runs in Docker
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
         "OPTIONS": {
             "sslmode": os.getenv("POSTGRES_SSLMODE", "prefer"),
@@ -105,9 +109,15 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
-GOOGLE_MAPS_API_KEY="AIzaSyBdbRFLLwPTNe7RR9zahjksLOHovFjGM-M"
-GOOGLE_MAPS_ID = "9f96fc85ced76649d1bf190d"
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+GOOGLE_MAPS_ID = os.getenv("GOOGLE_MAPS_ID")
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Location configs
@@ -116,4 +126,11 @@ ENABLE_HIGH_ACCURACY = True
 TIMEOUT = 20000
 MAXIMUM_AGE = 10
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://roadpulsefrontend.onrender.com",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://roadpulsefrontend.onrender.com",
+]

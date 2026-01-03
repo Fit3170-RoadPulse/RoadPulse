@@ -1,14 +1,27 @@
-# RoadPulse/frontend/Dockerfile
-FROM node:20-alpine
+# ---------- build stage ----------
+FROM node:20-alpine AS build
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# install deps using lockfile if present
 COPY package*.json ./
 RUN npm ci || npm install
 
-# copy the rest (for prod builds; for dev, compose will mount your code)
 COPY . .
+RUN npm run build
 
-EXPOSE 5173
-CMD ["npm","run","dev","--","--host"]
+
+# ---------- production stage ----------
+FROM nginx:alpine
+
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy custom nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built files
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
