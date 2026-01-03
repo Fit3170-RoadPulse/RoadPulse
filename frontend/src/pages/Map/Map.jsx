@@ -7,6 +7,8 @@ import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import "./Map.css"
 import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../lib/api";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
+import { Easing, Tween } from "@tweenjs/tween.js";
+
 
 export default function Map() {
     let [mapData, setMapData] = useState(null);
@@ -324,8 +326,6 @@ export default function Map() {
         };
     }, [showTimeSelector, selectedOffsetMinutes]);
 
-
-    // MAP FUNCTIONS
     const setMarker = useCallback(async (map) => {
         if (mapReadyRef.current) return;
         mapReadyRef.current = true;
@@ -703,6 +703,60 @@ export default function Map() {
     }, [reports, selectedReport]);
 
 
+    function liveNavigateToDestination(){
+        console.log("Starting live navigation animation...");
+        const totalTime = 1500;
+
+        const lastPolyline = mapPolylines[mapPolylines.length - 1]
+        const navigationPathway = lastPolyline.getPath().getArray();
+        console.log(lastPolyline)
+        console.log("Most recent polyline:", navigationPathway);
+        let navigationIndex = 0;
+
+        let startPoint = mapMarkers.origin?.position;
+        let endPoint = mapMarkers.destination?.position;
+
+        // Align with the current direction
+        let currentPoint = lastPolyline[navigationIndex];
+        let nextPoint = lastPolyline[navigationIndex + 1];
+
+        const heading = google.maps.geometry.spherical.computeHeading(
+            new google.maps.LatLng(currentPoint),
+            new google.maps.LatLng(nextPoint)
+        );
+        const map = mapRef || mapInstanceRef.current;
+
+        // google maps camera options (for navigation mode)
+        const cameraOptions = {
+            tilt: map.getTilt(),
+            heading: map.getHeading(),
+            zoom: map.getZoom(),
+            center: new google.maps.LatLng(startPoint),
+        };
+
+        const tween = new Tween(cameraOptions) // Create a new tween that modifies 'cameraOptions'.
+            .to({ tilt: 20, heading: heading, zoom: 18, center: new google.maps.LatLng(startPoint) }, totalTime) // Move to destination in 15 second.
+            .easing(Easing.Quadratic.Out) // Use an easing function to make the animation smooth.
+            .onUpdate(() => {map.moveCamera(cameraOptions);
+            })
+        .start(); // Start the tween immediately.
+        
+        let culTime = 0;
+        // Stops all functionality until animation completes
+        function animate(time) {
+            tween.update(time)
+            culTime += time;
+
+            if (culTime < totalTime)
+            {
+                return;
+            }
+
+            requestAnimationFrame(animate)
+        }
+        requestAnimationFrame(animate)
+    }
+
     return (
         <div className="map-page-container">
             <div className="map-wrapper">
@@ -881,6 +935,16 @@ export default function Map() {
                                     <div className="route-info-value">{routeInfo.eta}</div>
                                 </div>
                             </div>
+
+                            {/* Directions */}
+                            <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
+                                <div className="route-info-icon">
+                                    <span>🗺️</span>
+                                </div>
+                                <div>
+                                    <div className="route-info-value">Directions {"->"}</div>
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </div>
