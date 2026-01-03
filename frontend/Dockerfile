@@ -1,24 +1,22 @@
-# ---------- build stage ----------
-FROM node:20-alpine AS build
+# frontend/Dockerfile
+FROM node:20-alpine
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++
+WORKDIR /usr/src/app
 
-WORKDIR /app
-
+# Install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
+# Copy source
 COPY . .
 
+# Build production bundle
 RUN npm run build
 
-# ---------- production stage ----------
-FROM nginx:alpine
-
-RUN rm /etc/nginx/conf.d/default.conf
+# Use nginx to serve the build
+FROM nginx:stable-alpine
+COPY --from=0 /usr/src/app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
