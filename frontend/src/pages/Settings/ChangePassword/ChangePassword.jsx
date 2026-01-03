@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import SettingMenu from "../menu/SettingMenu";
+import SettingMenu from "../Menu/SettingMenu";
 import CloseIcon from "../../../assets/close.png";
 import "./ChangePassword.css";
 
