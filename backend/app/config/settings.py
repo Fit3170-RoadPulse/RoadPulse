@@ -127,10 +127,9 @@ TIMEOUT = 20000
 MAXIMUM_AGE = 10
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://roadpulsefrontend.onrender.com",
+    "https://roadpulsefrontend.onrender.com"
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://roadpulsefrontend.onrender.com",
+    "https://roadpulsefrontend.onrender.com"
 ]
