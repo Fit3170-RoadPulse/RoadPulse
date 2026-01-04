@@ -9,6 +9,7 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../l
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { useEffectEvent } from "react";
+import SpeedTracker from "../../components/speed-tracker";
 
 
 export default function Map() {
@@ -58,6 +59,11 @@ export default function Map() {
     const [navigationIndex, setNavigationIndex] = useState(0);
     const [isNavigationBegun, setIsNavigationBegun] = useState(false);
     const [isNavigationFinished, setIsNavigationFinished] = useState(false);
+    const [speedMps, setSpeedMps] = useState(0); 
+    const [speedKmh, setSpeedKmh] = useState(0);       
+    const speedEmaRef = useRef(0);                     
+    const lastGoodFixRef = useRef(null);               
+    const lastSpeedUpdateRef = useRef(0);              
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -99,16 +105,25 @@ export default function Map() {
             // Success handler: updates the state with the new position
             const successHandler = (position) => {
                 const now = Date.now();
+
                 const newLocation = {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
                     accuracy: position.coords.accuracy,
-                    timestamp: position.timestamp,
+                    timestamp: position.timestamp ?? now,
+                    deviceSpeedMps: typeof position.coords.speed === "number" ? position.coords.speed : null,
                 };
+                
+                // If accuracy is terrible, ignore to avoid crazy speed spikes
+                const MAX_ACCURACY_M = 100;
+                if (newLocation.accuracy && newLocation.accuracy > MAX_ACCURACY_M) {
+                    return;
+                }
 
                 const prev = prevLocationRef.current;
-                let distance = 0;
+                prevLocationRef.current = newLocation;
 
+                let distance = 0;
                 if (prev) {
                     distance = google.maps.geometry.spherical.computeDistanceBetween(
                         new google.maps.LatLng(prev.latitude, prev.longitude),
@@ -116,20 +131,68 @@ export default function Map() {
                     );
                 }
 
-                // update "previous" immediately
-                prevLocationRef.current = newLocation;
-
                 // filter jitter + jumps
                 const MIN_MOVE_M = 10;
                 const MAX_MOVE_M = 500;
 
-                if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
+                if (prev && distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
                     setCumulativeDistance((prevDist) => prevDist + distance);
 
                     if (isAuthenticated()) {
                         apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
                             console.error("Failed to persist distance:", err)
                         );
+                    }
+                }
+
+                let computedSpeedMps = null;
+
+                if (newLocation.deviceSpeedMps != null && Number.isFinite(newLocation.deviceSpeedMps)) {
+                    computedSpeedMps = Math.max(0, newLocation.deviceSpeedMps);
+                } else {
+                    const lastFix = lastGoodFixRef.current;
+
+                    if (lastFix) {
+                    const dtSec = (newLocation.timestamp - lastFix.timestamp) / 1000;
+
+                    if (dtSec > 0.2 && dtSec < 10) {
+                        const d = google.maps.geometry.spherical.computeDistanceBetween(
+                        new google.maps.LatLng(lastFix.latitude, lastFix.longitude),
+                        new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
+                        );
+
+                        // Ignore tiny jitter & huge teleports for speed
+                        const MIN_D_FOR_SPEED = 2;     // meters
+                        const MAX_SPEED_MPS = 70;      // ~252 km/h cap to kill spikes
+                        if (d >= MIN_D_FOR_SPEED) {
+                        const s = d / dtSec;
+                        if (s <= MAX_SPEED_MPS) computedSpeedMps = s;
+                        } else {
+                        computedSpeedMps = 0;
+                        }
+                    }
+                    }
+                }
+
+                // update last good fix for speed computation
+                lastGoodFixRef.current = newLocation;
+
+                // Smooth speed to avoid jumpy UI: EMA
+                // alpha ~ 0.25 gives quick response without being too noisy.
+                if (computedSpeedMps != null && Number.isFinite(computedSpeedMps)) {
+                    const alpha = 0.25;
+                    const ema = speedEmaRef.current === 0
+                    ? computedSpeedMps
+                    : alpha * computedSpeedMps + (1 - alpha) * speedEmaRef.current;
+
+                    speedEmaRef.current = ema;
+
+                    // Throttle UI updates to ~10Hz (keeps it smooth & avoids re-render spam)
+                    if (now - lastSpeedUpdateRef.current > 100) {
+                    lastSpeedUpdateRef.current = now;
+
+                    setSpeedMps(ema);
+                    setSpeedKmh(ema * 3.6);
                     }
                 }
 
@@ -144,8 +207,11 @@ export default function Map() {
                     code: err.code,
                     message: err.message,
                 });
-                prevLocationRef.current = mockLocation;
-                console.log("Location updated:", mockLocation);
+                speedEmaRef.current = 0;
+                setSpeedMps(0);
+                setSpeedKmh(0);
+                prevLocationRef.current = null;
+                lastGoodFixRef.current = null;
             };
 
             // Options object for watchPosition (optional)
@@ -155,17 +221,14 @@ export default function Map() {
                 maximumAge: locationPollingData.current?.maximumAge ?? 0,
             };
 
-            // Start watching the position and store the watch ID
-            const intervalID = setInterval( async () => {
-                navigator.geolocation.getCurrentPosition(
+            const watchId = navigator.geolocation.watchPosition(
                 successHandler,
                 errorHandler,
                 options
             );
-            }, locationPollingData.current?.pollingInterval ?? 1000);
 
-            // Cleanup function: stops watching the position when the component unmounts
-            return () => clearInterval(intervalID);
+            // Cleanup
+            return () => navigator.geolocation.clearWatch(watchId);
         });
     }, []);
     useEffect(() => {
@@ -881,54 +944,61 @@ export default function Map() {
             </div>
 
             {showNavigationScreen && (
-                <div className="map-nav-overlay">
-                    <h2>Directions</h2>
-                    <div className="map-nav-container">
-                        <ol>
-                            {routeInfo?.steps?.map((step, index) => (
-                                <li key={index}
-                                    className={index === navigationIndex ? "active" : ""}
-                                >
-                                    <div>{step?.navigationInstruction.instructions}</div>
-                                    <div>{step?.distanceMeters}</div>
-                                    {/* <div>{step?.startLocation.latLng.latitude}</div>
-                                    <div>{step?.startLocation.latLng.longitude}</div>
-                                    <div>{step?.endLocation.latLng.latitude}</div>
-                                    <div>{step?.endLocation.latLng.longitude}</div> */}
-                                </li>
-                            ))}
-                        </ol>
+                <>
+                    <div className="map-nav-overlay">
+                        <h2>Directions</h2>
+                        <div className="map-nav-container">
+                            <ol>
+                                {routeInfo?.steps?.map((step, index) => (
+                                    <li key={index}
+                                        className={index === navigationIndex ? "active" : ""}
+                                    >
+                                        <div>{step?.navigationInstruction.instructions}</div>
+                                        <div>{step?.distanceMeters}</div>
+                                        {/* <div>{step?.startLocation.latLng.latitude}</div>
+                                        <div>{step?.startLocation.latLng.longitude}</div>
+                                        <div>{step?.endLocation.latLng.latitude}</div>
+                                        <div>{step?.endLocation.latLng.longitude}</div> */}
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+
+                        {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
+                        <div className="map-nav-controls">
+                            <button
+                                onClick={() => setNavigationIndex((s) => Math.max(s - 1, 0))}
+                                disabled={navigationIndex === 0}
+                            >
+                                Previous
+                            </button>
+                            <button
+                                onClick={() =>
+                                    setNavigationIndex((s) => Math.min(s + 1, routeInfo.steps.length))
+                                }
+                                disabled={navigationIndex === routeInfo.steps.length}
+                            >
+                                Next
+                            </button>
+                        </div>
+    {/* 
+                        <div className="map-nav-end-button">
+                            <button
+                                onClick={() => {
+                                    setIsNavigationFinished(true)
+                                    setIsNavigationBegun(false)
+                                }}
+                            >
+                                End Navigation
+                            </button>
+                        </div> */}
                     </div>
 
-                    {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
-                    <div className="map-nav-controls">
-                        <button
-                            onClick={() => setNavigationIndex((s) => Math.max(s - 1, 0))}
-                            disabled={navigationIndex === 0}
-                        >
-                            Previous
-                        </button>
-                        <button
-                            onClick={() =>
-                                setNavigationIndex((s) => Math.min(s + 1, routeInfo.steps.length))
-                            }
-                            disabled={navigationIndex === routeInfo.steps.length}
-                        >
-                            Next
-                        </button>
+                    <div className="speed-tracker">
+                        <SpeedTracker speedKmh={speedKmh} />
                     </div>
-{/* 
-                    <div className="map-nav-end-button">
-                        <button
-                            onClick={() => {
-                                setIsNavigationFinished(true)
-                                setIsNavigationBegun(false)
-                            }}
-                        >
-                            End Navigation
-                        </button>
-                    </div> */}
-                </div>
+                </>
+
             )}
 
             {/* Overlay UI */}

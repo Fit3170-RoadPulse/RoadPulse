@@ -824,3 +824,10 @@
   background: #dc2626;
   color : white;
 }
+
+.speed-tracker {
+  position: absolute;
+  top: 16px;
+  right: 104px;
+  z-index: 30;
+}
