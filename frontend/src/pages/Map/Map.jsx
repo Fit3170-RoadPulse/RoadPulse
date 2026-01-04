@@ -792,7 +792,7 @@ export default function Map() {
         if (isNavigationBegun === false) return;
         
         // Align with the current direction
-        const navigationPathway = mapPolylines[mapPolylines.length - 1].getPath().getArray();
+        const navigationPathway = mapPolylines[mapPolylines.length - 1]?.getPath()?.getArray();
         const userLoc = {lat:prevLocationRef.current.latitude, lng:prevLocationRef.current.longitude};
         let nextPoint = {lat: 0, lng: 0}
         let shouldCameraPan = true;
