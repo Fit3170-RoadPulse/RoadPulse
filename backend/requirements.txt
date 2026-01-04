@@ -8,3 +8,4 @@ requests
 psycopg
 gunicorn
 whitenoise
+Pillow>=11.0

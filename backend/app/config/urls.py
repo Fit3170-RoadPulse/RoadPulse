@@ -1,6 +1,7 @@
 from django.contrib import admin
-# from django.urls import path
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from rp_core.views import health, samples, map, map_config, locationData, compute_route, RegisterView, LoginView, ForgotPasswordView, ChangePasswordView, update_cumulative_distance
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -19,3 +20,6 @@ urlpatterns = [
     path("api/user/distance/", update_cumulative_distance, name="user-distance"),
     path("api/map/compute-route/",compute_route,name="compute-route")
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
