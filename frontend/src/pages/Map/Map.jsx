@@ -99,8 +99,6 @@ export default function Map() {
             // Success handler: updates the state with the new position
             const successHandler = (position) => {
                 const now = Date.now();
-                if (now - lastUpdateTimeRef.current < locationPollingData.current?.pollingInterval) return;
-
                 const newLocation = {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
@@ -152,24 +150,22 @@ export default function Map() {
 
             // Options object for watchPosition (optional)
             const options = {
-                enableHighAccuracy: locationPollingData.current?.enableHighAccuracy,
+                enableHighAccuracy: locationPollingData.current?.enableHighAccuracy ?? true,
                 timeout: locationPollingData.current?.timeout ?? 10000,
                 maximumAge: locationPollingData.current?.maximumAge ?? 0,
             };
 
             // Start watching the position and store the watch ID
-            const id = navigator.geolocation.watchPosition(
+            const intervalID = setInterval( async () => {
+                navigator.geolocation.getCurrentPosition(
                 successHandler,
                 errorHandler,
                 options
             );
+            }, locationPollingData.current?.pollingInterval ?? 1000);
 
             // Cleanup function: stops watching the position when the component unmounts
-            return () => {
-                if (id) {
-                    navigator.geolocation.clearWatch(id);
-                }
-            };
+            return () => clearInterval(intervalID);
         });
     }, []);
     useEffect(() => {
