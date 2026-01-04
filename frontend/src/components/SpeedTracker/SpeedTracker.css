@@ -1,0 +1,59 @@
+.speed-card {
+  width: 200px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  text-align: left;
+}
+
+.speed-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.speed-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.speed-value {
+  margin-top: 12px;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.speed-unit {
+  font-size: 16px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* Speed states */
+.speed-value--idle {
+  color: #9ca3af;
+}
+
+.speed-value--safe {
+  color: #16a34a;
+}
+
+.speed-value--warning {
+  color: #f59e0b;
+}
+
+.speed-value--danger {
+  color: #dc2626;
+}
+
+.speed-warning {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+}
