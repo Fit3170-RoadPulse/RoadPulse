@@ -8,6 +8,7 @@ import "./Map.css"
 import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../lib/api";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 import { Easing, Tween } from "@tweenjs/tween.js";
+import { useEffectEvent } from "react";
 
 
 export default function Map() {
@@ -55,6 +56,8 @@ export default function Map() {
     const [showNavigationScreen, setShowNavigationScreen] = useState(false);
     const [showAll, setShowAll] = useState(true);
     const [navigationIndex, setNavigationIndex] = useState(0);
+    const [isNavigationBegun, setIsNavigationBegun] = useState(false);
+    const [isNavigationFinished, setIsNavigationFinished] = useState(false);
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -750,6 +753,7 @@ export default function Map() {
         }else{
             panToLocation(map, currentPoint, nextPoint, totalTime);
         }
+        setIsNavigationBegun(true);
     }
     
     function transitionToNavigationScreen(){
@@ -787,8 +791,52 @@ export default function Map() {
             }
         }
         requestAnimationFrame(animate)
-
     }
+    useEffect(() => {
+        if (isNavigationBegun === false) return;
+        
+        // Align with the current direction
+        const navigationPathway = mapPolylines[mapPolylines.length - 1].getPath().getArray();
+        const userLoc = {lat:prevLocationRef.current.latitude, lng:prevLocationRef.current.longitude};
+        let nextPoint = {lat: 0, lng: 0}
+        let shouldCameraPan = true;
+
+        let maxCutoffDistance = 100; // meters
+
+        if (navigationIndex >= navigationPathway.length - 1){
+            console.log("Reached destination in navigation mode.");
+            setIsNavigationFinished(true);
+            setIsNavigationBegun(false);
+            return;
+        }
+
+        // Determine next point
+        if (navigationIndex == 0 && isAToBRef.current === true){
+            nextPoint = navigationPathway[0];
+            shouldCameraPan = false;
+        }else {
+            nextPoint = navigationPathway[navigationIndex + 1];
+            shouldCameraPan = true;
+        }
+
+        // Calculate distance to next point
+        let distance = google.maps.geometry.spherical.computeDistanceBetween(
+            new google.maps.LatLng(userLoc.lat, userLoc.lng),
+            new google.maps.LatLng(nextPoint.lat, nextPoint.lng)
+        );
+
+        // Pan camera to face next point
+        if (shouldCameraPan === true){
+            const map = mapRef || mapInstanceRef.current;
+            panToLocation(map, userLoc, nextPoint);
+        }
+
+        // If within threshold, move to next point
+        if (distance < maxCutoffDistance) {
+            setNavigationIndex((prev) => Math.min(prev + 1, navigationPathway.length - 1));
+        }
+    }, [navigationIndex, isAToBRef, isNavigationBegun, isNavigationFinished, prevLocationRef, mapPolylines])
+
 
     return (
         <div className="map-page-container">
