@@ -72,7 +72,7 @@ def compute_route(request):
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': settings.GOOGLE_MAPS_API_KEY,
-        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
+        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps'
     }
 
     def build_cache_key(origin_data, destination_data, departure_time):
@@ -138,7 +138,8 @@ def compute_route(request):
             "starting_time":time,
             "distance_meters":route["distanceMeters"],
             "duration":int((route["duration"]).replace("s","")),
-            "polyline":route["polyline"]["encodedPolyline"]
+            "polyline":route["polyline"]["encodedPolyline"],
+            "legs":route["legs"],
         }
         cache.set(cache_key, result, timeout=getattr(settings, "GOOGLE_ROUTES_CACHE_TTL", 300))
         responseMatrix.append(result)
