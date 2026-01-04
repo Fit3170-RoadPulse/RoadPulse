@@ -819,3 +819,8 @@
   background: #9ca3af;
   cursor: not-allowed;
 }
+
+.map-nav-end-button {
+  background: #dc2626;
+  color : white;
+}

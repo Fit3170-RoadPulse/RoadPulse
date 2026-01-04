@@ -732,9 +732,6 @@ export default function Map() {
         console.log("Most recent polyline:", navigationPathway);
         setNavigationIndex(0);
 
-        let startPoint = mapMarkers.origin.position;
-        let endPoint = mapMarkers.destination.position;
-
         // Align with the current direction
         let currentPoint = navigationPathway[navigationIndex];
         let nextPoint = navigationPathway[navigationIndex + 1];
@@ -788,12 +785,48 @@ export default function Map() {
         }
         requestAnimationFrame(animate)
     }
+
+    function finishNavigation(){
+        setShowNavigationScreen(false);
+        setShowAll(true);
+        setIsNavigationBegun(false);
+        setIsNavigationFinished(true);
+        setNavigationIndex(0);
+        console.log("Navigation finished, returning to map view.");
+        const map = mapRef || mapInstanceRef.current;
+        const curLocation = {lat:prevLocationRef.current.latitude, lng:prevLocationRef.current.longitude};
+        const totalTime = 1500;
+
+        const cameraOptions = {
+            tilt: map.getTilt(),
+            heading: map.getHeading(),
+            zoom: map.getZoom(),
+            center: new google.maps.LatLng(curLocation),
+        };
+
+        const tween = new Tween(cameraOptions) // Create a new tween that modifies 'cameraOptions'.
+            .to({ tilt: 0, heading: 0, zoom: 3, center: new google.maps.LatLng(curLocation) }, totalTime) // Move to destination in 15 second.
+            .easing(Easing.Quadratic.Out) // Use an easing function to make the animation smooth.
+            .onUpdate(() => {map.moveCamera(cameraOptions);
+            })
+        .start(); // Start the tween immediately.
+
+        // Animate
+        function animate(time) {
+            requestAnimationFrame(animate)
+            tween.update(time)
+            if (tween.isPlaying() === false) {
+                tween.remove(); // Clean up the tween once it's done
+            }
+        }
+        requestAnimationFrame(animate)
+    }
     useEffect(() => {
         if (isNavigationBegun === false) return;
         
         // Align with the current direction
         const navigationPathway = mapPolylines[mapPolylines.length - 1]?.getPath()?.getArray();
-        const userLoc = {lat:prevLocationRef.current.latitude, lng:prevLocationRef.current.longitude};
+        const userLoc = {lat:prevLocationRef.current?.latitude, lng:prevLocationRef.current?.longitude};
         let nextPoint = {lat: 0, lng: 0}
         let shouldCameraPan = true;
 
@@ -801,8 +834,7 @@ export default function Map() {
 
         if (navigationIndex >= navigationPathway.length - 1){
             console.log("Reached destination in navigation mode.");
-            setIsNavigationFinished(true);
-            setIsNavigationBegun(false);
+            finishNavigation();
             return;
         }
 
@@ -866,24 +898,36 @@ export default function Map() {
                                 </li>
                             ))}
                         </ol>
-{/* 
-                        <div className="map-nav-controls">
-                            <button
-                                onClick={() => setNavigationIndex((s) => Math.max(s - 1, 0))}
-                                disabled={navigationIndex === 0}
-                            >
-                                Previous
-                            </button>
-                            <button
-                                onClick={() =>
-                                    setNavigationIndex((s) => Math.min(s + 1, routeInfo.steps.length - 1))
-                                }
-                                disabled={navigationIndex === routeInfo.steps.length - 1}
-                            >
-                                Next
-                            </button>
-                        </div> */}
                     </div>
+
+                    {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
+                    <div className="map-nav-controls">
+                        <button
+                            onClick={() => setNavigationIndex((s) => Math.max(s - 1, 0))}
+                            disabled={navigationIndex === 0}
+                        >
+                            Previous
+                        </button>
+                        <button
+                            onClick={() =>
+                                setNavigationIndex((s) => Math.min(s + 1, routeInfo.steps.length))
+                            }
+                            disabled={navigationIndex === routeInfo.steps.length}
+                        >
+                            Next
+                        </button>
+                    </div>
+{/* 
+                    <div className="map-nav-end-button">
+                        <button
+                            onClick={() => {
+                                setIsNavigationFinished(true)
+                                setIsNavigationBegun(false)
+                            }}
+                        >
+                            End Navigation
+                        </button>
+                    </div> */}
                 </div>
             )}
 
