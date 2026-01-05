@@ -11,8 +11,6 @@ import { Easing, Tween } from "@tweenjs/tween.js";
 import { useEffectEvent } from "react";
 import {NativeGeolocationProvider, WebGeolocationProvider} from "../../lib/geolocationFiles.js";
 
-const mapConfig = {enableHighAccuracy: true, timeout: 8000, maximumAge: 15000, pollingInterval: 1000};
-
 export default function Map() {
     let [mapData, setMapData] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -87,46 +85,33 @@ export default function Map() {
         }
 
         loadUserData();
-
-        // axios.get(`${base}/api/map/location/`).then((r) => {
-        //     locationPollingData.current = r.data;
-        //     console.log("Location Polling Data Ref:", locationPollingData);
-            
-        //     const provider = isNativeApp
-        //     ? new NativeGeolocationProvider()
-        //     : new WebGeolocationProvider();
-
-        //     isMounted.current = true;
-        //     if (!API_KEY || !MAP_ID) return () => { isMounted.current = false; };
-        //     provider.start(isMounted, prevLocationRef, locationPollingData, onLocationUpdate);
-
-        //     // Cleanup function: stops watching the position when the component unmounts
-        //     return () => provider.stop();
-        //     });
     }, []);
 
     useEffect(() => {
-        isMounted.current = true;
-        let provider = null
-        if (!mapData?.GMAPS_KEY || !mapData?.GMAPS_ID) return () => { isMounted.current = false; };
+        const base = import.meta.env.VITE_API_URL || "";
+        axios.get(`${base}/api/map/location/`).then((r) => {
+            isMounted.current = true;
+            let provider = null
+            if (!mapData?.GMAPS_KEY || !mapData?.GMAPS_ID) return () => { isMounted.current = false; };
 
-        if (navigator?.geolocation && isMounted.current) {
-            locationPollingData.current = mapConfig;
-            console.log("Location Polling Data Ref:", locationPollingData);
-            
-            provider = isMobileDevice
-            ? new NativeGeolocationProvider()
-            : new WebGeolocationProvider();
+            if (navigator?.geolocation && isMounted.current) {
+                locationPollingData.current = r.data;
+                console.log("Location Polling Data Ref:", locationPollingData);
+                
+                provider = isMobileDevice
+                ? new NativeGeolocationProvider()
+                : new WebGeolocationProvider();
 
-            console.log("provider", provider);
-            provider?.start(prevLocationRef, locationPollingData, onLocationUpdate);
-        }
+                console.log("provider", provider);
+                provider?.start(prevLocationRef, locationPollingData, onLocationUpdate);
+            }
 
-        // // Cleanup function: stops watching the position when the component unmounts
-        return () => {
-            isMounted.current = false;
-            provider?.stop();
-        };
+            // // Cleanup function: stops watching the position when the component unmounts
+            return () => {
+                isMounted.current = false;
+                provider?.stop();
+            };
+        });
     }, [isMounted, isMobileDevice, mapData]);
 
 
