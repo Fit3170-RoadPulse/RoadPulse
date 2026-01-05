@@ -63,7 +63,11 @@ export default function Map() {
     const [speedKmh, setSpeedKmh] = useState(0);       
     const speedEmaRef = useRef(0);                     
     const lastGoodFixRef = useRef(null);               
-    const lastSpeedUpdateRef = useRef(0);              
+    const lastSpeedUpdateRef = useRef(0);  
+    const [liveEtaText, setLiveEtaText] = useState(null);
+    const [liveEtaSec, setLiveEtaSec] = useState(null);      
+    const liveEtaAbortRef = useRef(null);
+    const lastEtaOriginRef = useRef(null);      
 
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
@@ -734,6 +738,25 @@ export default function Map() {
         return arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
+    function getDestinationLatLng(mapMarkers, routeInfo) {
+        // Prefer destination marker if your app stores it
+        const dest = mapMarkers?.destination;
+        if (dest && typeof dest.lat === "number" && typeof dest.lng === "number") {
+            return { lat: dest.lat, lng: dest.lng };
+        }
+
+        // Fallback: last step end location (if present)
+        const steps = routeInfo?.steps;
+        if (!steps?.length) return null;
+
+        const last = steps[steps.length - 1];
+        const lat = last?.endLocation?.latLng?.latitude;
+        const lng = last?.endLocation?.latLng?.longitude;
+
+        if (typeof lat !== "number" || typeof lng !== "number") return null;
+        return { lat, lng };
+    }
+
     useEffect(() => {
         const map = mapInstanceRef.current;
         if (!mapReady || !map) return;
@@ -783,6 +806,94 @@ export default function Map() {
             setSelectedReport(null);
         }
     }, [reports, selectedReport]);
+
+    useEffect(() => {
+        // Only run while navigation is active
+        if (!showNavigationScreen) {
+            setLiveEtaText(null);
+            setLiveArrivalTime(null);
+            return;
+        }
+
+        const base = import.meta.env.VITE_API_URL;
+        if (!base) return;
+
+        // Need current location
+        if (!prevLocationRef.current) return;
+
+        // Need destination
+        const dest = getDestinationLatLng(mapMarkers, routeInfo);
+        if (!dest) return;
+
+        let stopped = false;
+
+        const refreshLiveEta = async () => {
+            try {
+            if (stopped) return;
+            if (!window.google?.maps?.geometry) return;
+
+            const originLoc = prevLocationRef.current;
+            if (!originLoc) return;
+
+            // Only refresh if user moved enough (or first time)
+            const MIN_MOVE_FOR_REFRESH_M = 30;
+            if (
+                lastEtaOriginRef.current &&
+                !movedMoreThanMeters(lastEtaOriginRef.current, originLoc, MIN_MOVE_FOR_REFRESH_M)
+            ) {
+                return;
+            }
+
+            lastEtaOriginRef.current = originLoc;
+
+            liveEtaAbortRef.current?.abort?.();
+            const controller = new AbortController();
+            liveEtaAbortRef.current = controller;
+
+            // Use "now" as departure time for live ETA
+            const departureTime = new Date().toISOString();
+
+            const response = await axios.post(
+                `${base}/api/map/compute-route/`,
+                {
+                origin: { latitude: originLoc.latitude, longitude: originLoc.longitude },
+                destination: { latitude: dest.lat, longitude: dest.lng },
+                startTimes: [departureTime],
+                },
+                { signal: controller.signal }
+            );
+
+            if (stopped) return;
+
+            const data = response.data;
+            if (!data || !data.length) return;
+
+            const routeData = data[0];
+
+            const durationInfo = formatDurationInfo(routeData.duration);
+            const etaText = durationInfo.text;
+
+            const arrival = formatEtaTimeByMinutes(departureTime, durationInfo.totalMinutes);
+
+            setLiveEtaText(etaText);
+            setLiveArrivalTime(arrival);
+            } catch (e) {
+            if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
+            console.warn("Live ETA refresh failed:", e);
+            }
+        };
+
+        // Run once immediately, then poll
+        refreshLiveEta();
+        const interval = setInterval(refreshLiveEta, 15000); // 15s is a good default
+
+        return () => {
+            stopped = true;
+            clearInterval(interval);
+            liveEtaAbortRef.current?.abort?.();
+            lastEtaOriginRef.current = null;
+        };
+    }, [showNavigationScreen, mapMarkers, routeInfo]);
 
 
     function liveNavigateToDestination(){
@@ -992,6 +1103,16 @@ export default function Map() {
                                 End Navigation
                             </button>
                         </div> */}
+                    </div>
+
+                    <div className="eta-tracker">
+                        <div className="eta-card">
+                            <div className="eta-title">ETA</div>
+                            <div className="eta-arrival">{liveEtaArrival ?? "--"}</div>
+                            <div className="eta-duration">
+                            {liveEtaDuration ? `(${liveEtaDuration} remaining)` : ""}
+                            </div>
+                        </div>
                     </div>
 
                     <div className="speed-tracker">
