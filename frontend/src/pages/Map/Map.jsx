@@ -9,7 +9,7 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../l
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { useEffectEvent } from "react";
-import { Geolocation } from '@capacitor/geolocation';
+import {NativeGeolocationProvider, WebGeolocationProvider} from "../../lib/geolocationFiles.js";
 
 export default function Map() {
     let [mapData, setMapData] = useState(null);
@@ -28,21 +28,15 @@ export default function Map() {
     const [showErrorPopup, setShowErrorPopup] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const lastRouteSelectionRef = useRef(null);
+    const prevLocationRef = useRef(null);
 
     const [cumulativeDistance, setCumulativeDistance] = useState(0);
-    const prevLocationRef = useRef(null);
     let locationPollingData = useRef(null);
     let lastUpdateTimeRef = useRef(0);
     const routeCacheRef = useRef(new globalThis.Map());
     const activeRouteRequestRef = useRef(null);
+    const [isMobileDevice, setIsMobileDevice] = useState(false);
 
-    // Fallback mock location (used if real geolocation fails)
-    const mockLocation = {
-        latitude: -37.813904798147796,
-        longitude: 144.98810008133233,
-        accuracy: 50,
-        timestamp: Date.now(),
-    };
     const [selectedReport, setSelectedReport] = useState(null);
     const [reports, setReports] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
@@ -60,6 +54,10 @@ export default function Map() {
     const [isNavigationFinished, setIsNavigationFinished] = useState(false);
 
     useEffect(() => {
+        const isNativeApp = /Mobi|Android/i.test(navigator.userAgent)
+        setIsMobileDevice(isNativeApp);
+        console.log("isNativeApp", isNativeApp);
+
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/`).then((r) => {
             setMapData(r.data)
@@ -89,85 +87,52 @@ export default function Map() {
         axios.get(`${base}/api/map/location/`).then((r) => {
             locationPollingData.current = r.data;
             console.log("Location Polling Data Ref:", locationPollingData);
+            
+            const provider = isNativeApp
+            ? new NativeGeolocationProvider()
+            : new WebGeolocationProvider();
 
-            if (!navigator.geolocation) {
-                prevLocationRef.current = mockLocation;
-                console.log('Geolocation is not supported by your browser');
-                return;
-            }
-
-            // Success handler: updates the state with the new position
-            const successHandler = (position) => {
-                const now = Date.now();
-                const newLocation = {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy,
-                    timestamp: position.timestamp,
-                };
-
-                const prev = prevLocationRef.current;
-                let distance = 0;
-
-                if (prev) {
-                    distance = google.maps.geometry.spherical.computeDistanceBetween(
-                        new google.maps.LatLng(prev.latitude, prev.longitude),
-                        new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
-                    );
-                }
-
-                // update "previous" immediately
-                prevLocationRef.current = newLocation;
-
-                // filter jitter + jumps
-                const MIN_MOVE_M = 10;
-                const MAX_MOVE_M = 500;
-
-                if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
-                    setCumulativeDistance((prevDist) => prevDist + distance);
-
-                    if (isAuthenticated()) {
-                        apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
-                            console.error("Failed to persist distance:", err)
-                        );
-                    }
-                }
-
-                lastUpdateTimeRef.current = now;
-                console.log("Distance moved (m):", distance);
-                console.log("Location updated:", newLocation);
-            };
-
-            // Error handler: updates the error state
-            const errorHandler = (err) => {
-                console.error("Geolocation error:", {
-                    code: err.code,
-                    message: err.message,
-                });
-                prevLocationRef.current = mockLocation;
-                console.log("Location updated:", mockLocation);
-            };
-
-            // Options object for watchPosition (optional)
-            const options = {
-                enableHighAccuracy: locationPollingData.current?.enableHighAccuracy ?? true,
-                timeout: locationPollingData.current?.timeout ?? 10000,
-                maximumAge: locationPollingData.current?.maximumAge ?? 0,
-            };
-
-            // Start watching the position and store the watch ID
-            const intervalID = setInterval( async () => {
-                navigator.geolocation.getCurrentPosition(
-                successHandler,
-                errorHandler,
-                options
-            );
-            }, locationPollingData.current?.pollingInterval ?? 1000);
+            provider.start(prevLocationRef, locationPollingData, onLocationUpdate);
 
             // Cleanup function: stops watching the position when the component unmounts
-            return () => clearInterval(intervalID);
+            return () => provider.stop();
         });
     }, []);
+
+    function onLocationUpdate(newLocation, now){
+        const prev = prevLocationRef.current;
+        let distance = 0;
+
+        if (prev) {
+            distance = google.maps.geometry.spherical.computeDistanceBetween(
+                new google.maps.LatLng(prev.latitude, prev.longitude),
+                new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
+            );
+        }
+
+        // update "previous" immediately
+        prevLocationRef.current = newLocation;
+
+        // filter jitter + jumps
+        const MIN_MOVE_M = 10;
+        const MAX_MOVE_M = 500;
+
+        if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
+            setCumulativeDistance((prevDist) => prevDist + distance);
+
+            if (isAuthenticated()) {
+                apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
+                    console.error("Failed to persist distance:", err)
+                );
+            }
+        }
+
+        lastUpdateTimeRef.current = now;
+        console.log("Distance moved (m):", cumulativeDistance);
+        console.log("Location updated:", newLocation);
+    }
+
+
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
         const fetchReports = () =>
