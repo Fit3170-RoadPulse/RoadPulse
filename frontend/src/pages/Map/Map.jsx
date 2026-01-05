@@ -65,7 +65,7 @@ export default function Map() {
     const lastGoodFixRef = useRef(null);               
     const lastSpeedUpdateRef = useRef(0);  
     const [liveEtaText, setLiveEtaText] = useState(null);
-    const [liveEtaSec, setLiveEtaSec] = useState(null);      
+    const [liveArrivalTime, setLiveArrivalTime] = useState(null);     
     const liveEtaAbortRef = useRef(null);
     const lastEtaOriginRef = useRef(null);      
 
