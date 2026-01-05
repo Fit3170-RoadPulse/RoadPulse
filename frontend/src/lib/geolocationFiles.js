@@ -11,7 +11,8 @@ const mockLocation = {
 export class NativeGeolocationProvider {
     watchId;
 
-    async start(locationPollingData, cb) {
+    async start(prevLocationRef, locationPollingData, cb) {
+        console.log("Starting mobile geolocation");
         Geolocation.requestPermissions();
         this.watchId = await Geolocation.watchPosition(
         { enableHighAccuracy: true },
@@ -19,10 +20,10 @@ export class NativeGeolocationProvider {
             if (!pos) return;
             const now = Date.now();
             const newLocation = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                timestamp: position.timestamp,
+                latitude: pos?.coords?.latitude,
+                longitude: pos?.coords?.longitude,
+                accuracy: pos?.coords?.accuracy,
+                timestamp: pos?.timestamp,
             };
             cb.bind(null, newLocation, now);
         }
@@ -38,15 +39,23 @@ export class WebGeolocationProvider {
     intervalID = null;
 
     start(prevLocationRef, locationPollingData, cb) {
+
+        if (!navigator?.geolocation) {
+            console.warn("Geolocation is not supported by this browser.");
+            return;
+        }
         // Success handler: updates the state with the new position
         const successHandler = (position) => {
+            console.log(position);
             const now = Date.now();
             const newLocation = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                timestamp: position.timestamp,
+                latitude: position?.coords?.latitude,
+                longitude: position?.coords?.longitude,
+                accuracy: position?.coords?.accuracy,
+                timestamp: position?.timestamp,
             };
+            console.log("Location updated:", newLocation);
+            prevLocationRef.current = newLocation;
 
             cb.bind(null, newLocation, now);
         };
@@ -67,18 +76,18 @@ export class WebGeolocationProvider {
             timeout: locationPollingData.current?.timeout ?? 10000,
             maximumAge: locationPollingData.current?.maximumAge ?? 0,
         };
-
-        this.intervalID = setInterval( async () => {
-            navigator.geolocation.getCurrentPosition(
+        console.log("Starting web geolocation");
+        this.intervalID = navigator.geolocation.watchPosition(
             successHandler,
             errorHandler,
             options
         );
-        }, locationPollingData.current?.pollingInterval ?? 1000);
-
     }
 
     stop() {
-        clearInterval(this.intervalID);
+        if (this.intervalID != null && navigator?.geolocation) {
+            navigator.geolocation.clearWatch(this.intervalID);
+            this.intervalID = null;
+        }
     }
 }
