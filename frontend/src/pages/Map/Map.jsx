@@ -9,7 +9,7 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../l
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { useEffectEvent } from "react";
-import SpeedTracker from "../../components/speed-tracker";
+import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
 
 
 export default function Map() {
