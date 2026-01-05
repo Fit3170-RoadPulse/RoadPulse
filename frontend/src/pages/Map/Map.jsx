@@ -9,7 +9,8 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../l
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { useEffectEvent } from "react";
-import SpeedTracker from "../../components/speed-tracker";
+import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
+import {NativeGeolocationProvider, WebGeolocationProvider} from "../../lib/geolocationFiles.js";
 
 
 export default function Map() {
@@ -36,14 +37,8 @@ export default function Map() {
     let lastUpdateTimeRef = useRef(0);
     const routeCacheRef = useRef(new globalThis.Map());
     const activeRouteRequestRef = useRef(null);
+    const [isMobileDevice, setIsMobileDevice] = useState(false);
 
-    // Fallback mock location (used if real geolocation fails)
-    const mockLocation = {
-        latitude: -37.813904798147796,
-        longitude: 144.98810008133233,
-        accuracy: 50,
-        timestamp: Date.now(),
-    };
     const [selectedReport, setSelectedReport] = useState(null);
     const [reports, setReports] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
@@ -59,6 +54,8 @@ export default function Map() {
     const [navigationIndex, setNavigationIndex] = useState(0);
     const [isNavigationBegun, setIsNavigationBegun] = useState(false);
     const [isNavigationFinished, setIsNavigationFinished] = useState(false);
+    const [showNavigationEndScreen, setShowNavigationEndScreen] = useState(false);
+    const isMounted = useRef(false);
     const [speedMps, setSpeedMps] = useState(0); 
     const [speedKmh, setSpeedKmh] = useState(0);       
     const speedEmaRef = useRef(0);                     
@@ -66,6 +63,10 @@ export default function Map() {
     const lastSpeedUpdateRef = useRef(0);              
 
     useEffect(() => {
+        const isNativeApp = /Mobi|Android/i.test(navigator.userAgent)
+        setIsMobileDevice(isNativeApp);
+        console.log("isNativeApp", isNativeApp);
+
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/`).then((r) => {
             setMapData(r.data)
@@ -91,146 +92,68 @@ export default function Map() {
         }
 
         loadUserData();
+    }, []);
 
+    useEffect(() => {
+        const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/location/`).then((r) => {
-            locationPollingData.current = r.data;
-            console.log("Location Polling Data Ref:", locationPollingData);
+            isMounted.current = true;
+            let provider = null
+            if (!mapData?.GMAPS_KEY || !mapData?.GMAPS_ID) return () => { isMounted.current = false; };
 
-            if (!navigator.geolocation) {
-                prevLocationRef.current = mockLocation;
-                console.log('Geolocation is not supported by your browser');
-                return;
+            if (navigator?.geolocation && isMounted.current) {
+                locationPollingData.current = r.data;
+                console.log("Location Polling Data Ref:", locationPollingData);
+                
+                provider = isMobileDevice
+                ? new NativeGeolocationProvider()
+                : new WebGeolocationProvider();
+
+                console.log("provider", provider);
+                provider?.start(prevLocationRef, locationPollingData, onLocationUpdate);
             }
 
-            // Success handler: updates the state with the new position
-            const successHandler = (position) => {
-                const now = Date.now();
-
-                const newLocation = {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy,
-                    timestamp: position.timestamp ?? now,
-                    deviceSpeedMps: typeof position.coords.speed === "number" ? position.coords.speed : null,
-                };
-                
-                // If accuracy is terrible, ignore to avoid crazy speed spikes
-                const MAX_ACCURACY_M = 100;
-                if (newLocation.accuracy && newLocation.accuracy > MAX_ACCURACY_M) {
-                    return;
-                }
-
-                const prev = prevLocationRef.current;
-                prevLocationRef.current = newLocation;
-
-                let distance = 0;
-                if (prev) {
-                    distance = google.maps.geometry.spherical.computeDistanceBetween(
-                        new google.maps.LatLng(prev.latitude, prev.longitude),
-                        new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
-                    );
-                }
-
-                // filter jitter + jumps
-                const MIN_MOVE_M = 10;
-                const MAX_MOVE_M = 500;
-
-                if (prev && distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
-                    setCumulativeDistance((prevDist) => prevDist + distance);
-
-                    if (isAuthenticated()) {
-                        apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
-                            console.error("Failed to persist distance:", err)
-                        );
-                    }
-                }
-
-                let computedSpeedMps = null;
-
-                if (newLocation.deviceSpeedMps != null && Number.isFinite(newLocation.deviceSpeedMps)) {
-                    computedSpeedMps = Math.max(0, newLocation.deviceSpeedMps);
-                } else {
-                    const lastFix = lastGoodFixRef.current;
-
-                    if (lastFix) {
-                    const dtSec = (newLocation.timestamp - lastFix.timestamp) / 1000;
-
-                    if (dtSec > 0.2 && dtSec < 10) {
-                        const d = google.maps.geometry.spherical.computeDistanceBetween(
-                        new google.maps.LatLng(lastFix.latitude, lastFix.longitude),
-                        new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
-                        );
-
-                        // Ignore tiny jitter & huge teleports for speed
-                        const MIN_D_FOR_SPEED = 2;     // meters
-                        const MAX_SPEED_MPS = 70;      // ~252 km/h cap to kill spikes
-                        if (d >= MIN_D_FOR_SPEED) {
-                        const s = d / dtSec;
-                        if (s <= MAX_SPEED_MPS) computedSpeedMps = s;
-                        } else {
-                        computedSpeedMps = 0;
-                        }
-                    }
-                    }
-                }
-
-                // update last good fix for speed computation
-                lastGoodFixRef.current = newLocation;
-
-                // Smooth speed to avoid jumpy UI: EMA
-                // alpha ~ 0.25 gives quick response without being too noisy.
-                if (computedSpeedMps != null && Number.isFinite(computedSpeedMps)) {
-                    const alpha = 0.25;
-                    const ema = speedEmaRef.current === 0
-                    ? computedSpeedMps
-                    : alpha * computedSpeedMps + (1 - alpha) * speedEmaRef.current;
-
-                    speedEmaRef.current = ema;
-
-                    // Throttle UI updates to ~10Hz (keeps it smooth & avoids re-render spam)
-                    if (now - lastSpeedUpdateRef.current > 100) {
-                    lastSpeedUpdateRef.current = now;
-
-                    setSpeedMps(ema);
-                    setSpeedKmh(ema * 3.6);
-                    }
-                }
-
-                lastUpdateTimeRef.current = now;
-                console.log("Distance moved (m):", distance);
-                console.log("Location updated:", newLocation);
+            return () => {
+                isMounted.current = false;
+                provider?.stop();
             };
-
-            // Error handler: updates the error state
-            const errorHandler = (err) => {
-                console.error("Geolocation error:", {
-                    code: err.code,
-                    message: err.message,
-                });
-                speedEmaRef.current = 0;
-                setSpeedMps(0);
-                setSpeedKmh(0);
-                prevLocationRef.current = null;
-                lastGoodFixRef.current = null;
-            };
-
-            // Options object for watchPosition (optional)
-            const options = {
-                enableHighAccuracy: locationPollingData.current?.enableHighAccuracy ?? true,
-                timeout: locationPollingData.current?.timeout ?? 10000,
-                maximumAge: locationPollingData.current?.maximumAge ?? 0,
-            };
-
-            const watchId = navigator.geolocation.watchPosition(
-                successHandler,
-                errorHandler,
-                options
-            );
-
-            // Cleanup
-            return () => navigator.geolocation.clearWatch(watchId);
         });
-    }, []);
+    }, [isMounted, isMobileDevice, mapData]);
+
+    function onLocationUpdate(newLocation, now){
+        console.log("Location update received:", newLocation);
+        const prev = prevLocationRef.current;
+        let distance = 0;
+
+        if (prev) {
+            distance = google.maps.geometry.spherical.computeDistanceBetween(
+                new google.maps.LatLng(prev.latitude, prev.longitude),
+                new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
+            );
+        }
+
+        // update "previous" immediately
+        prevLocationRef.current = newLocation;
+
+        // filter jitter + jumps
+        const MIN_MOVE_M = 10;
+        const MAX_MOVE_M = 500;
+
+        if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
+            setCumulativeDistance((prevDist) => prevDist + distance);
+
+            if (isAuthenticated()) {
+                apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
+                    console.error("Failed to persist distance:", err)
+                );
+            }
+        }
+
+        lastUpdateTimeRef.current = now;
+        console.log("Distance moved (m):", cumulativeDistance);
+        console.log("Location updated:", newLocation);
+    }
+
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
         const fetchReports = () =>
@@ -849,55 +772,22 @@ export default function Map() {
         requestAnimationFrame(animate)
     }
 
-    function finishNavigation(){
-        setShowNavigationScreen(false);
-        setShowAll(true);
-        setIsNavigationBegun(false);
-        setIsNavigationFinished(true);
-        setNavigationIndex(0);
-        console.log("Navigation finished, returning to map view.");
-        const map = mapRef || mapInstanceRef.current;
-        const curLocation = {lat:prevLocationRef.current.latitude, lng:prevLocationRef.current.longitude};
-        const totalTime = 1500;
-
-        const cameraOptions = {
-            tilt: map.getTilt(),
-            heading: map.getHeading(),
-            zoom: map.getZoom(),
-            center: new google.maps.LatLng(curLocation),
-        };
-
-        const tween = new Tween(cameraOptions) // Create a new tween that modifies 'cameraOptions'.
-            .to({ tilt: 0, heading: 0, zoom: 3, center: new google.maps.LatLng(curLocation) }, totalTime) // Move to destination in 15 second.
-            .easing(Easing.Quadratic.Out) // Use an easing function to make the animation smooth.
-            .onUpdate(() => {map.moveCamera(cameraOptions);
-            })
-        .start(); // Start the tween immediately.
-
-        // Animate
-        function animate(time) {
-            requestAnimationFrame(animate)
-            tween.update(time)
-            if (tween.isPlaying() === false) {
-                tween.remove(); // Clean up the tween once it's done
-            }
-        }
-        requestAnimationFrame(animate)
-    }
     useEffect(() => {
+        const navigationPathway = routeInfo?.steps;
         if (isNavigationBegun === false) return;
         
         // Align with the current direction
-        const navigationPathway = mapPolylines[mapPolylines.length - 1]?.getPath()?.getArray();
         const userLoc = {lat:prevLocationRef.current?.latitude, lng:prevLocationRef.current?.longitude};
         let nextPoint = {lat: 0, lng: 0}
         let shouldCameraPan = true;
 
         let maxCutoffDistance = 100; // meters
+        console.log("Navigation Index:", navigationIndex);
+        console.log("Navigation Pathway Length:", navigationPathway?.length);
 
-        if (navigationIndex >= navigationPathway.length - 1){
+        if (navigationIndex >= navigationPathway?.length){
             console.log("Reached destination in navigation mode.");
-            finishNavigation();
+            showNavEndScreen();
             return;
         }
 
@@ -905,7 +795,7 @@ export default function Map() {
         if (navigationIndex == 0 && isAToBRef.current === true){
             nextPoint = navigationPathway[0];
             shouldCameraPan = false;
-        }else {
+        }else if (navigationIndex < navigationPathway.length - 1){
             nextPoint = navigationPathway[navigationIndex + 1];
             shouldCameraPan = true;
         }
@@ -926,79 +816,134 @@ export default function Map() {
         if (distance < maxCutoffDistance) {
             setNavigationIndex((prev) => Math.min(prev + 1, navigationPathway.length - 1));
         }
-    }, [navigationIndex, isAToBRef, isNavigationBegun, isNavigationFinished, prevLocationRef, mapPolylines])
+    }, [navigationIndex, isAToBRef, isNavigationBegun, isNavigationFinished, prevLocationRef, mapPolylines, routeInfo])
 
+    function showNavEndScreen(){
+        setShowNavigationScreen(false);
+        setShowAll(false);
+        setShowNavigationEndScreen(true);
+    }
+    
+
+    function finishNavigation(){
+        setShowNavigationEndScreen(false);
+        setShowNavigationScreen(false);
+        setShowAll(true);
+        setIsNavigationBegun(false);
+        setIsNavigationFinished(true);
+        setNavigationIndex(0);
+        console.log("Navigation finished, returning to map view.");
+        const map = mapRef || mapInstanceRef.current;
+        const curLocation = {lat:prevLocationRef.current.latitude, lng:prevLocationRef.current.longitude};
+        const totalTime = 1500;
+
+        const cameraOptions = {
+            tilt: map.getTilt(),
+            heading: map.getHeading(),
+            zoom: map.getZoom(),
+            center: new google.maps.LatLng(curLocation),
+        };
+
+        const tween = new Tween(cameraOptions) // Create a new tween that modifies 'cameraOptions'.
+            .to({ tilt: 0, heading: 0, zoom: 8, center: new google.maps.LatLng(curLocation) }, totalTime) // Move to destination in 15 second.
+            .easing(Easing.Quadratic.Out) // Use an easing function to make the animation smooth.
+            .onUpdate(() => {map.moveCamera(cameraOptions);
+            })
+        .start(); // Start the tween immediately.
+
+        // Animate
+        function animate(time) {
+            requestAnimationFrame(animate)
+            tween.update(time)
+        }
+        requestAnimationFrame(animate)
+
+        clearMap();
+    }
 
     return (
         <div className="map-page-container">
             <div className="map-wrapper">
-                <MapComponent
-                    API_KEY={mapData?.GMAPS_KEY}
-                    MAP_ID={mapData?.GMAPS_ID}
-                    map_function={setMarker}
-                    showUserLocation
-                    toggleSelectionType={isAToBRef}
-                    currentLocation={prevLocationRef}
-                    onUserLocation={setUserLocation}
-                />
+            <MapComponent
+                API_KEY={mapData?.GMAPS_KEY}
+                MAP_ID={mapData?.GMAPS_ID}
+                map_function={setMarker}
+                showUserLocation
+                toggleSelectionType={isAToBRef}
+                currentLocation={prevLocationRef}
+                onUserLocation={setUserLocation}
+            />
             </div>
 
             {showNavigationScreen && (
-                <>
-                    <div className="map-nav-overlay">
-                        <h2>Directions</h2>
-                        <div className="map-nav-container">
-                            <ol>
-                                {routeInfo?.steps?.map((step, index) => (
-                                    <li key={index}
-                                        className={index === navigationIndex ? "active" : ""}
-                                    >
-                                        <div>{step?.navigationInstruction.instructions}</div>
-                                        <div>{step?.distanceMeters}</div>
-                                        {/* <div>{step?.startLocation.latLng.latitude}</div>
-                                        <div>{step?.startLocation.latLng.longitude}</div>
-                                        <div>{step?.endLocation.latLng.latitude}</div>
-                                        <div>{step?.endLocation.latLng.longitude}</div> */}
-                                    </li>
-                                ))}
-                            </ol>
-                        </div>
+            <>
+                {/* Directions panel */}
+                <div className="map-nav-overlay">
+                <h2>Directions</h2>
 
-                        {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
-                        <div className="map-nav-controls">
-                            <button
-                                onClick={() => setNavigationIndex((s) => Math.max(s - 1, 0))}
-                                disabled={navigationIndex === 0}
-                            >
-                                Previous
-                            </button>
-                            <button
-                                onClick={() =>
-                                    setNavigationIndex((s) => Math.min(s + 1, routeInfo.steps.length))
-                                }
-                                disabled={navigationIndex === routeInfo.steps.length}
-                            >
-                                Next
-                            </button>
-                        </div>
-    {/* 
-                        <div className="map-nav-end-button">
-                            <button
-                                onClick={() => {
-                                    setIsNavigationFinished(true)
-                                    setIsNavigationBegun(false)
-                                }}
-                            >
-                                End Navigation
-                            </button>
-                        </div> */}
-                    </div>
+                <div className="map-nav-container">
+                    <ol>
+                    {routeInfo?.steps?.map((step, index) => (
+                        <li
+                        key={index}
+                        className={index === navigationIndex ? "active" : ""}
+                        >
+                        <div>{step?.navigationInstruction.instructions}</div>
+                        <div>{step?.distanceMeters}m</div>
+                        </li>
+                    ))}
+                    </ol>
+                </div>
 
-                    <div className="speed-tracker">
-                        <SpeedTracker speedKmh={speedKmh} />
-                    </div>
-                </>
+                {/* <div className="map-nav-controls">
+                    <button
+                    onClick={() => setNavigationIndex((s) => Math.max(s - 1, 0))}
+                    disabled={navigationIndex === 0}
+                    >
+                    Previous
+                    </button>
+                    <button
+                    onClick={() =>
+                        setNavigationIndex((s) =>
+                        Math.min(s + 1, routeInfo.steps.length)
+                        )
+                    }
+                    disabled={navigationIndex === routeInfo?.steps.length ?? 0}
+                    >
+                    Next
+                    </button>
+                </div> */}
 
+                <div className="map-nav-end-button">
+                    <button
+                        onClick={() => {
+                            showNavEndScreen();
+                        }}
+                        className="map-nav-end-button-inner"
+                    >
+                        End Navigation
+                    </button>
+                </div>
+                </div>
+
+                {/* End navigation screen */}
+                {showNavigationEndScreen && (
+                <div className="map-nav-end-screen">
+                    <h2>Thank you for travelling with us!</h2>
+                    <button
+                    onClick={finishNavigation}
+                    className="map-nav-end-screen-button"
+                    >
+                    Close
+                    </button>
+                </div>
+                )}
+
+                {/* Speed tracker overlay */}
+                <div className="speed-tracker">
+                <SpeedTracker speedKmh={speedKmh} />
+                </div>
+            </>
             )}
 
             {/* Overlay UI */}
