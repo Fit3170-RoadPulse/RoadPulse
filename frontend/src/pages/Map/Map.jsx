@@ -9,7 +9,7 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../l
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { useEffectEvent } from "react";
-
+import { Geolocation } from '@capacitor/geolocation';
 
 export default function Map() {
     let [mapData, setMapData] = useState(null);
@@ -805,7 +805,7 @@ export default function Map() {
         };
 
         const tween = new Tween(cameraOptions) // Create a new tween that modifies 'cameraOptions'.
-            .to({ tilt: 0, heading: 0, zoom: 3, center: new google.maps.LatLng(curLocation) }, totalTime) // Move to destination in 15 second.
+            .to({ tilt: 0, heading: 0, zoom: 8, center: new google.maps.LatLng(curLocation) }, totalTime) // Move to destination in 15 second.
             .easing(Easing.Quadratic.Out) // Use an easing function to make the animation smooth.
             .onUpdate(() => {map.moveCamera(cameraOptions);
             })
@@ -815,24 +815,23 @@ export default function Map() {
         function animate(time) {
             requestAnimationFrame(animate)
             tween.update(time)
-            if (tween.isPlaying() === false) {
-                tween.remove(); // Clean up the tween once it's done
-            }
         }
         requestAnimationFrame(animate)
     }
+
     useEffect(() => {
-        if (isNavigationBegun === false) return;
-        
+        const navigationPathway = routeInfo?.steps;
+        if (isNavigationBegun === false || !navigationPathway) return;
+
         // Align with the current direction
-        const navigationPathway = mapPolylines[mapPolylines.length - 1]?.getPath()?.getArray();
         const userLoc = {lat:prevLocationRef.current?.latitude, lng:prevLocationRef.current?.longitude};
         let nextPoint = {lat: 0, lng: 0}
         let shouldCameraPan = true;
 
         let maxCutoffDistance = 100; // meters
-
-        if (navigationIndex >= navigationPathway.length - 1){
+        console.log("Navigation Index:", navigationIndex);
+        console.log("Navigation Pathway Length:", navigationPathway?.length);
+        if (navigationIndex >= navigationPathway?.length){
             console.log("Reached destination in navigation mode.");
             finishNavigation();
             return;
@@ -842,7 +841,7 @@ export default function Map() {
         if (navigationIndex == 0 && isAToBRef.current === true){
             nextPoint = navigationPathway[0];
             shouldCameraPan = false;
-        }else {
+        }else if (navigationIndex < navigationPathway.length - 1){
             nextPoint = navigationPathway[navigationIndex + 1];
             shouldCameraPan = true;
         }
@@ -854,7 +853,7 @@ export default function Map() {
         );
 
         // Pan camera to face next point
-        if (shouldCameraPan === true){
+        if (shouldCameraPan === true && distance < maxCutoffDistance){
             const map = mapRef || mapInstanceRef.current;
             panToLocation(map, userLoc, nextPoint);
         }
@@ -863,7 +862,7 @@ export default function Map() {
         if (distance < maxCutoffDistance) {
             setNavigationIndex((prev) => Math.min(prev + 1, navigationPathway.length - 1));
         }
-    }, [navigationIndex, isAToBRef, isNavigationBegun, isNavigationFinished, prevLocationRef, mapPolylines])
+    }, [navigationIndex, isAToBRef, isNavigationBegun, isNavigationFinished, prevLocationRef, mapPolylines, routeInfo])
 
 
     return (
@@ -910,9 +909,9 @@ export default function Map() {
                         </button>
                         <button
                             onClick={() =>
-                                setNavigationIndex((s) => Math.min(s + 1, routeInfo.steps.length))
+                                setNavigationIndex((s) => Math.min(s + 1, routeInfo?.steps.length ?? 0))
                             }
-                            disabled={navigationIndex === routeInfo.steps.length}
+                            disabled={navigationIndex === routeInfo?.steps.length ?? 0}
                         >
                             Next
                         </button>
