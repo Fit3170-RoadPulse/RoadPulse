@@ -651,6 +651,42 @@ export default function Map() {
         return polyline; // Return the polyline so it can be stored
     }
 
+    async function recalcEta(origin, destination) {
+        const base = import.meta.env.VITE_API_URL;
+        const departureTime = new Date().toISOString();
+
+        console.log("[ETA] Recalculating via backend...", { origin, destination, departureTime });
+
+        const response = await axios.post(`${base}/api/map/compute-route/`, {
+            origin: { latitude: origin.latitude, longitude: origin.longitude },
+            destination: { latitude: destination.latitude, longitude: destination.longitude },
+            startTimes: [departureTime],
+        });
+
+        const data = response.data;
+        console.log("[ETA] Response:", data);
+
+        if (!data || !data.length) return;
+
+        const routeData = data[0];
+        const durationInfo = formatDurationInfo(routeData.duration);
+
+        const etaText = durationInfo.text; // "6 min"
+        const arrival_time = formatEtaTimeByMinutes(departureTime, durationInfo.totalMinutes); // "10:21 PM"
+
+        // Update routeInfo but keep everything else the same
+        setRouteInfo((prev) => ({
+            ...(prev ?? {}),
+            eta: etaText,
+            arrival_time,
+            duration: routeData.duration,
+            distance_meters: routeData.distance_meters,
+            distanceKm: formatDistance(routeData.distance_meters),
+        }));
+
+        console.log("[ETA] Updated routeInfo:", { etaText, arrival_time });
+    }
+
     function generateStartTimes() {
         const times = [];
         const now = new Date();
@@ -810,49 +846,64 @@ export default function Map() {
     useEffect(() => {
         // Only run while navigation is active
         if (!showNavigationScreen) {
-            setLiveEtaText(null);
-            setLiveArrivalTime(null);
             return;
         }
 
-        const base = import.meta.env.VITE_API_URL;
-        if (!base) return;
+        const destMarker = mapMarkers?.destination;
+        const origin = prevLocationRef.current;
 
-        // Need current location
-        if (!prevLocationRef.current) return;
+        if (!origin || !destMarker) {
+            console.log("[ETA] Missing origin/destination for recalculation", { origin, destMarker });
+            return;
+        }
 
-        // Need destination
-        const dest = getDestinationLatLng(mapMarkers, routeInfo);
-        if (!dest) return;
+
+        const destination =
+            typeof destMarker.latitude === "number"
+                ? { latitude: destMarker.latitude, longitude: destMarker.longitude }
+                : typeof destMarker.lat === "number"
+                ? { latitude: destMarker.lat, longitude: destMarker.lng }
+                : null;
+
+        if (!destination) {
+            console.log("[ETA] Destination marker shape unknown:", destMarker);
+            return;
+        }
 
         let stopped = false;
 
         const refreshLiveEta = async () => {
-            try {
             if (stopped) return;
-            if (!window.google?.maps?.geometry) return;
 
             const originLoc = prevLocationRef.current;
             if (!originLoc) return;
 
             // Only refresh if user moved enough (or first time)
             const MIN_MOVE_FOR_REFRESH_M = 30;
-            if (
-                lastEtaOriginRef.current 
-            ) {
-                return;
+
+            if (lastEtaOriginRef.current) {
+                const moved = google.maps.geometry.spherical.computeDistanceBetween(
+                    new google.maps.LatLng(lastEtaOriginRef.current.latitude, lastEtaOriginRef.current.longitude),
+                    new google.maps.LatLng(originLoc.latitude, originLoc.longitude)
+                );
+
+                if (moved < MIN_MOVE_M) {
+                    console.log("[ETA] Skip: moved", moved.toFixed(1), "m");
+                    return;
+                }
             }
 
             lastEtaOriginRef.current = originLoc;
 
-            liveEtaAbortRef.current?.abort?.();
-            const controller = new AbortController();
-            liveEtaAbortRef.current = controller;
+            try {
+                liveEtaAbortRef.current?.abort?.();
+                const controller = new AbortController();
+                liveEtaAbortRef.current = controller;
 
-            // Use "now" as departure time for live ETA
-            const departureTime = new Date().toISOString();
+                // Use "now" as departure time for live ETA
+                const departureTime = new Date().toISOString();
 
-            const response = await axios.post(
+                const response = await axios.post(
                 `${base}/api/map/compute-route/`,
                 {
                 origin: { latitude: originLoc.latitude, longitude: originLoc.longitude },
@@ -860,34 +911,41 @@ export default function Map() {
                 startTimes: [departureTime],
                 },
                 { signal: controller.signal }
-            );
-            console.log("[ETA] Route response received:", response.data);
+                );
 
-            if (stopped) return;
-
-            const data = response.data;
-            if (!data || !data.length) return;
-
-            const routeData = data[0];
-
-            const durationInfo = formatDurationInfo(routeData.duration);
-            const etaText = durationInfo.text;
-
-            const arrival = formatEtaTimeByMinutes(departureTime, durationInfo.totalMinutes);
-
-            console.log("[ETA] Updated ETA:",
-                {
-                    arrivalTime,
-                    durationText: durationInfo.text,
-                    totalMinutes: durationInfo.totalMinutes,
+                if (!response.data || !response.data.length) {
+                    console.warn("[ETA] No route data returned");
+                    return;
                 }
-            );
 
-            setLiveEtaText(etaText);
-            setLiveArrivalTime(arrival);
+                console.log("[ETA] Route response received:", response.data);
+
+                const routeData = data[0];
+
+                const durationInfo = formatDurationInfo(routeData.duration);
+                const etaText = durationInfo.text;
+
+                const arrivalTime = formatEtaTimeByMinutes(departureTime, durationInfo.totalMinutes);
+
+                console.log("[ETA] Updated:", {
+                    etaText,
+                    arrivalTime,
+                });
+
+                setRouteInfo((prev) => ({
+                    ...(prev ?? {}),
+                    eta: etaText,
+                    arrival_time: arrivalTime,
+                    duration: routeData.duration,
+                    distance_meters: routeData.distance_meters,
+                    distanceKm: formatDistance(routeData.distance_meters),
+                }));
             } catch (e) {
-            if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
-            console.warn("Live ETA refresh failed:", e);
+                if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") {
+                    console.log("[ETA] Previous ETA request cancelled");
+                    return;
+                }
+                console.error("[ETA] Recalculation failed:", e);
             }
         };
 
