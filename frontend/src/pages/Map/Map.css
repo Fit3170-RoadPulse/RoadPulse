@@ -49,6 +49,66 @@
     background: linear-gradient(135deg, #5568d3 0%, #653a8a 100%);
 }
 
+.origin-toggle{
+    position: absolute;
+    top: 80px;
+    left: 110px;
+    z-index: 1000;
+    pointer-events: auto;
+    animation: slideDown 0.3s ease-out;
+}
+
+.origin-toggle-container {
+    position: relative;
+    display: flex;
+    width: 400px;
+    height: 40px;
+    z-index: 1000;
+    background: #e5e7eb;
+    border-radius: 999px;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.origin-toggle-option {
+    flex: 1;
+    border: none;
+    background: none;
+    font-size: 14px;
+    cursor: pointer;
+    z-index: 1000;
+    color: #374151;
+}
+
+.origin-toggle-options {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    justify-content: space-between;
+}
+
+.origin-toggle-option.active {
+    color: #ffffff;
+}
+
+.origin-toggle-slider {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    width: calc(50% - 4px);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 999px;
+    transition: transform 0.25s ease;
+}
+
+.origin-toggle-slider.left {
+    transform: translateX(0);
+}
+
+.origin-toggle-slider.right {
+    transform: translateX(100%);
+}
+
 /* Time Picker Styles */
 .time-picker-container {
     position: absolute;
@@ -248,6 +308,20 @@
     background: rgba(255, 255, 255, 0.7);
     border-radius: 12px;
     transition: all 0.2s ease;
+}
+
+.route-info-directions-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+.route-info-directions-item:hover{
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    cursor: pointer;
 }
 
 .route-info-icon {
@@ -653,4 +727,107 @@
 
 .map-logout-box button:last-of-type:hover {
     background: #b91c1c;
+}
+
+.map-nav-overlay {
+  position: absolute;
+  top: 150px;
+  right: 20px;
+  z-index: 1000;
+  width: 500px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  z-index: 1000;
+  font-family: system-ui, sans-serif;
+}
+
+.map-nav-container {
+    padding: 5px 14px;
+    border-radius: 8px;
+    border: none;
+    width: 100%;
+    max-height: 50vh;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+    scrollbar-color: #696969 #f1f1f1;
+    scrollbar-width: thin;
+    background-color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: left;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.map-nav-container::-webkit-scrollbar {
+  width: 12px; /* width of the vertical scrollbar */
+}
+
+.map-nav-container::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Track background (and implicitly the gutter background in webkit) */
+}
+
+.map-nav-container::-webkit-scrollbar-thumb {
+  background: #696969; /* Thumb color */
+}
+
+
+.map-nav-overlay h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.map-nav-overlay ol {
+  padding-left: 20px;
+  margin: 0 0 12px;
+}
+
+.map-nav-overlay li {
+  font-size: 18px;
+  font-weight: 500;
+  color: black;
+  margin-bottom: 1rem;
+  border-bottom: black 1px solid;
+ opacity: 0.8;
+}
+
+.map-nav-overlay li.active {
+  font-weight: 600;
+  color: #667eea;
+  opacity: 1;
+}
+
+.map-nav-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.map-nav-controls button {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #2563eb;
+  color: white;
+}
+
+.map-nav-controls button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.map-nav-end-button {
+  background: #dc2626;
+  color : white;
+}
+
+.speed-tracker {
+  position: absolute;
+  top: 16px;
+  right: 104px;
+  z-index: 30;
 }

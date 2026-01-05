@@ -119,7 +119,7 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Location configs
-POLLING_INTERVAL = 20
+POLLING_INTERVAL = 1000
 ENABLE_HIGH_ACCURACY = True
 TIMEOUT = 20000
 MAXIMUM_AGE = 10
