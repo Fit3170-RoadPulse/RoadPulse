@@ -49,6 +49,44 @@ export default function Map() {
     const reportMarkersRef = useRef(new globalThis.Map()); // id -> AdvancedMarkerElement
     const trafficLayerRef = useRef(null);
 
+    // Proximity detection: auto-show report when within 150m, hide when beyond 151m
+    useEffect(() => {
+        if (!prevLocationRef.current || reports.length === 0) return;
+
+        const userLat = prevLocationRef.current.latitude;
+        const userLng = prevLocationRef.current.longitude;
+        const userLatLng = new google.maps.LatLng(userLat, userLng);
+
+        let closestReport = null;
+        let minDistance = Infinity;
+
+        // Find closest report within 150m
+        for (const report of reports) {
+            const reportLatLng = new google.maps.LatLng(report.latitude, report.longitude);
+            const distance = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, reportLatLng);
+
+            if (distance <= 150 && distance < minDistance) {
+                minDistance = distance;
+                closestReport = report;
+            }
+        }
+
+        // Show popup if within 150m
+        if (closestReport) {
+            if (!selectedReport || selectedReport.id !== closestReport.id) {
+                setSelectedReport(closestReport);
+            }
+        } else if (selectedReport) {
+            // Check if user moved away from the currently selected report (beyond 151m)
+            const selectedLatLng = new google.maps.LatLng(selectedReport.latitude, selectedReport.longitude);
+            const distanceToSelected = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, selectedLatLng);
+
+            if (distanceToSelected > 151) {
+                setSelectedReport(null);
+            }
+        }
+    }, [prevLocationRef.current, reports, selectedReport]);
+
     useEffect(() => {
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/`).then((r) => {
