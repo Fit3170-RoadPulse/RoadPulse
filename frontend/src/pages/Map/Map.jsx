@@ -47,11 +47,12 @@ export default function Map() {
     const trafficLayerRef = useRef(null);
     const isAToBRef = useRef(true);
     const [isAToBState, setIsAToBState] = useState(true);
-    const [showNavigationScreen, setShowNavigationScreen] = useState(false);
+    const [showNavigationScreen, setShowNavigationScreen] = useState(true);
     const [showAll, setShowAll] = useState(true);
     const [navigationIndex, setNavigationIndex] = useState(0);
     const [isNavigationBegun, setIsNavigationBegun] = useState(false);
     const [isNavigationFinished, setIsNavigationFinished] = useState(false);
+    const [showNavigationEndScreen, setShowNavigationEndScreen] = useState(false);
 
     useEffect(() => {
         const isNativeApp = /Mobi|Android/i.test(navigator.userAgent)
@@ -96,8 +97,8 @@ export default function Map() {
 
             // Cleanup function: stops watching the position when the component unmounts
             return () => provider.stop();
-        });
-    }, []);
+            });
+        }, []);
 
     function onLocationUpdate(newLocation, now){
         const prev = prevLocationRef.current;
@@ -751,39 +752,6 @@ export default function Map() {
         requestAnimationFrame(animate)
     }
 
-    function finishNavigation(){
-        setShowNavigationScreen(false);
-        setShowAll(true);
-        setIsNavigationBegun(false);
-        setIsNavigationFinished(true);
-        setNavigationIndex(0);
-        console.log("Navigation finished, returning to map view.");
-        const map = mapRef || mapInstanceRef.current;
-        const curLocation = {lat:prevLocationRef.current.latitude, lng:prevLocationRef.current.longitude};
-        const totalTime = 1500;
-
-        const cameraOptions = {
-            tilt: map.getTilt(),
-            heading: map.getHeading(),
-            zoom: map.getZoom(),
-            center: new google.maps.LatLng(curLocation),
-        };
-
-        const tween = new Tween(cameraOptions) // Create a new tween that modifies 'cameraOptions'.
-            .to({ tilt: 0, heading: 0, zoom: 8, center: new google.maps.LatLng(curLocation) }, totalTime) // Move to destination in 15 second.
-            .easing(Easing.Quadratic.Out) // Use an easing function to make the animation smooth.
-            .onUpdate(() => {map.moveCamera(cameraOptions);
-            })
-        .start(); // Start the tween immediately.
-
-        // Animate
-        function animate(time) {
-            requestAnimationFrame(animate)
-            tween.update(time)
-        }
-        requestAnimationFrame(animate)
-    }
-
     useEffect(() => {
         const navigationPathway = routeInfo?.steps;
         if (isNavigationBegun === false || !navigationPathway) return;
@@ -798,7 +766,7 @@ export default function Map() {
         console.log("Navigation Pathway Length:", navigationPathway?.length);
         if (navigationIndex >= navigationPathway?.length){
             console.log("Reached destination in navigation mode.");
-            finishNavigation();
+            showNavEndScreen();
             return;
         }
 
@@ -829,6 +797,48 @@ export default function Map() {
         }
     }, [navigationIndex, isAToBRef, isNavigationBegun, isNavigationFinished, prevLocationRef, mapPolylines, routeInfo])
 
+    function showNavEndScreen(){
+        setShowNavigationScreen(false);
+        setShowAll(false);
+        setShowNavigationEndScreen(true);
+    }
+    
+
+    function finishNavigation(){
+        setShowNavigationEndScreen(false);
+        setShowNavigationScreen(false);
+        setShowAll(true);
+        setIsNavigationBegun(false);
+        setIsNavigationFinished(true);
+        setNavigationIndex(0);
+        console.log("Navigation finished, returning to map view.");
+        const map = mapRef || mapInstanceRef.current;
+        const curLocation = {lat:prevLocationRef.current.latitude, lng:prevLocationRef.current.longitude};
+        const totalTime = 1500;
+
+        const cameraOptions = {
+            tilt: map.getTilt(),
+            heading: map.getHeading(),
+            zoom: map.getZoom(),
+            center: new google.maps.LatLng(curLocation),
+        };
+
+        const tween = new Tween(cameraOptions) // Create a new tween that modifies 'cameraOptions'.
+            .to({ tilt: 0, heading: 0, zoom: 8, center: new google.maps.LatLng(curLocation) }, totalTime) // Move to destination in 15 second.
+            .easing(Easing.Quadratic.Out) // Use an easing function to make the animation smooth.
+            .onUpdate(() => {map.moveCamera(cameraOptions);
+            })
+        .start(); // Start the tween immediately.
+
+        // Animate
+        function animate(time) {
+            requestAnimationFrame(animate)
+            tween.update(time)
+        }
+        requestAnimationFrame(animate)
+
+        clearMap();
+    }
 
     return (
         <div className="map-page-container">
@@ -854,7 +864,7 @@ export default function Map() {
                                     className={index === navigationIndex ? "active" : ""}
                                 >
                                     <div>{step?.navigationInstruction.instructions}</div>
-                                    <div>{step?.distanceMeters}</div>
+                                    <div>{step?.distanceMeters}m</div>
                                     {/* <div>{step?.startLocation.latLng.latitude}</div>
                                     <div>{step?.startLocation.latLng.longitude}</div>
                                     <div>{step?.endLocation.latLng.latitude}</div>
@@ -865,7 +875,7 @@ export default function Map() {
                     </div>
 
                     {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
-                    <div className="map-nav-controls">
+                    {/* <div className="map-nav-controls">
                         <button
                             onClick={() => setNavigationIndex((s) => Math.max(s - 1, 0))}
                             disabled={navigationIndex === 0}
@@ -880,18 +890,32 @@ export default function Map() {
                         >
                             Next
                         </button>
-                    </div>
-{/* 
+                    </div> */}
+
                     <div className="map-nav-end-button">
                         <button
                             onClick={() => {
-                                setIsNavigationFinished(true)
-                                setIsNavigationBegun(false)
+                                showNavEndScreen();
                             }}
+                            className="map-nav-end-button-inner"
                         >
                             End Navigation
                         </button>
-                    </div> */}
+                    </div>
+                </div>
+            )}
+
+            {showNavigationEndScreen && (
+                <div className="map-nav-end-screen">
+                    <h2>Thank you for travelling with us!</h2>
+                    <button
+                        onClick={() => {
+                            finishNavigation();
+                        }}
+                        className="map-nav-end-screen-button"
+                    >
+                        Close
+                    </button>
                 </div>
             )}
 
