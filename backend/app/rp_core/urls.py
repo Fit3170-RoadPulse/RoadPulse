@@ -11,4 +11,9 @@ urlpatterns = [
     path("rewards/redeem/", views.redeem_reward, name="redeem-reward"),
     path("incident-reports/", views.incident_reports, name="incident-reports"),
     path("incident-reports/<int:report_id>/vote/", views.incident_report_vote, name="incident-report-vote"),
+    
+    # Admin Reward Management
+    path("admin/rewards/", views.admin_rewards, name="admin-rewards"),
+    path("admin/rewards/<int:reward_id>/", views.admin_reward_detail, name="admin-reward-detail"),
+    path("admin/profile/", views.admin_profile, name="admin-profile"),
 ]

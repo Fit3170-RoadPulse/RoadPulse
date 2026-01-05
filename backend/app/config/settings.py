@@ -115,6 +115,9 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -125,9 +128,13 @@ TIMEOUT = 20000
 MAXIMUM_AGE = 10
 
 CORS_ALLOWED_ORIGINS = [
-    "https://roadpulsefrontend.onrender.com"
+    "https://roadpulsefrontend.onrender.com",
+    "http://localhost:3000",  # User frontend
+    "http://localhost:5174",  # Admin panel
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://roadpulsefrontend.onrender.com"
+    "https://roadpulsefrontend.onrender.com",
+    "http://localhost:3000",
+    "http://localhost:5174",
 ]
