@@ -834,8 +834,8 @@
 
 .eta-tracker {
   position: absolute;
-  left: 16px;
-  bottom: 16px;
+  left: 110px;
+  bottom: 30px;
   z-index: 30;
 }
 
