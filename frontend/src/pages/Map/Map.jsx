@@ -11,6 +11,8 @@ import { Easing, Tween } from "@tweenjs/tween.js";
 import { useEffectEvent } from "react";
 import {NativeGeolocationProvider, WebGeolocationProvider} from "../../lib/geolocationFiles.js";
 
+const mapConfig = {enableHighAccuracy: true, timeout: 8000, maximumAge: 15000, pollingInterval: 1000};
+
 export default function Map() {
     let [mapData, setMapData] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -53,6 +55,7 @@ export default function Map() {
     const [isNavigationBegun, setIsNavigationBegun] = useState(false);
     const [isNavigationFinished, setIsNavigationFinished] = useState(false);
     const [showNavigationEndScreen, setShowNavigationEndScreen] = useState(false);
+    const isMounted = useRef(false);
 
     useEffect(() => {
         const isNativeApp = /Mobi|Android/i.test(navigator.userAgent)
@@ -85,22 +88,50 @@ export default function Map() {
 
         loadUserData();
 
-        axios.get(`${base}/api/map/location/`).then((r) => {
-            locationPollingData.current = r.data;
+        // axios.get(`${base}/api/map/location/`).then((r) => {
+        //     locationPollingData.current = r.data;
+        //     console.log("Location Polling Data Ref:", locationPollingData);
+            
+        //     const provider = isNativeApp
+        //     ? new NativeGeolocationProvider()
+        //     : new WebGeolocationProvider();
+
+        //     isMounted.current = true;
+        //     if (!API_KEY || !MAP_ID) return () => { isMounted.current = false; };
+        //     provider.start(isMounted, prevLocationRef, locationPollingData, onLocationUpdate);
+
+        //     // Cleanup function: stops watching the position when the component unmounts
+        //     return () => provider.stop();
+        //     });
+    }, []);
+
+    useEffect(() => {
+        isMounted.current = true;
+        let provider = null
+        if (!mapData?.GMAPS_KEY || !mapData?.GMAPS_ID) return () => { isMounted.current = false; };
+
+        if (navigator?.geolocation && isMounted.current) {
+            locationPollingData.current = mapConfig;
             console.log("Location Polling Data Ref:", locationPollingData);
             
-            const provider = isNativeApp
+            provider = isMobileDevice
             ? new NativeGeolocationProvider()
             : new WebGeolocationProvider();
 
-            provider.start(prevLocationRef, locationPollingData, onLocationUpdate);
+            console.log("provider", provider);
+            provider?.start(prevLocationRef, locationPollingData, onLocationUpdate);
+        }
 
-            // Cleanup function: stops watching the position when the component unmounts
-            return () => provider.stop();
-            });
-        }, []);
+        // // Cleanup function: stops watching the position when the component unmounts
+        return () => {
+            isMounted.current = false;
+            provider?.stop();
+        };
+    }, [isMounted, isMobileDevice, mapData]);
+
 
     function onLocationUpdate(newLocation, now){
+        console.log("Location update received:", newLocation);
         const prev = prevLocationRef.current;
         let distance = 0;
 
