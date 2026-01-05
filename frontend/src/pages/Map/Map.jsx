@@ -51,7 +51,6 @@ export default function Map() {
     const [showAll, setShowAll] = useState(true);
     const [navigationIndex, setNavigationIndex] = useState(0);
     const [isNavigationBegun, setIsNavigationBegun] = useState(false);
-    const [isNavigationFinished, setIsNavigationFinished] = useState(false);
     const [showNavigationEndScreen, setShowNavigationEndScreen] = useState(false);
     const isMounted = useRef(false);
 
@@ -339,6 +338,8 @@ export default function Map() {
         });
 
         map.addListener("click", (e) => {
+            if (showNavigationScreen || isNavigationBegun) {return;} // disable marker on navigation mode
+            
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
             console.log(isAToBRef.current, "isAToB");
             console.log("currentlocation ", prevLocationRef.current);
@@ -811,7 +812,7 @@ export default function Map() {
         if (distance < maxCutoffDistance) {
             setNavigationIndex((prev) => Math.min(prev + 1, navigationPathway.length - 1));
         }
-    }, [navigationIndex, isAToBRef, isNavigationBegun, isNavigationFinished, prevLocationRef, mapPolylines, routeInfo])
+    }, [navigationIndex, isAToBRef, isNavigationBegun, prevLocationRef, mapPolylines, routeInfo])
 
     function showNavEndScreen(){
         setShowNavigationScreen(false);
@@ -825,7 +826,6 @@ export default function Map() {
         setShowNavigationScreen(false);
         setShowAll(true);
         setIsNavigationBegun(false);
-        setIsNavigationFinished(true);
         setNavigationIndex(0);
         console.log("Navigation finished, returning to map view.");
         const map = mapRef || mapInstanceRef.current;
