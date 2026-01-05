@@ -862,6 +862,7 @@ export default function Map() {
                 },
                 { signal: controller.signal }
             );
+            console.log("[ETA] Route response received:", response.data);
 
             if (stopped) return;
 
@@ -874,6 +875,14 @@ export default function Map() {
             const etaText = durationInfo.text;
 
             const arrival = formatEtaTimeByMinutes(departureTime, durationInfo.totalMinutes);
+
+            console.log("[ETA] Updated ETA:",
+                {
+                    arrivalTime,
+                    durationText: durationInfo.text,
+                    totalMinutes: durationInfo.totalMinutes,
+                }
+            );
 
             setLiveEtaText(etaText);
             setLiveArrivalTime(arrival);
