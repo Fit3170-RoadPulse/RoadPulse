@@ -21,7 +21,7 @@ export default function SpeedTracker({ speedKmh }) {
       </div>
 
       <div className={`speed-value ${speedColor}`}>
-        {speedKmh ?? "--"}
+        {typeof speedKmh === "number" ? speedKmh.toFixed(2) : "--"}
         <span className="speed-unit"> km/h</span>
 
         {speedKmh != null && speedKmh > SPEED_LIMIT && (
