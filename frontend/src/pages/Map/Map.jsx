@@ -47,7 +47,7 @@ export default function Map() {
     const trafficLayerRef = useRef(null);
     const isAToBRef = useRef(true);
     const [isAToBState, setIsAToBState] = useState(true);
-    const [showNavigationScreen, setShowNavigationScreen] = useState(true);
+    const [showNavigationScreen, setShowNavigationScreen] = useState(false);
     const [showAll, setShowAll] = useState(true);
     const [navigationIndex, setNavigationIndex] = useState(0);
     const [isNavigationBegun, setIsNavigationBegun] = useState(false);
