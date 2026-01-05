@@ -1116,7 +1116,7 @@ export default function Map() {
                     <div className="eta-tracker">
                         <div className="eta-card">
                             <div className="eta-title">ETA</div>
-                            <div className="eta-arrival">{liveEtaArrival ?? "--"}</div>
+                            <div className="eta-arrival">{liveArrivalTime ?? "--"}</div>
                             <div className="eta-duration">
                             {liveEtaDuration ? `(${liveEtaDuration} remaining)` : ""}
                             </div>
