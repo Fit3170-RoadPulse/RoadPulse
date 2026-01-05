@@ -838,8 +838,7 @@ export default function Map() {
             // Only refresh if user moved enough (or first time)
             const MIN_MOVE_FOR_REFRESH_M = 30;
             if (
-                lastEtaOriginRef.current &&
-                !movedMoreThanMeters(lastEtaOriginRef.current, originLoc, MIN_MOVE_FOR_REFRESH_M)
+                lastEtaOriginRef.current 
             ) {
                 return;
             }
