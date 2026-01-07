@@ -36,7 +36,6 @@ export default function Map() {
     let lastUpdateTimeRef = useRef(0);
     const routeCacheRef = useRef(new globalThis.Map());
     const activeRouteRequestRef = useRef(null);
-    const [isMobileDevice, setIsMobileDevice] = useState(false);
 
     const [selectedReport, setSelectedReport] = useState(null);
     const [reports, setReports] = useState([]);
@@ -61,7 +60,8 @@ export default function Map() {
     const [liveEtaText, setLiveEtaText] = useState(null);
     const [liveArrivalTime, setLiveArrivalTime] = useState(null);     
     const liveEtaAbortRef = useRef(null);
-    const lastEtaOriginRef = useRef(null);      
+    const lastEtaOriginRef = useRef(null);   
+    const isMounted = useRef(false);
 
     useEffect(() => {
         const isNativeApp = /Mobi|Android/i.test(navigator.userAgent)
@@ -99,19 +99,11 @@ export default function Map() {
         const base = import.meta.env.VITE_API_URL || "";
         axios.get(`${base}/api/map/location/`).then((r) => {
             isMounted.current = true;
-            let provider = null
             if (!mapData?.GMAPS_KEY || !mapData?.GMAPS_ID) return () => { isMounted.current = false; };
 
             if (navigator?.geolocation && isMounted.current) {
                 locationPollingData.current = r.data;
                 console.log("Location Polling Data Ref:", locationPollingData);
-                
-                provider = isMobileDevice
-                ? new NativeGeolocationProvider()
-                : new WebGeolocationProvider();
-
-                console.log("provider", provider);
-                provider?.start(prevLocationRef, locationPollingData, onLocationUpdate);
             }
 
             // Success handler: updates the state with the new position
@@ -143,9 +135,9 @@ export default function Map() {
                     );
                 }
 
-        // filter jitter + jumps
-        const MIN_MOVE_M = 10;
-        const MAX_MOVE_M = 500;
+                // filter jitter + jumps
+                const MIN_MOVE_M = 10;
+                const MAX_MOVE_M = 500;
 
                 if (prev && distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
                     setCumulativeDistance((prevDist) => prevDist + distance);
