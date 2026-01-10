@@ -10,6 +10,7 @@ import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDe
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { useEffectEvent } from "react";
 import {NativeGeolocationProvider, WebGeolocationProvider} from "../../lib/geolocationFiles.js";
+import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
 
 export default function Map() {
     let [mapData, setMapData] = useState(null);
@@ -53,6 +54,18 @@ export default function Map() {
     const [isNavigationBegun, setIsNavigationBegun] = useState(false);
     const [showNavigationEndScreen, setShowNavigationEndScreen] = useState(false);
     const isMounted = useRef(false);
+
+    const [speedKmh, setSpeedKmh] = useState(0);
+    const [rawSpeedKmh, setRawSpeedKmh] = useState(0);        
+    const speedEmaRef = useRef(0); 
+    const totalMoveTimeSecRef = useRef(0);  
+    const totalMoveDistMRef = useRef(0);   
+    
+    const [etaRemainingText, setEtaRemainingText] = useState(null);
+    const [etaRemainingMinutes, setEtaRemainingMinutes] = useState(null);
+    const lastEtaOriginRef = useRef(null); 
+    const activeEtaRequestRef = useRef(null);
+    const lastEtaUpdateMsRef = useRef(0);
 
     useEffect(() => {
         const isNativeApp = /Mobi|Android/i.test(navigator.userAgent)
@@ -129,17 +142,50 @@ export default function Map() {
         // update "previous" immediately
         prevLocationRef.current = newLocation;
 
+        // time delta (seconds)
+        const lastT = lastUpdateTimeRef.current || now;
+        const dtSec = Math.max(0.001, (now - lastT) / 1000);
+
         // filter jitter + jumps
         const MIN_MOVE_M = 10;
         const MAX_MOVE_M = 500;
+        const MAX_SPEED_KMH = 200; // ignore unrealistic spikes
+
 
         if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
             setCumulativeDistance((prevDist) => prevDist + distance);
+
+            totalMoveDistMRef.current += distance;
+            totalMoveTimeSecRef.current += dtSec;
+
+            // Instant speed
+            const speedMps = distance / dtSec;
+            const instKmh = speedMps * 3.6;
 
             if (isAuthenticated()) {
                 apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
                     console.error("Failed to persist distance:", err)
                 );
+            }
+
+            if (Number.isFinite(instKmh) && instKmh <= MAX_SPEED_KMH) {
+                // Smooth with EMA for stable UI
+                const alpha = 0.25;
+                const ema = speedEmaRef.current
+                    ? alpha * instKmh + (1 - alpha) * speedEmaRef.current
+                    : instKmh;
+
+                speedEmaRef.current = ema;
+                setSpeedKmh(ema);
+            }
+        } else {
+            const decay = 0.85;
+            speedEmaRef.current *= decay;
+            setSpeedKmh(speedEmaRef.current);
+
+            if (speedEmaRef.current < 0.5) {
+                speedEmaRef.current = 0;
+                setSpeedKmh(0);
             }
         }
 
@@ -147,6 +193,93 @@ export default function Map() {
         console.log("Distance moved (m):", cumulativeDistance);
         console.log("Location updated:", newLocation);
     }
+
+    useEffect(() => {
+        if (!isNavigationBegun) return;
+
+        let stopped = false;
+
+        const refreshLiveEta = async () => {
+            if (stopped) return;
+
+            const cur = prevLocationRef.current;
+            const destMarker = mapMarkers?.destination;
+
+            if (!cur || !destMarker) return;
+
+            const dest = normalizeLatLng(destMarker.position);
+
+            const MIN_MOVE_FOR_REFRESH_M = 30;
+            const nowMs = Date.now();
+
+            if (lastEtaOriginRef.current) {
+                const movedM = google.maps.geometry.spherical.computeDistanceBetween(
+                    new google.maps.LatLng(
+                        lastEtaOriginRef.current.latitude,
+                        lastEtaOriginRef.current.longitude
+                    ),
+                    new google.maps.LatLng(cur.latitude, cur.longitude)
+                );
+
+                const timeSince = nowMs - (lastEtaUpdateMsRef.current || 0);
+
+                if (movedM < MIN_MOVE_FOR_REFRESH_M && timeSince < 15000) {
+                    return;
+                }
+            }
+
+            // abort previous ETA request
+            activeEtaRequestRef.current?.abort?.();
+            const controller = new AbortController();
+            activeEtaRequestRef.current = controller;
+
+            try {
+                const base = import.meta.env.VITE_API_URL;
+                const departureTime = new Date().toISOString();
+
+                const res = await axios.post(
+                    `${base}/api/map/compute-route/`,
+                    {
+                        origin: {
+                            latitude: cur.latitude,
+                            longitude: cur.longitude,
+                        },
+                        destination: {
+                            latitude: dest.lat,
+                            longitude: dest.lng,
+                        },
+                        startTimes: [departureTime],
+                    },
+                    { signal: controller.signal }
+                );
+
+                const route = res.data?.[0];
+                if (!route) return;
+
+                const durationInfo = formatDurationInfo(route.duration);
+                setEtaRemainingText(durationInfo.text);
+
+                lastEtaOriginRef.current = {
+                    latitude: cur.latitude,
+                    longitude: cur.longitude,
+                };
+                lastEtaUpdateMsRef.current = nowMs;
+            } catch (err) {
+                if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
+                console.error("[ETA] Live ETA refresh failed:", err);
+            }
+        };
+
+        refreshLiveEta();
+
+        const intervalId = setInterval(refreshLiveEta, 15000);
+
+        return () => {
+            stopped = true;
+            clearInterval(intervalId);
+            activeEtaRequestRef.current?.abort?.();
+        };
+    }, [isNavigationBegun, mapMarkers?.destination]);
 
 
     useEffect(() => {
@@ -871,54 +1004,70 @@ export default function Map() {
             </div>
 
             {showNavigationScreen && (
-                <div className="map-nav-overlay">
-                    <h2>Directions</h2>
-                    <div className="map-nav-container">
-                        <ol>
-                            {routeInfo?.steps?.map((step, index) => (
-                                <li key={index}
-                                    className={index === navigationIndex ? "active" : ""}
-                                >
-                                    <div>{step?.navigationInstruction.instructions}</div>
-                                    <div>{step?.distanceMeters}m</div>
-                                    {/* <div>{step?.startLocation.latLng.latitude}</div>
-                                    <div>{step?.startLocation.latLng.longitude}</div>
-                                    <div>{step?.endLocation.latLng.latitude}</div>
-                                    <div>{step?.endLocation.latLng.longitude}</div> */}
-                                </li>
-                            ))}
-                        </ol>
+                <>
+                    <div className="map-nav-overlay">
+                        <h2>Directions</h2>
+                        <div className="map-nav-container">
+                            <ol>
+                                {routeInfo?.steps?.map((step, index) => (
+                                    <li key={index}
+                                        className={index === navigationIndex ? "active" : ""}
+                                    >
+                                        <div>{step?.navigationInstruction.instructions}</div>
+                                        <div>{step?.distanceMeters}m</div>
+                                        {/* <div>{step?.startLocation.latLng.latitude}</div>
+                                        <div>{step?.startLocation.latLng.longitude}</div>
+                                        <div>{step?.endLocation.latLng.latitude}</div>
+                                        <div>{step?.endLocation.latLng.longitude}</div> */}
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+
+                        {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
+                        {/* <div className="map-nav-controls">
+                            <button
+                                onClick={() => setNavigationIndex((s) => Math.max(s - 1, 0))}
+                                disabled={navigationIndex === 0}
+                            >
+                                Previous
+                            </button>
+                            <button
+                                onClick={() =>
+                                    setNavigationIndex((s) => Math.min(s + 1, routeInfo?.steps.length ?? 0))
+                                }
+                                disabled={navigationIndex === routeInfo?.steps.length ?? 0}
+                            >
+                                Next
+                            </button>
+                        </div> */}
+
+                        <div className="map-nav-end-button">
+                            <button
+                                onClick={() => {
+                                    showNavEndScreen();
+                                }}
+                                className="map-nav-end-button-inner"
+                            >
+                                End Navigation
+                            </button>
+                        </div>
                     </div>
 
-                    {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
-                    {/* <div className="map-nav-controls">
-                        <button
-                            onClick={() => setNavigationIndex((s) => Math.max(s - 1, 0))}
-                            disabled={navigationIndex === 0}
-                        >
-                            Previous
-                        </button>
-                        <button
-                            onClick={() =>
-                                setNavigationIndex((s) => Math.min(s + 1, routeInfo?.steps.length ?? 0))
-                            }
-                            disabled={navigationIndex === routeInfo?.steps.length ?? 0}
-                        >
-                            Next
-                        </button>
-                    </div> */}
-
-                    <div className="map-nav-end-button">
-                        <button
-                            onClick={() => {
-                                showNavEndScreen();
-                            }}
-                            className="map-nav-end-button-inner"
-                        >
-                            End Navigation
-                        </button>
+                    <div className="eta-tracker">
+                        <div className="eta-card">
+                            <div className="eta-title">ETA</div>
+                            <div className="eta-arrival">{routeInfo?.arrival_time ?? "--"}</div>
+                            <div className="eta-duration">
+                                {routeInfo?.eta ? `(${routeInfo?.eta} remaining)` : ""}
+                            </div>
+                        </div>
                     </div>
-                </div>
+
+                    <div className="speed-tracker">
+                        <SpeedTracker speedKmh={speedKmh} />
+                    </div>
+                </>
             )}
 
             {showNavigationEndScreen && (
