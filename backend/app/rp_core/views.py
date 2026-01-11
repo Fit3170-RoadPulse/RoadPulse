@@ -443,6 +443,25 @@ def list_exchange_items(_req):
     return Response(data)
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_redemptions(request):
+    redemptions = RewardRedemption.objects.filter(user=request.user).select_related('item')
+    data = [{
+        "id": redemption.id,
+        "item": {
+            "id": redemption.item.id,
+            "name": redemption.item.name,
+            "description": redemption.item.description,
+        },
+        "quantity": redemption.quantity,
+        "points_spent": redemption.points_spent,
+        "created_at": redemption.created_at.isoformat(),
+        "code": f"VOUCHER-{redemption.id}-{request.user.id}",
+    } for redemption in redemptions]
+    return Response(data)
+
+
 POINTS_PER_10KM = Decimal("0.1")
 KM_BLOCK = Decimal("10")
 

@@ -3,9 +3,10 @@ import { X, Award } from "lucide-react";
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import "./RewardsPage.css";
-import { fetchRewardAccount, fetchExchangeItems, redeemReward } from "../../lib/api";
+import { fetchRewardAccount, fetchExchangeItems, redeemReward, fetchUserRedemptions } from "../../lib/api";
 
 function RewardsPage() {
+    console.log("RewardsPage component rendered");
     const navigate = useNavigate();
     const [points, setPoints] = useState(0);
     const [username, setUsername] = useState("");
@@ -55,54 +56,10 @@ function RewardsPage() {
     useEffect(() => {
         async function loadExchangeItems() {
             try {
-                // const items = await fetchExchangeItems();
-                // setExchangeItems(items);
-                
-                // Use mock data for now
-                setExchangeItems([
-                    {
-                        id: 1,
-                        name: "Coffee Voucher",
-                        description: "Get a free coffee at participating cafes",
-                        points_cost: 50,
-                        stock: null
-                    },
-                    {
-                        id: 2,
-                        name: "Movie Ticket",
-                        description: "One movie ticket for any showing",
-                        points_cost: 100,
-                        stock: 10
-                    },
-                    {
-                        id: 3,
-                        name: "Gift Card $10",
-                        description: "Digital gift card worth $10",
-                        points_cost: 150,
-                        stock: null
-                    },
-                    {
-                        id: 4,
-                        name: "Parking Pass",
-                        description: "Free parking for one day",
-                        points_cost: 75,
-                        stock: 5
-                    },
-                    {
-                        id: 5,
-                        name: "Book Voucher",
-                        description: "Voucher for any book up to $20",
-                        points_cost: 200,
-                        stock: null
-                    },
-                    {
-                        id: 6,
-                        name: "Meal Deal",
-                        description: "Discounted meal at partner restaurants",
-                        points_cost: 120,
-                        stock: 20
-                    }
-                ]);
+                console.log("Fetching exchange items...");
+                const items = await fetchExchangeItems();
+                console.log("Fetched items:", items);
+                setExchangeItems(items);
             } catch (err) {
                 console.error("Failed to fetch exchange items:", err);
                 // Don't set error state for items, just log
@@ -112,27 +69,29 @@ function RewardsPage() {
         loadExchangeItems();
     }, []);
 
-    // Load user vouchers (mock data for now)
+    // Load user vouchers (from API)
     useEffect(() => {
-        // Mock vouchers - in real app, fetch from API
-        setUserVouchers([
-            {
-                id: 1,
-                name: "Coffee Voucher",
-                description: "Get a free coffee at participating cafes",
-                redeemed_at: "2024-01-15T10:30:00Z",
-                status: "active",
-                code: "COFFEE2024"
-            },
-            {
-                id: 2,
-                name: "Movie Ticket",
-                description: "One movie ticket for any showing",
-                redeemed_at: "2024-01-10T14:20:00Z",
-                status: "used",
-                code: "MOVIE2024"
+        async function loadUserVouchers() {
+            try {
+                console.log("Fetching user vouchers...");
+                const vouchers = await fetchUserRedemptions();
+                console.log("Fetched vouchers:", vouchers);
+                setUserVouchers(vouchers.map(voucher => ({
+                    id: voucher.id,
+                    name: voucher.item.name,
+                    description: voucher.item.description,
+                    redeemed_at: voucher.created_at,
+                    status: "active", // Assuming all are active for now
+                    code: voucher.code,
+                })));
+                console.log("Set user vouchers");
+            } catch (err) {
+                console.error("Failed to fetch user vouchers:", err);
+                // Don't set error state for vouchers, just log
             }
-        ]);
+        }
+
+        loadUserVouchers();
     }, []);
 
     // Handle reward card click
@@ -158,9 +117,27 @@ function RewardsPage() {
             setShowPurchaseModal(false);
             setSelectedItem(null);
             alert(`Successfully redeemed ${selectedItem.name}!`);
+            
+            // Refresh vouchers
+            console.log("Refreshing vouchers after redemption...");
+            const vouchers = await fetchUserRedemptions();
+            console.log("Refreshed vouchers:", vouchers);
+            setUserVouchers(vouchers.map(voucher => ({
+                id: voucher.id,
+                name: voucher.item.name,
+                description: voucher.item.description,
+                redeemed_at: voucher.created_at,
+                status: "active",
+                code: voucher.code,
+            })));
+            console.log("Updated user vouchers after redemption");
         } catch (err) {
             console.error("Failed to redeem reward:", err);
-            alert(`Failed to redeem reward: ${err.message}`);
+            if (err.message.includes("Not enough reward points")) {
+                alert("You don't have enough points to redeem this reward.");
+            } else {
+                alert(`Failed to redeem reward: ${err.message}`);
+            }
         }
     };
 
