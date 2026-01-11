@@ -5,8 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import "./RewardsPage.css";
 import { fetchRewardAccount, fetchExchangeItems, redeemReward, fetchUserRedemptions } from "../../lib/api";
 
-function RewardsPage() {
-    console.log("RewardsPage component rendered");
+function RewardsPage() {    
     const navigate = useNavigate();
     const [points, setPoints] = useState(0);
     const [username, setUsername] = useState("");
@@ -55,10 +54,8 @@ function RewardsPage() {
     // Fetch exchange items on component mount
     useEffect(() => {
         async function loadExchangeItems() {
-            try {
-                console.log("Fetching exchange items...");
-                const items = await fetchExchangeItems();
-                console.log("Fetched items:", items);
+            try {                
+                const items = await fetchExchangeItems();                
                 setExchangeItems(items);
             } catch (err) {
                 console.error("Failed to fetch exchange items:", err);
@@ -72,8 +69,7 @@ function RewardsPage() {
     // Load user vouchers (from API)
     useEffect(() => {
         async function loadUserVouchers() {
-            try {
-                console.log("Fetching user vouchers...");
+            try {                
                 const vouchers = await fetchUserRedemptions();
                 console.log("Fetched vouchers:", vouchers);
                 setUserVouchers(vouchers.map(voucher => ({
@@ -83,8 +79,7 @@ function RewardsPage() {
                     redeemed_at: voucher.created_at,
                     status: "active", // Assuming all are active for now
                     code: voucher.code,
-                })));
-                console.log("Set user vouchers");
+                })))                
             } catch (err) {
                 console.error("Failed to fetch user vouchers:", err);
                 // Don't set error state for vouchers, just log
@@ -118,10 +113,8 @@ function RewardsPage() {
             setSelectedItem(null);
             alert(`Successfully redeemed ${selectedItem.name}!`);
             
-            // Refresh vouchers
-            console.log("Refreshing vouchers after redemption...");
-            const vouchers = await fetchUserRedemptions();
-            console.log("Refreshed vouchers:", vouchers);
+            // Refresh vouchers            
+            const vouchers = await fetchUserRedemptions();            
             setUserVouchers(vouchers.map(voucher => ({
                 id: voucher.id,
                 name: voucher.item.name,
