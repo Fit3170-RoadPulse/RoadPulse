@@ -75,6 +75,7 @@ class ExchangeItem(models.Model):
         null=True,
         help_text="Leave blank for unlimited redemptions.",
     )
+    image = models.ImageField(upload_to='rewards/', blank=True, null=True, help_text="Reward image")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

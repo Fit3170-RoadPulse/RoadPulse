@@ -30,6 +30,7 @@ from .incidentReport import (
     IncidentReportVoteCreateSerializer,
     RegisterSerializerIncidentReport,
 )
+from .event_serializers import RewardSerializer, RewardCreateUpdateSerializer, AdminProfileSerializer
 from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption
 
 
@@ -342,7 +343,9 @@ class LoginView(views.APIView):
             "refresh": str(refresh),
             "access": str(refresh.access_token),
             "username": user.username,
-            "email": user.email
+            "email": user.email,
+            "is_staff": user.is_staff,
+            "is_superuser": user.is_superuser,
         })
 
 class ForgotPasswordView(views.APIView):
@@ -593,3 +596,77 @@ def redeem_reward(request):
         "remaining_points": user.reward_points,
         "created_at": redemption.created_at.isoformat(),
     })
+
+
+# ========== ADMIN REWARD MANAGEMENT ENDPOINTS ==========
+
+class IsStaffUser(IsAuthenticated):
+    """Custom permission class to allow only admin/staff users"""
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and request.user.is_staff
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsStaffUser])
+def admin_rewards(request):
+    """
+    List all rewards (GET) or create new reward (POST)
+    Admin-only endpoint
+    """
+    if request.method == "GET":
+        rewards = ExchangeItem.objects.all()
+        serializer = RewardSerializer(rewards, many=True)
+        return Response(serializer.data)
+    
+    # POST - Create new reward
+    serializer = RewardCreateUpdateSerializer(data=request.data)
+    if serializer.is_valid():
+        reward = serializer.save()
+        return Response(
+            RewardSerializer(reward).data,
+            status=status.HTTP_201_CREATED
+        )
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET", "PUT", "DELETE"])
+@permission_classes([IsStaffUser])
+def admin_reward_detail(request, reward_id):
+    """
+    Get, update, or delete a specific reward
+    Admin-only endpoint
+    """
+    try:
+        reward = ExchangeItem.objects.get(pk=reward_id)
+    except ExchangeItem.DoesNotExist:
+        return Response(
+            {"detail": "Reward not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if request.method == "GET":
+        serializer = RewardSerializer(reward)
+        return Response(serializer.data)
+    
+    elif request.method == "PUT":
+        serializer = RewardCreateUpdateSerializer(reward, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(RewardSerializer(reward).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == "DELETE":
+        reward.delete()
+        return Response(
+            {"detail": "Reward deleted successfully."},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsStaffUser])
+def admin_profile(request):
+    """Get admin profile information"""
+    serializer = AdminProfileSerializer(request.user)
+    return Response(serializer.data)
+
