@@ -353,6 +353,18 @@ export default function Map() {
                     title: "A",
                 });
             }
+            console.log(isAToBRef.current, "isAToB");
+            console.log("currentlocation ", prevLocationRef.current);
+
+            if (!isAToBRef.current && prevLocationRef.current) {
+                // Use current location as origin
+                console.log("Setting origin to user location:", prevLocationRef.current);
+                originMarker = new AdvancedMarkerElement({
+                    map: map,
+                    position: { lat: prevLocationRef.current.latitude, lng: prevLocationRef.current.longitude },
+                    title: "A",
+                });
+            }
 
             if (!originMarker) {
                 originMarker = new AdvancedMarkerElement({
@@ -413,11 +425,34 @@ export default function Map() {
                         title: "A",
                     });
                 }
+
+                if (!isAToBRef.current && prevLocationRef.current) {
+                    // Use current location as origin
+                    console.log("Setting origin to user location:", prevLocationRef.current);
+                    originMarker = new AdvancedMarkerElement({
+                        map: map,
+                        position: { lat: prevLocationRef.current.latitude, lng: prevLocationRef.current.longitude },
+                        title: "A",
+                    });
+                }
+                else {
+                    originMarker = new AdvancedMarkerElement({
+                        map: map,
+                        position: clicked,
+                        title: "A",
+                    });
+                }
                 destinationMarker = null;
                 setMapMarkers({ origin: originMarker, destination: null });
             }
         });
     }, [createIncidentPinContent, reportTypeLabel]);
+
+    // Clears map when switching
+    useEffect(() => {
+        isAToBRef.current = isAToBState;
+        clearMap();
+    }, [isAToBState, isAToBRef]);
 
     // Clears map when switching
     useEffect(() => {
@@ -511,7 +546,7 @@ export default function Map() {
                 const starting_time = formatDate(baseDeparture);
                 const arrival_time = formatEtaTimeByMinutes(baseDeparture, durationInfo.totalMinutes);
                 const steps = formatSteps(routeData.legs);
-                console.log("Formatted steps:", steps);
+                console.log("Formatted steps:", steps);        
 
                 setRouteInfo({
                     distanceKm,
@@ -519,6 +554,8 @@ export default function Map() {
                     starting_time,
                     arrival_time,
                     distance_meters: routeData.distance_meters,
+                    duration: routeData.duration,
+                    steps,
                     duration: routeData.duration,
                     steps,
                 });
@@ -551,6 +588,20 @@ export default function Map() {
         return steps;
     }
 
+    function formatSteps(legs) {
+        const steps = [];
+        if (legs && Array.isArray(legs)) {
+            legs.forEach(leg => {
+                if (leg.steps && Array.isArray(leg.steps)) {
+                    leg.steps.forEach(step => {
+                        steps.push(step);
+                    });
+                }
+            });
+        }
+        return steps;
+    }
+
     async function drawPolyLine(map, encodedPolyline) {
         const maps = await google.maps.importLibrary("geometry");
         const decodedPath = google.maps.geometry.encoding.decodePath(encodedPolyline);
@@ -565,6 +616,42 @@ export default function Map() {
         });
 
         return polyline; // Return the polyline so it can be stored
+    }
+
+    async function recalcEta(origin, destination) {
+        const base = import.meta.env.VITE_API_URL;
+        const departureTime = new Date().toISOString();
+
+        console.log("[ETA] Recalculating via backend...", { origin, destination, departureTime });
+
+        const response = await axios.post(`${base}/api/map/compute-route/`, {
+            origin: { latitude: origin.latitude, longitude: origin.longitude },
+            destination: { latitude: destination.latitude, longitude: destination.longitude },
+            startTimes: [departureTime],
+        });
+
+        const data = response.data;
+        console.log("[ETA] Response:", data);
+
+        if (!data || !data.length) return;
+
+        const routeData = data[0];
+        const durationInfo = formatDurationInfo(routeData.duration);
+
+        const etaText = durationInfo.text; // "6 min"
+        const arrival_time = formatEtaTimeByMinutes(departureTime, durationInfo.totalMinutes); // "10:21 PM"
+
+        // Update routeInfo but keep everything else the same
+        setRouteInfo((prev) => ({
+            ...(prev ?? {}),
+            eta: etaText,
+            arrival_time,
+            duration: routeData.duration,
+            distance_meters: routeData.distance_meters,
+            distanceKm: formatDistance(routeData.distance_meters),
+        }));
+
+        console.log("[ETA] Updated routeInfo:", { etaText, arrival_time });
     }
 
     function generateStartTimes() {
@@ -652,6 +739,25 @@ export default function Map() {
         if (!departure || !Number.isFinite(totalMinutes)) return "N/A";
         const arrival = new Date(departure.getTime() + totalMinutes * 60000);
         return arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function getDestinationLatLng(mapMarkers, routeInfo) {
+        // Prefer destination marker if your app stores it
+        const dest = mapMarkers?.destination;
+        if (dest && typeof dest.lat === "number" && typeof dest.lng === "number") {
+            return { lat: dest.lat, lng: dest.lng };
+        }
+
+        // Fallback: last step end location (if present)
+        const steps = routeInfo?.steps;
+        if (!steps?.length) return null;
+
+        const last = steps[steps.length - 1];
+        const lat = last?.endLocation?.latLng?.latitude;
+        const lng = last?.endLocation?.latLng?.longitude;
+
+        if (typeof lat !== "number" || typeof lng !== "number") return null;
+        return { lat, lng };
     }
 
     useEffect(() => {
@@ -865,8 +971,7 @@ export default function Map() {
                     map_function={setMarker}
                     showUserLocation
                     toggleSelectionType={isAToBRef}
-                    currentLocation={prevLocationRef}
-                    onUserLocation={setUserLocation}
+                    currentLocation={prevLocationRef}                        
                 />
             </div>
 
@@ -1307,7 +1412,233 @@ export default function Map() {
                     </button>
                 </div>
 
+            {showAll && (<div>
+                {/* Incident details panel (same UI as Report tab) */}
+                <div className={`map-incident-panel ${selectedReport ? "map-incident-panel-active" : "map-incident-panel-inactive"}`}>
+                    <div className="map-incident-panel-content">
+                        {selectedReport ? (
+                            <IncidentDetailsCard
+                                report={selectedReport}
+                                onClose={() => setSelectedReport(null)}
+                                userLocation={userLocation}
+                                onReportUpdated={(updated) => {
+                                    if (!updated?.id) return;
+                                    setSelectedReport(updated);
+                                    setReports((prev) => {
+                                        const next = prev.map((r) => (r.id === updated.id ? updated : r));
+                                        return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
+                                    });
+                                }}
+                            />
+                        ) : null}
+                    </div>
+                </div>
 
+                {/* Selection mode toggle button */}
+                <div className="origin-toggle" style={{ pointerEvents: "auto" }}>
+                    <div className="origin-toggle-container">
+                        {/* Change to be usestate blah blah blah */}
+                        <div className={`origin-toggle-slider ${isAToBState ? "left" : "right"}`} />
+
+                        <div className="origin-toggle-options">
+                        <button
+                            className={`origin-toggle-option ${isAToBState ? "active" : ""}`}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setIsAToBState(true);
+                            }}
+                        >
+                            A to B
+                        </button>
+
+                        <button
+                            className={`origin-toggle-option ${!isAToBState ? "active" : ""}`}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setIsAToBState(false);
+                            }}
+                        >
+                            Current location
+                        </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Time Selector - Scrollable Picker */}
+                {showTimeSelector && (
+                    <div className="time-picker-container">
+                        <div className="time-picker-card">
+                            <div className="time-picker-header">
+                                <h3 className="time-picker-title">
+                                    Select Departure Time
+                                </h3>
+                                <p className="time-picker-subtitle">
+                                    Choose when you want to start your trip
+                                </p>
+                            </div>
+
+                            <div className="time-picker-list custom-scrollbar">
+                                {availableTimes.map((timeSlot, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => handleTimeChange(index)}
+                                        disabled={isLoadingRoute}
+                                        className={`time-slot-button ${selectedOffsetMinutes === timeSlot.offsetMinutes ? 'selected' : ''}`}
+                                    >
+                                        <div className="time-slot-info">
+                                            <div className="time-slot-display-time">
+                                                {timeSlot.displayTime}
+                                            </div>
+                                            <div className="time-slot-label">
+                                                {timeSlot.label}
+                                            </div>
+                                        </div>
+                                        {selectedOffsetMinutes === timeSlot.offsetMinutes && (
+                                            <div className="time-slot-checkmark">
+                                                <span style={{ fontSize: '14px' }}>✓</span>
+                                            </div>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modern Route Info Card */}
+                {routeInfo && (
+                    <div className="route-info-container">
+                        <div className="route-info-card">
+                            <div className="route-info-gradient-bar" />
+
+                            {isLoadingRoute && (
+                                <div className="route-info-loading">
+                                    <div className="route-info-spinner" />
+                                </div>
+                            )}
+
+                            <h3 className="route-info-title">
+                                Route Information
+                            </h3>
+
+                            <div className="route-info-items">
+                                {/* Distance */}
+                                <div className="route-info-item">
+                                    <div className="route-info-icon distance">
+                                        <span>📍</span>
+                                    </div>
+                                    <div>
+                                        <div className="route-info-label">Distance</div>
+                                        <div className="route-info-value">
+                                            {routeInfo.distanceKm} <span className="route-info-unit">km</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Departure Time */}
+                                <div className="route-info-item">
+                                    <div className="route-info-icon departure">
+                                        <span>🚗</span>
+                                    </div>
+                                    <div>
+                                        <div className="route-info-label">Departure</div>
+                                        <div className="route-info-value">{routeInfo.starting_time}</div>
+                                    </div>
+                                </div>
+
+                                {/* ETA */}
+                                <div className="route-info-item">
+                                    <div className="route-info-icon duration">
+                                        <span>🕒</span>
+                                    </div>
+                                    <div>
+                                        <div className="route-info-label">ETA</div>
+                                        <div className="route-info-value">{routeInfo.arrival_time ?? "N/A"}</div>
+                                    </div>
+                                </div>
+
+                                {/* Duration */}
+                                <div className="route-info-item">
+                                    <div className="route-info-icon duration">
+                                        <span>⏱️</span>
+                                    </div>
+                                    <div>
+                                        <div className="route-info-label">Travel Time</div>
+                                        <div className="route-info-value">{routeInfo.eta}</div>
+                                    </div>
+                                </div>
+
+                                {/* Directions */}
+                                <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
+                                    <div className="route-info-icon">
+                                        <span>🗺️</span>
+                                    </div>
+                                    <div>
+                                        <div className="route-info-value">Directions {"->"}</div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Clear Map Button */}
+                <div className="clear-button-container">
+                    <button
+                        onClick={clearMap}
+                        className="clear-button"
+                        title="Clear all pins and routes"
+                    >
+                        <X size={24} color="#dc2626" />
+                    </button>
+                </div>
+
+
+                {/* Error Popup */}
+                {showErrorPopup && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 2000,
+                        backdropFilter: 'blur(4px)'
+                    }}>
+                        <div style={{
+                            backgroundColor: 'white',
+                            borderRadius: '16px',
+                            padding: '24px',
+                            width: '90%',
+                            maxWidth: '400px',
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                            textAlign: 'center',
+                            position: 'relative',
+                            animation: 'fadeIn 0.2s ease-out'
+                        }}>
+                            <button
+                                onClick={() => setShowErrorPopup(false)}
+                                style={{
+                                    position: 'absolute',
+                                    top: '16px',
+                                    right: '16px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <X size={20} color="#9ca3af" />
+                            </button>
                 {/* Error Popup */}
                 {showErrorPopup && (
                     <div style={{
@@ -1364,6 +1695,18 @@ export default function Map() {
                             }}>
                                 <AlertTriangle size={24} color="#dc2626" />
                             </div>
+                            <div style={{
+                                width: '48px',
+                                height: '48px',
+                                backgroundColor: '#fef2f2',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 16px auto'
+                            }}>
+                                <AlertTriangle size={24} color="#dc2626" />
+                            </div>
 
                             <h3 style={{
                                 fontSize: '18px',
@@ -1374,7 +1717,24 @@ export default function Map() {
                             }}>
                                 Server Error
                             </h3>
+                            <h3 style={{
+                                fontSize: '18px',
+                                fontWeight: '600',
+                                color: '#111827',
+                                marginBottom: '8px',
+                                marginTop: 0
+                            }}>
+                                Server Error
+                            </h3>
 
+                            <p style={{
+                                fontSize: '14px',
+                                color: '#6b7280',
+                                marginBottom: '24px',
+                                lineHeight: '1.5'
+                            }}>
+                                We encountered a 502 Bad Gateway error. The server is currently unavailable. Please try again later.
+                            </p>
                             <p style={{
                                 fontSize: '14px',
                                 color: '#6b7280',
@@ -1406,7 +1766,57 @@ export default function Map() {
                         </div>
                     </div>
                 )}
+                            <button
+                                onClick={() => setShowErrorPopup(false)}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    backgroundColor: '#dc2626',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '500',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    transition: 'background-color 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )}
 
+                {/* Click outside to close dropdown */}
+                {
+                    showDropdown && (
+                        <div
+                            onClick={() => setShowDropdown(false)}
+                            style={{
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                zIndex: 999
+                            }}
+                        />
+                    )}
+                {/* Logout Confirmation Modal */}
+                {showLogoutConfirm && (
+                    <div className="logout-modal">
+                        <div className="logout-box">
+                            <h3>Confirm Logout</h3>
+                            <p>Are you sure you want to log out?</p>
+                            <button onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
+                            <button onClick={handleLogout}>Log Out</button>
+                        </div>
+                    </div>
+                )}
+            </div>
+            )}
                 {/* Click outside to close dropdown */}
                 {
                     showDropdown && (

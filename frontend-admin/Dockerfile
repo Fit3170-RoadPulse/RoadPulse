@@ -1,4 +1,4 @@
-# frontend/Dockerfile
+# frontend-admin/Dockerfile
 # Stage 1: Build React app
 FROM node:20-alpine AS build
 
@@ -28,7 +28,7 @@ RUN npm install -g serve
 COPY --from=build /usr/src/app/dist ./dist
 
 # Expose port
-EXPOSE 3000
+EXPOSE 5174
 
 # Serve the app
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["serve", "-s", "dist", "-l", "5174"]
