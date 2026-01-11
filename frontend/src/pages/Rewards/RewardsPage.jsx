@@ -70,8 +70,7 @@ function RewardsPage() {
     useEffect(() => {
         async function loadUserVouchers() {
             try {                
-                const vouchers = await fetchUserRedemptions();
-                console.log("Fetched vouchers:", vouchers);
+                const vouchers = await fetchUserRedemptions();                
                 setUserVouchers(vouchers.map(voucher => ({
                     id: voucher.id,
                     name: voucher.item.name,

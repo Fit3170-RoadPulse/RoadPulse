@@ -587,7 +587,9 @@ def redeem_reward(request):
 
         # Deduct points and stock, create redemption record
         try:
-            deduct_points(user, total_cost, reason="redeem_reward", ref=f"Redeem: Item {item.id} with quantity of {quantity}")
+            import time
+            unique_ref = f"Redeem: Item {item.id} with quantity of {quantity} at {int(time.time() * 1000000)}"
+            deduct_points(user, total_cost, reason="redeem_reward", ref=unique_ref)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
