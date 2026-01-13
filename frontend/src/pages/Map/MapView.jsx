@@ -51,6 +51,12 @@ export default class MapView extends Component {
             setShowLogoutConfirm,
             showLogoutConfirm,
             handleLogout,
+            showSaveMenu,
+            toggleSaveMenu,
+            closeSaveMenu,
+            onSaveOriginPlace,
+            onSaveDestinationPlace,
+            mapMarkers,
         } = this.props;
 
         return (
@@ -454,9 +460,44 @@ export default class MapView extends Component {
                                     </div>
                                 )}
 
-                                <h3 className="route-info-title">
-                                    Route Information
-                                </h3>
+                                <div className="route-info-header">
+                                    <h3 className="route-info-title">
+                                        Route Information
+                                    </h3>
+
+                                    <button
+                                        className="route-info-bookmark-btn"
+                                        onClick={toggleSaveMenu}
+                                        title="Save places"
+                                        type="button"
+                                    >
+                                        ⭐
+                                    </button>
+                                </div>
+
+                                {showSaveMenu && (
+                                    <div className="route-info-save-menu" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                            className="route-info-save-menu-item"
+                                            onClick={onSaveOriginPlace}
+                                            type="button"
+                                            disabled={!mapMarkers?.origin}
+                                            title={!mapMarkers?.origin ? "Set an origin first" : "Save origin"}
+                                        >
+                                            Save origin <span className="route-info-star">⭐</span>
+                                        </button>
+
+                                        <button
+                                            className="route-info-save-menu-item"
+                                            onClick={onSaveDestinationPlace}
+                                            type="button"
+                                            disabled={!mapMarkers?.destination}
+                                            title={!mapMarkers?.destination ? "Set a destination first" : "Save destination"}
+                                        >
+                                            Save destination <span className="route-info-star">⭐</span>
+                                        </button>
+                                    </div>
+                                )}
 
                                 <div className="route-info-items">
                                     {/* Distance */}
@@ -471,6 +512,16 @@ export default class MapView extends Component {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {mapMarkers?.origin && (
+                                        <button
+                                            className="route-info-save-btn"
+                                            onClick={onSaveOriginPlace}
+                                            title="Save Start (A)"
+                                        >
+                                            ⭐
+                                        </button>
+                                    )}
 
                                     {/* Departure Time */}
                                     <div className="route-info-item">

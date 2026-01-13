@@ -324,3 +324,16 @@ class PointTransaction(models.Model):
     def __str__(self):
         sign = "-" if self.kind == self.Kind.SPEND else "+"
         return f"{self.user} {sign}{self.amount} ({self.reason})"
+
+class SavedDestination(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_destinations")
+    label = models.CharField(max_length=80)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "label") 
+
+    def __str__(self):
+        return f"{self.user} - {self.label}"

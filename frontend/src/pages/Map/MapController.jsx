@@ -42,6 +42,7 @@ export default class MapController extends Component {
             etaRemainingMinutes: null,
             isTollRoadsOn: false,
             chosenRouteState: null,
+            showSaveMenu: false,
         };
 
         this.lastRouteSelectionRef = null;
@@ -511,6 +512,7 @@ export default class MapController extends Component {
             showRouteOptions: false,
             availableTimes: [],
             selectedOffsetMinutes: 1,
+            showSaveMenu: false,
         });
     };
 
@@ -763,6 +765,60 @@ export default class MapController extends Component {
         });
 
         return polyline;
+    };
+
+    getMarkerCoords = (marker) => {
+        if (!marker || !marker.position) return null;
+
+        const { lat, lng } = this.normalizeLatLng(marker.position);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+        return {
+            latitude: lat,
+            longitude: lng,
+        };
+    };
+
+    saveMarkerPlace = async (marker, defaultLabel) => {
+        const coords = this.getMarkerCoords(marker);
+        if (!coords) return;
+
+        const label =
+            window.prompt("Name this place:", defaultLabel) || defaultLabel;
+
+        try {
+
+            await apiPost("/user/saved-destinations/", {
+                label,
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+            });
+
+            console.log("Saved place:", label, coords);
+        } catch (e) {
+            console.error("Failed to save place:", e);
+            
+            const status = e?.response?.status;
+            if (status === 401) alert("Not logged in / token expired.");
+            else if (status === 400) alert("Bad request (backend field mismatch).");
+            else if (status === 404) alert("Endpoint not found (/user/frequent-routes/).");
+            alert("Failed to save place.");
+        }
+    };
+
+    saveOriginPlace = async () => {
+        const { mapMarkers } = this.state;
+        if (!mapMarkers?.origin) return;
+
+        await this.saveMarkerPlace(mapMarkers.origin, "Origin");
+    };
+
+    saveDestinationPlace = async () => {
+        const { mapMarkers } = this.state;
+        if (!mapMarkers?.destination) return;
+
+        await this.saveMarkerPlace(mapMarkers.destination, "Destination");
     };
 
     generateStartTimes = () => {
@@ -1096,6 +1152,24 @@ export default class MapController extends Component {
         this.setState({ isTollRoadsOn: !this.state.isTollRoadsOn });
     };
 
+    toggleSaveMenu = () => {
+        this.setState((prev) => ({ showSaveMenu: !prev.showSaveMenu }));
+    };
+
+    closeSaveMenu = () => {
+        this.setState({ showSaveMenu: false });
+    };
+
+    handleSaveOriginClick = async () => {
+        await this.saveOriginPlace();
+        this.closeSaveMenu();
+    };
+
+    handleSaveDestinationClick = async () => {
+        await this.saveDestinationPlace();
+        this.closeSaveMenu();
+    };
+
     render() {
         return (
             <MapView
@@ -1140,6 +1214,11 @@ export default class MapController extends Component {
                 setShowLogoutConfirm={this.setShowLogoutConfirm}
                 showLogoutConfirm={this.state.showLogoutConfirm}
                 handleLogout={this.handleLogout}
+                showSaveMenu={this.state.showSaveMenu}
+                toggleSaveMenu={this.toggleSaveMenu}
+                closeSaveMenu={this.closeSaveMenu}
+                onSaveOriginPlace={this.handleSaveOriginClick}
+                onSaveDestinationPlace={this.handleSaveDestinationClick}
             />
         );
     }
