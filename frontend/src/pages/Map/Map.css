@@ -238,6 +238,9 @@
     left: 120px;
     z-index: 1000;
     pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
     animation: fadeIn 0.4s ease-out;
 }
 
@@ -320,6 +323,20 @@
     transition: all 0.2s ease;
 }
 .route-info-directions-item:hover{
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    cursor: pointer;
+}
+
+.route-time-select-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #c4c4c4 0%, #bebebe 100%);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+.route-time-select-item:hover{
     box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
     cursor: pointer;
 }

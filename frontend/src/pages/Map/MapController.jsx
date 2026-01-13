@@ -19,6 +19,7 @@ export default class MapController extends Component {
             availableTimes: [],
             selectedOffsetMinutes: 1,
             showTimeSelector: false,
+            showRouteOptions: false,
             isLoadingRoute: false,
             mapRef: null,
             showErrorPopup: false,
@@ -39,6 +40,8 @@ export default class MapController extends Component {
             rawSpeedKmh: 0,
             etaRemainingText: null,
             etaRemainingMinutes: null,
+            isTollRoadsOn: false,
+            chosenRouteState: null,
         };
 
         this.lastRouteSelectionRef = null;
@@ -127,6 +130,10 @@ export default class MapController extends Component {
             prevState.selectedOffsetMinutes !== this.state.selectedOffsetMinutes
         ) {
             this.updateTimeSelector();
+        }
+
+        if (prevState.isTollRoadsOn !== this.state.isTollRoadsOn) {
+            this.handleTollRouteChange();
         }
 
         if (prevState.isAToBState !== this.state.isAToBState) {
@@ -501,6 +508,7 @@ export default class MapController extends Component {
             mapPolylines: [],
             routeInfo: null,
             showTimeSelector: false,
+            showRouteOptions: false,
             availableTimes: [],
             selectedOffsetMinutes: 1,
         });
@@ -565,9 +573,9 @@ export default class MapController extends Component {
                 this.setState({
                     availableTimes: times,
                     selectedOffsetMinutes: times[0]?.offsetMinutes ?? 1,
-                    showTimeSelector: true,
+                    showRouteOptions: true,
                 });
-
+                
                 this.fetchRoute(originMarker.position, destinationMarker.position, times[0].offsetMinutes, map);
             } else {
                 originMarker.map = null;
@@ -580,7 +588,7 @@ export default class MapController extends Component {
 
                 this.setState({
                     routeInfo: null,
-                    showTimeSelector: false,
+                    showRouteOptions: false,
                     availableTimes: [],
                     selectedOffsetMinutes: 1,
                 });
@@ -604,6 +612,19 @@ export default class MapController extends Component {
             }
         });
     };
+    handleTollRouteChange = async () => {
+        const map = this.state.mapRef || this.mapInstanceRef;
+        const { mapMarkers, isLoadingRoute, selectedOffsetMinutes } = this.state;
+        if (!mapMarkers.origin || !mapMarkers.destination || !map) return;
+        if (isLoadingRoute) return;
+
+        this.setState({ isLoadingRoute: true });
+
+        this.state.mapPolylines.forEach((polyline) => polyline.setMap(null));
+        this.setState({ mapPolylines: [] });
+
+        await this.fetchRoute(mapMarkers.origin.position, mapMarkers.destination.position, selectedOffsetMinutes, map);
+    }
 
     handleTimeChange = async (index) => {
         const map = this.state.mapRef || this.mapInstanceRef;
@@ -661,6 +682,7 @@ export default class MapController extends Component {
                     origin: { latitude: originPos.lat, longitude: originPos.lng },
                     destination: { latitude: destPos.lat, longitude: destPos.lng },
                     startTimes: [departureTime],
+                    avoidTolls: this.state.isTollRoadsOn,
                 }, {
                     signal: controller.signal,
                 });
@@ -913,6 +935,10 @@ export default class MapController extends Component {
         }
     };
 
+    showTimeSelectorFunction = () => {
+        this.setState({ showTimeSelector: !this.state.showTimeSelector });
+    }
+
     liveNavigateToDestination = () => {
         console.log("Starting live navigation animation...");
         const totalTime = 1500;
@@ -1066,6 +1092,9 @@ export default class MapController extends Component {
             this.setState({ userLocation: valueOrUpdater });
         }
     };
+    toggleTollRoads = async () => {
+        this.setState({ isTollRoadsOn: !this.state.isTollRoadsOn });
+    };
 
     render() {
         return (
@@ -1090,6 +1119,10 @@ export default class MapController extends Component {
                 isAToBState={this.state.isAToBState}
                 setIsAToBState={this.setIsAToBState}
                 showTimeSelector={this.state.showTimeSelector}
+                showTimeSelectorFunction={this.showTimeSelectorFunction}
+                showRouteOptions={this.state.showRouteOptions}
+                isTollRoadsOn={this.state.isTollRoadsOn}
+                toggleTollRoads={this.toggleTollRoads}
                 availableTimes={this.state.availableTimes}
                 selectedOffsetMinutes={this.state.selectedOffsetMinutes}
                 isLoadingRoute={this.state.isLoadingRoute}

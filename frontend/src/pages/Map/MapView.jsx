@@ -5,6 +5,7 @@ import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import "./Map.css";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
+import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent.jsx";
 
 export default class MapView extends Component {
     render() {
@@ -28,7 +29,11 @@ export default class MapView extends Component {
             setReports,
             isAToBState,
             setIsAToBState,
+            isTollRoadsOn,
+            toggleTollRoads,
             showTimeSelector,
+            showTimeSelectorFunction,
+            showRouteOptions,
             availableTimes,
             selectedOffsetMinutes,
             isLoadingRoute,
@@ -426,10 +431,20 @@ export default class MapView extends Component {
                             </div>
                         </div>
                     )}
-
+                    
                     {/* Modern Route Info Card */}
-                    {routeInfo && (
+                    {showRouteOptions && (
                         <div className="route-info-container">
+                            {/* Route Options */}
+                            <div class="route-info-card">
+                                <div className="route-info-gradient-bar" />
+                                <RouteOptionsComponent 
+                                    isTollRoadsOn={isTollRoadsOn} 
+                                    toggleTollRoads={toggleTollRoads}>
+                                </RouteOptionsComponent>
+                            </div>
+
+                            {/* Route Info */}
                             <div className="route-info-card">
                                 <div className="route-info-gradient-bar" />
 
@@ -452,7 +467,7 @@ export default class MapView extends Component {
                                         <div>
                                             <div className="route-info-label">Distance</div>
                                             <div className="route-info-value">
-                                                {routeInfo.distanceKm} <span className="route-info-unit">km</span>
+                                                {routeInfo?.distanceKm ?? "N/A"} <span className="route-info-unit">km</span>
                                             </div>
                                         </div>
                                     </div>
@@ -464,7 +479,7 @@ export default class MapView extends Component {
                                         </div>
                                         <div>
                                             <div className="route-info-label">Departure</div>
-                                            <div className="route-info-value">{routeInfo.starting_time}</div>
+                                            <div className="route-info-value">{routeInfo?.starting_time ?? "N/A"}</div>
                                         </div>
                                     </div>
 
@@ -475,7 +490,7 @@ export default class MapView extends Component {
                                         </div>
                                         <div>
                                             <div className="route-info-label">ETA</div>
-                                            <div className="route-info-value">{routeInfo.arrival_time ?? "N/A"}</div>
+                                            <div className="route-info-value">{routeInfo?.arrival_time ?? "N/A"}</div>
                                         </div>
                                     </div>
 
@@ -486,9 +501,19 @@ export default class MapView extends Component {
                                         </div>
                                         <div>
                                             <div className="route-info-label">Travel Time</div>
-                                            <div className="route-info-value">{routeInfo.eta}</div>
+                                            <div className="route-info-value">{routeInfo?.eta ?? "N/A"}</div>
                                         </div>
                                     </div>
+
+                                    {/* Directions */}
+                                    <button className="route-time-select-item" onClick={showTimeSelectorFunction}>
+                                        <div className="route-info-icon">
+                                            <span>⌚</span>
+                                        </div>
+                                        <div>
+                                            <div className="route-info-value">Choose a time</div>
+                                        </div>
+                                    </button>
 
                                     {/* Directions */}
                                     <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
