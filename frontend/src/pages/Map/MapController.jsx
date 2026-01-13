@@ -516,6 +516,7 @@ export default class MapController extends Component {
             availableTimes: [],
             selectedOffsetMinutes: 1,
             showSaveMenu: false,
+            showSavedDestinations: false,
         });
     };
 

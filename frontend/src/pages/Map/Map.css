@@ -397,7 +397,7 @@
     color: #6b7280;
 }
 
-.route-info-bookmark-btn {
+.route-info-star-btn {
   border: none;
   background: transparent;
   cursor: pointer;
@@ -409,11 +409,11 @@
   transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
-.route-info-bookmark-btn:hover {
+.route-info-star-btn:hover {
   background: rgba(0, 0, 0, 0.06);
 }
 
-.route-info-bookmark-btn:active {
+.route-info-star-btn:active {
   transform: scale(0.95);
 }
 
@@ -458,14 +458,14 @@
 }
 
 .route-info-saved-item {
-  width: 100%;
-  border: 0;
-  background: transparent;
+  background: linear-gradient(135deg, #135cbd 0%, #104fa0 100%);
   cursor: pointer;
   display: flex;
-  gap: 12px;
+  gap: 4px;
   align-items: center;
   padding: 10px 0;
+  border-radius: 12px;
+  transition: all 0.2s ease;
 }
 
 .saved-destinations-overlay {
@@ -475,15 +475,17 @@
   background: rgba(0,0,0,0.25);
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  padding-right: 24px;
 }
 
 .saved-destinations-panel {
   width: 320px;
-  max-width: 90vw;
-  height: 100%;
-  background: #fff;
-  box-shadow: -12px 0 30px rgba(0,0,0,0.15);
   padding: 16px;
+}
+
+.saved-destinations-card {
+  height: 80%;
   display: flex;
   flex-direction: column;
 }
@@ -500,6 +502,11 @@
   background: transparent;
   cursor: pointer;
   font-size: 18px;
+  color: #6b7280;
+}
+
+.saved-destinations-close:hover {
+    color: #111827;
 }
 
 .saved-destinations-list {
@@ -516,10 +523,12 @@
   text-align: left;
   background: #fff;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .saved-destinations-item:hover {
   background: #f9fafb;
+  transform: translateY(-1px);
 }
 
 .saved-destinations-title {
@@ -531,6 +540,10 @@
   font-size: 12px;
   color: #6b7280;
   margin-top: 4px;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .saved-destinations-empty {
