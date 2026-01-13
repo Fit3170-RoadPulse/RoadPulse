@@ -76,6 +76,6 @@ class PointTransactionAdmin(admin.ModelAdmin):
     
 @admin.register(SavedDestination)
 class SavedDestinationAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "label", "latitude", "longitude", "created_at")
+    list_display = ("id", "user", "label", "latitude", "longitude", "address", "created_at")
     search_fields = ("user__username", "label")
     list_filter = ("created_at",)

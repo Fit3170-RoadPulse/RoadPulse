@@ -57,6 +57,12 @@ export default class MapView extends Component {
             onSaveOriginPlace,
             onSaveDestinationPlace,
             mapMarkers,
+            openSavedDestinations,
+            showSavedDestinations,
+            isLoadingSavedDestinations,
+            savedDestinations,
+            closeSavedDestinations,
+            selectSavedDestination,
         } = this.props;
 
         return (
@@ -575,21 +581,67 @@ export default class MapView extends Component {
                                             <div className="route-info-value">Directions {"->"}</div>
                                         </div>
                                     </button>
+
+                                    {/* Saved Destinations */}
+                                    <button className="route-info-saved-item" onClick={openSavedDestinations}>
+                                        <div className="route-info-icon">
+                                            <span>🔖</span>
+                                        </div>
+                                        <div>
+                                            <div className="route-info-value">Saved destinations</div>
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
+
+                            {showSavedDestinations && (
+                                <div className="saved-destinations-overlay" onClick={closeSavedDestinations}>
+                                    <div className="saved-destinations-panel" onClick={(e) => e.stopPropagation()}>
+                                    <div className="saved-destinations-header">
+                                        <h3>Saved destinations</h3>
+                                        <button className="saved-destinations-close" onClick={closeSavedDestinations}>✕</button>
+                                    </div>
+
+                                    {isLoadingSavedDestinations ? (
+                                        <div className="saved-destinations-loading">Loading...</div>
+                                    ) : (
+                                        <div className="saved-destinations-list">
+                                        {savedDestinations?.length ? savedDestinations.map((d) => (
+                                            <button
+                                            key={d.id}
+                                            className="saved-destinations-item"
+                                            onClick={() => selectSavedDestination(d)}
+                                            >
+                                            <div className="saved-destinations-title">{d.label}</div>
+                                            <div className="saved-destinations-sub">
+                                                {d.address?.trim()
+                                                    ? d.address
+                                                    : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
+                                            </div>
+                                            </button>
+                                        )) : (
+                                            <div className="saved-destinations-empty">No saved destinations yet.</div>
+                                        )}
+                                        </div>
+                                    )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {/* Clear Map Button */}
-                    <div className="clear-button-container">
-                        <button
-                            onClick={clearMap}
-                            className="clear-button"
-                            title="Clear all pins and routes"
-                        >
-                            <X size={24} color="#dc2626" />
-                        </button>
-                    </div>
+                    {!showSavedDestinations && (
+                        <div className="clear-button-container">
+                            <button
+                                onClick={clearMap}
+                                className="clear-button"
+                                title="Clear all pins and routes"
+                            >
+                                <X size={24} color="#dc2626" />
+                            </button>
+                        </div>
+                    )}
 
 
                     {/* Error Popup */}

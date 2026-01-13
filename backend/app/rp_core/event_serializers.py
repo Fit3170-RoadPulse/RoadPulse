@@ -48,4 +48,4 @@ class AdminProfileSerializer(serializers.ModelSerializer):
 class SavedDestinationSerializer(serializers.ModelSerializer):
     class Meta:
         model = SavedDestination
-        fields = ("id", "label", "latitude", "longitude", "created_at")
+        fields = ("id", "label", "latitude", "longitude", "address", "created_at")

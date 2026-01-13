@@ -1,6 +1,6 @@
 import { Component } from "react";
 import axios from "axios";
-import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../lib/api";
+import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet } from "../../lib/api";
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
@@ -43,6 +43,9 @@ export default class MapController extends Component {
             isTollRoadsOn: false,
             chosenRouteState: null,
             showSaveMenu: false,
+            showSavedDestinations: false,
+            savedDestinations: [],
+            isLoadingSavedDestinations: false,
         };
 
         this.lastRouteSelectionRef = null;
@@ -569,7 +572,9 @@ export default class MapController extends Component {
                     position: clicked,
                     title: "B",
                 });
-                this.setState({ mapMarkers: { origin: originMarker, destination: destinationMarker } });
+                this.setState({ mapMarkers: { origin: originMarker, destination: destinationMarker },
+                showSaveMenu: false,
+            });
 
                 const times = this.generateStartTimes();
                 this.setState({
@@ -593,6 +598,7 @@ export default class MapController extends Component {
                     showRouteOptions: false,
                     availableTimes: [],
                     selectedOffsetMinutes: 1,
+                    showSaveMenu: false,
                 });
 
                 if (!this.isAToBRef.current && this.prevLocationRef.current) {
@@ -650,6 +656,23 @@ export default class MapController extends Component {
         const lat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
         const lng = typeof pos.lng === "function" ? pos.lng() : pos.lng;
         return { lat, lng };
+    };
+
+    getAddressForLatLng = async (lat, lng) => {
+        const g = window.google;
+        if (!g?.maps?.Geocoder) return "";
+
+        const geocoder = new g.maps.Geocoder();
+
+        return new Promise((resolve) => {
+            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+                if (status === "OK" && results?.[0]) {
+                    resolve(results[0].formatted_address);
+                } else {
+                    resolve("");
+                }
+            });
+        });
     };
 
     buildRouteCacheKey = (origin, destination, departureTime) => {
@@ -784,6 +807,8 @@ export default class MapController extends Component {
         const coords = this.getMarkerCoords(marker);
         if (!coords) return;
 
+        const address = await this.getAddressForLatLng(coords.latitude, coords.longitude);
+
         const label =
             window.prompt("Name this place:", defaultLabel) || defaultLabel;
 
@@ -793,6 +818,7 @@ export default class MapController extends Component {
                 label,
                 latitude: coords.latitude,
                 longitude: coords.longitude,
+                address: address || "",
             });
 
             console.log("Saved place:", label, coords);
@@ -1170,6 +1196,69 @@ export default class MapController extends Component {
         this.closeSaveMenu();
     };
 
+    openSavedDestinations = async () => {
+        this.setState({ showSavedDestinations: true });
+
+        await this.fetchSavedDestinations();
+    };
+
+    closeSavedDestinations = () => {
+        this.setState({ showSavedDestinations: false });
+    };
+
+    fetchSavedDestinations = async () => {
+        try {
+            this.setState({ isLoadingSavedDestinations: true });
+
+            const res = await apiGet("/user/saved-destinations/");
+            const data = Array.isArray(res) ? res : (res?.data ?? []);
+            this.setState({ savedDestinations: data });
+        } catch (e) {
+            console.error("Failed to fetch saved destinations:", e);
+            alert("Failed to load saved destinations.");
+        } finally {
+            this.setState({ isLoadingSavedDestinations: false });
+        }
+    };
+
+    selectSavedDestination = async (dest) => {
+        const map = this.state.mapRef || this.mapInstanceRef;
+        const cur = this.prevLocationRef?.current;
+        if (!map || !cur) {
+            alert("Current location not available yet.");
+            return;
+        }
+
+        this.setState({ showSavedDestinations: false });
+
+        this.clearMap();
+
+        const g = window.google;
+        if (!g?.maps?.importLibrary) return;
+        const { AdvancedMarkerElement } = await g.maps.importLibrary("marker");
+
+        const originMarker = new AdvancedMarkerElement({
+            map,
+            position: { lat: cur.latitude, lng: cur.longitude },
+            title: "A",
+        });
+
+        const destinationMarker = new AdvancedMarkerElement({
+            map,
+            position: { lat: Number(dest.latitude), lng: Number(dest.longitude) },
+            title: "B",
+        });
+
+        this.setState({
+            mapMarkers: { origin: originMarker, destination: destinationMarker },
+            showRouteOptions: true,
+            showSaveMenu: false,
+        });
+
+        const selectedOffsetMinutes = this.state.selectedOffsetMinutes ?? 1;
+        await this.fetchRoute(originMarker.position, destinationMarker.position, selectedOffsetMinutes, map);
+    };
+
     render() {
         return (
             <MapView
@@ -1219,6 +1308,12 @@ export default class MapController extends Component {
                 closeSaveMenu={this.closeSaveMenu}
                 onSaveOriginPlace={this.handleSaveOriginClick}
                 onSaveDestinationPlace={this.handleSaveDestinationClick}
+                openSavedDestinations={this.openSavedDestinations}
+                closeSavedDestinations={this.closeSavedDestinations}
+                savedDestinations={this.state.savedDestinations}
+                showSavedDestinations={this.state.showSavedDestinations}
+                isLoadingSavedDestinations={this.state.isLoadingSavedDestinations}
+                selectSavedDestination={this.selectSavedDestination}
             />
         );
     }
