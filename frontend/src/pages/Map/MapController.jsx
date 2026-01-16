@@ -117,7 +117,6 @@ export default class MapController extends Component {
         if (prevState.isMobileDevice !== this.state.isMobileDevice || prevState.mapData !== this.state.mapData) {
             this.startLocationPolling();
         }
-
         if (
             prevState.isNavigationBegun !== this.state.isNavigationBegun ||
             prevState.mapMarkers.destination !== this.state.mapMarkers.destination
@@ -151,6 +150,13 @@ export default class MapController extends Component {
             }
         }
 
+        if (prevState.prevLocationRef.current !== this.state.prevLocationRef.current ||
+            prevState.reports !== this.state.reports ||
+            prevState.selectedReport !== this.state.selectedReport){
+                this.proximityReports();
+        }
+
+
         if (
             prevState.navigationIndex !== this.state.navigationIndex ||
             prevState.isNavigationBegun !== this.state.isNavigationBegun ||
@@ -182,6 +188,46 @@ export default class MapController extends Component {
         this.etaRefreshRunId += 1;
         this.timeSelectorRunId += 1;
         this.reportMarkersRunId += 1;
+    }
+
+
+    proximityReports(){
+        
+        if (!this.state.prevLocationRef.current || this.state.reports.length === 0) return;
+
+        const userLat = this.state.prevLocationRef.current.latitude;
+        const userLng = this.state.prevLocationRef.current.longitude;
+        const userLatLng = new google.maps.LatLng(userLat, userLng);
+
+        let closestReport = null;
+        let minDistance = Infinity;
+
+        // Find closest report within 150m
+        for (const report of this.state.reports) {
+            const reportLatLng = new google.maps.LatLng(report.latitude, report.longitude);
+            const distance = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, reportLatLng);
+
+            if (distance <= 150 && distance < minDistance) {
+                minDistance = distance;
+                closestReport = report;
+            }
+        }
+
+        // Show popup if within 150m
+        if (closestReport) {
+            if (!this.state.selectedReport || this.state.selectedReport.id !== this.state.closestReport.id) {
+                setSelectedReport(closestReport);
+            }
+        } else if (this.state.selectedReport) {
+            // Check if user moved away from the currently selected report (beyond 151m)
+            const selectedLatLng = new google.maps.LatLng(this.state.selectedReport.latitude, this.state.selectedReport.longitude);
+            const distanceToSelected = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, selectedLatLng);
+
+            if (distanceToSelected > 151) {
+                setSelectedReport(null);
+            }
+        }
+    };
     }
 
     loadUserData = async () => {
