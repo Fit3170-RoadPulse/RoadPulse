@@ -150,7 +150,7 @@ export default class MapController extends Component {
             }
         }
 
-        if (prevState.prevLocationRef.current !== this.state.prevLocationRef.current ||
+        if (prevState.prevLocationRef?.current !== this.state.prevLocationRef?.current ||
             prevState.reports !== this.state.reports ||
             prevState.selectedReport !== this.state.selectedReport){
                 this.proximityReports();
@@ -193,7 +193,7 @@ export default class MapController extends Component {
 
     proximityReports(){
         
-        if (!this.state.prevLocationRef.current || this.state.reports.length === 0) return;
+        if (!this.state.prevLocationRef?.current || this.state.reports.length === 0) return;
 
         const userLat = this.state.prevLocationRef.current.latitude;
         const userLng = this.state.prevLocationRef.current.longitude;
@@ -228,7 +228,7 @@ export default class MapController extends Component {
             }
         }
     };
-    }
+    
 
     loadUserData = async () => {
         if (!isAuthenticated()) {
@@ -1188,5 +1188,5 @@ export default class MapController extends Component {
                 handleLogout={this.handleLogout}
             />
         );
-    }
+    };
 }
