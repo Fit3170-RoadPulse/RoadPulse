@@ -232,7 +232,13 @@ function RewardsPage() {
                         {exchangeItems.length > 0 ? (
                             exchangeItems.map((item) => (
                                 <div key={item.id} className="reward-card" onClick={() => handleRewardClick(item)}>
-                                    <Award size={48} className="reward-icon" />
+                                    {item.image ? (
+                                        <div className="reward-image">
+                                            <img src={`${item.image}`} alt={item.name} />
+                                        </div>
+                                    ) : (
+                                        <Award size={48} className="reward-icon" />
+                                    )}
                                     <p className="reward-name">{item.name}</p>
                                     <p className="reward-cost">{item.points_cost} points</p>
                                 </div>
