@@ -326,10 +326,10 @@ class PointTransaction(models.Model):
         return f"{self.user} {sign}{self.amount} ({self.reason})"
 
 class SavedDestination(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_destinations")
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="saved_destinations")
     label = models.CharField(max_length=80)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    latitude = models.DecimalField(max_digits=14, decimal_places=6)
+    longitude = models.DecimalField(max_digits=14, decimal_places=6)
     created_at = models.DateTimeField(auto_now_add=True)
     address = models.CharField(max_length=255, blank=True, default="")
 

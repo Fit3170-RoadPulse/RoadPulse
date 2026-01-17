@@ -12,6 +12,8 @@ export default class MapView extends Component {
         const {
             mapData,
             setMarker,
+            hasOrigin,
+            hasDestination,
             isAToBRef,
             prevLocationRef,
             setUserLocation,
@@ -473,7 +475,11 @@ export default class MapView extends Component {
 
                                     <button
                                         className="route-info-star-btn"
-                                        onClick={toggleSaveMenu}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            toggleSaveMenu();
+                                        }}
                                         title="Save places"
                                         type="button"
                                     >
@@ -485,9 +491,14 @@ export default class MapView extends Component {
                                     <div className="route-info-save-menu" onClick={(e) => e.stopPropagation()}>
                                         <button
                                             className="route-info-save-menu-item"
-                                            onClick={onSaveOriginPlace}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onSaveOriginPlace();
+                                            }}
                                             type="button"
-                                            disabled={!mapMarkers?.origin}
+                                            // disabled={!mapMarkers?.origin}
+                                            disabled={!hasOrigin}
                                             title={!mapMarkers?.origin ? "Set an origin first" : "Save origin"}
                                         >
                                             Save origin <span className="route-info-star">⭐</span>
@@ -495,9 +506,14 @@ export default class MapView extends Component {
 
                                         <button
                                             className="route-info-save-menu-item"
-                                            onClick={onSaveDestinationPlace}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onSaveDestinationPlace();
+                                            }}
                                             type="button"
-                                            disabled={!mapMarkers?.destination}
+                                            // disabled={!mapMarkers?.destination}
+                                            disabled={!hasDestination}
                                             title={!mapMarkers?.destination ? "Set a destination first" : "Save destination"}
                                         >
                                             Save destination <span className="route-info-star">⭐</span>
