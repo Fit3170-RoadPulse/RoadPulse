@@ -257,7 +257,7 @@ function RewardsPage() {
                                         <div className="voucher-info">
                                             <h3 className="voucher-name">{voucher.name}</h3>
                                             <p className="voucher-description">{voucher.description}</p>
-                                            <p className="voucher-date">Redeemed: {new Date(voucher.redeemed_at).toLocaleDateString()}</p>
+                                            <p className="voucher-date">Bought at: {new Date(voucher.redeemed_at).toLocaleDateString()}</p>
                                         </div>
                                         <div className={`voucher-status ${voucher.status}`}>
                                             {voucher.status === "active" ? "Active" : "Used"}
@@ -271,7 +271,7 @@ function RewardsPage() {
                                 </div>
                             ))
                         ) : (
-                            <p>No vouchers yet. Redeem some rewards to see them here!</p>
+                            <p>No vouchers yet. Exchange points for rewards to see them here!</p>
                         )}
                     </div>
                 )}
