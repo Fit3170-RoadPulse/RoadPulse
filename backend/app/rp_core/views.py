@@ -431,7 +431,7 @@ class ChangePasswordView(views.APIView):
 
     
 @api_view(["GET"])
-def list_exchange_items(_req):
+def list_exchange_items(request):
     items = ExchangeItem.objects.filter(is_active=True).order_by("name")
     data = [{
         "id": item.id,
@@ -439,6 +439,7 @@ def list_exchange_items(_req):
         "description": item.description,
         "points_cost": item.points_cost,
         "stock": item.stock,
+        "image": request.build_absolute_uri(item.image.url) if item.image else None,
     } for item in items]
     return Response(data)
 

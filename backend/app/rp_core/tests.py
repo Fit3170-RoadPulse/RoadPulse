@@ -34,6 +34,15 @@ class RewardExchangeTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["name"], self.item.name)
+        # Check that the image field is present
+        self.assertIn("image", response.data[0])
+
+    # Test that image field is None when no image is attached
+    def test_list_exchange_items_without_image(self):
+        response = self.client.get(reverse("exchange-items"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Item without image should have image field as None
+        self.assertEqual(response.data[0]["image"], None)
 
     # Test retrieving reward points for authenticated user
     def test_reward_account_returns_points(self):
