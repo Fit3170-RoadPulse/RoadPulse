@@ -493,7 +493,7 @@ export default class MapView extends Component {
                                         title="Save places"
                                         type="button"
                                     >
-                                        ⭐
+                                        ⋮
                                     </button>
                                 </div>
 
