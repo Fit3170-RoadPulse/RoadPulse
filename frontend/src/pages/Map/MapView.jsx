@@ -450,12 +450,22 @@ export default class MapView extends Component {
                     {showRouteOptions && (
                         <div className="route-info-container">
                             {/* Route Options */}
-                            <div class="route-info-card">
+                            <div className="route-info-card">
                                 <div className="route-info-gradient-bar" />
                                 <RouteOptionsComponent 
                                     isTollRoadsOn={isTollRoadsOn} 
-                                    toggleTollRoads={toggleTollRoads}>
-                                </RouteOptionsComponent>
+                                    toggleTollRoads={toggleTollRoads}
+                                />
+
+                                <div
+                                    className="tollRoadToggle savedDestinationsOption"
+                                    onClick={openSavedDestinations}
+                                    role="button"
+                                    tabIndex={0}
+                                >
+                                    <div>Saved destinations</div>
+                                    <div className="route-option-arrow">›</div>
+                                </div>
                             </div>
 
                             {/* Route Info */}
@@ -599,14 +609,14 @@ export default class MapView extends Component {
                                     </button>
 
                                     {/* Saved Destinations */}
-                                    <button className="route-info-saved-item" onClick={openSavedDestinations}>
+                                    {/* <button className="route-info-saved-item" onClick={openSavedDestinations}>
                                         <div className="route-info-icon">
                                             <span>🔖</span>
                                         </div>
                                         <div>
                                             <div className="route-info-value">Saved destinations</div>
                                         </div>
-                                    </button>
+                                    </button> */}
                                 </div>
                             </div>
 
