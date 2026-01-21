@@ -13,7 +13,13 @@ export class NativeGeolocationProvider {
 
     async start(prevLocationRef, locationPollingData, cb) {
         console.log("Starting mobile geolocation");
-        Geolocation.requestPermissions();
+
+        const perm = await Geolocation.requestPermissions();
+        if (perm.location !== 'granted') {
+            console.error("Location permission not granted");
+            return;
+        }
+        
         this.watchId = await Geolocation.watchPosition(
         { enableHighAccuracy: true },
         (pos) => {
