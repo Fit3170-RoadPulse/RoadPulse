@@ -42,6 +42,33 @@ import requests
 
 User = get_user_model()
 
+# Simple function to add delay based on hazard types
+def add_hazard_delay_to_duration(base_duration):
+    """
+    Adds delay based on active hazard types.
+    Different hazard types have different hardcoded delays.
+    """
+    # Get all active hazards
+    active_hazards = IncidentReport.objects.active()
+    
+    # Hardcoded delay values per hazard type (in minutes)
+    HAZARD_DELAYS = {
+        IncidentReport.ReportType.ACCIDENT: 10,   # 10 minutes
+        IncidentReport.ReportType.HAZARD: 5,      # 5 minutes
+        IncidentReport.ReportType.WEATHER: 3,     # 3 minutes
+        IncidentReport.ReportType.CRIME: 7,       # 7 minutes
+        IncidentReport.ReportType.OTHER: 2,       # 2 minutes
+    }
+    
+    total_delay_seconds = 0
+    
+    # Add delay for each hazard based on its type
+    for hazard in active_hazards:
+        delay_minutes = HAZARD_DELAYS.get(hazard.report_type, 0)
+        total_delay_seconds += delay_minutes * 60  # Convert to seconds
+    
+    return base_duration + total_delay_seconds
+
 def health(_req):
     return JsonResponse({
         "status": "ok",
@@ -62,6 +89,7 @@ def compute_route(request):
     origin = request.data.get("origin")
     destination = request.data.get("destination")
     startTimes = request.data.get("startTimes")
+    avoidTolls = bool(request.data.get("avoidTolls", False)) #Frontend needs to send this param, currently unused, default False
     url = "https://routes.googleapis.com/directions/v2:computeRoutes"
     responseMatrix = []
 
@@ -73,7 +101,7 @@ def compute_route(request):
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': settings.GOOGLE_MAPS_API_KEY,
-        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps'
+        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps,routes.travelAdvisory.tollInfo'
     }
 
     def build_cache_key(origin_data, destination_data, departure_time):
@@ -119,6 +147,12 @@ def compute_route(request):
             "departureTime": time,
             "languageCode": "en-US",
         }
+
+        if avoidTolls: #If true, add route modifier to avoid tolls
+            request_body["routeModifiers"] = {
+                "avoidTolls": avoidTolls
+            }
+
         try:
             google_response = requests.post(
                 url,
@@ -135,12 +169,19 @@ def compute_route(request):
         
         data = google_response.json()
         route = data["routes"][0]
+        toll_info = route.get("travelAdvisory", {}).get("tollInfo")
+        base_duration = int((route["duration"]).replace("s",""))
+        
+        # Add hazard delay if any hazards exist
+        adjusted_duration = add_hazard_delay_to_duration(base_duration)
+        
         result = {
             "starting_time":time,
             "distance_meters":route["distanceMeters"],
-            "duration":int((route["duration"]).replace("s","")),
+            "duration":adjusted_duration,
             "polyline":route["polyline"]["encodedPolyline"],
             "legs":route["legs"],
+            "toll": {"has_tolls": bool(toll_info),"details": toll_info}, #Return toll info
         }
         cache.set(cache_key, result, timeout=getattr(settings, "GOOGLE_ROUTES_CACHE_TTL", 300))
         responseMatrix.append(result)

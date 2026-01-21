@@ -124,8 +124,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Location configs
 POLLING_INTERVAL = 1000
 ENABLE_HIGH_ACCURACY = True
-TIMEOUT = 20000
-MAXIMUM_AGE = 10
+TIMEOUT = 8000
+MAXIMUM_AGE = 15000
 
 CORS_ALLOWED_ORIGINS = [
     "https://roadpulsefrontend.onrender.com",

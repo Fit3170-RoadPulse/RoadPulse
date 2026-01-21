@@ -234,11 +234,17 @@
 /* Route Info Card Styles */
 .route-info-container {
     position: absolute;
-    top: 160px;
+    top: 8vh;
     left: 120px;
     z-index: 1000;
     pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    gap: 2rem;
     animation: fadeIn 0.4s ease-out;
+    scale: 0.8;
+    height: 100vh;
 }
 
 .route-info-card {
@@ -320,6 +326,20 @@
     transition: all 0.2s ease;
 }
 .route-info-directions-item:hover{
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    cursor: pointer;
+}
+
+.route-time-select-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #c4c4c4 0%, #bebebe 100%);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+.route-time-select-item:hover{
     box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
     cursor: pointer;
 }
@@ -821,8 +841,55 @@
 }
 
 .map-nav-end-button {
-  background: #dc2626;
-  color : white;
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    color : white;
+}
+
+.map-nav-end-button-inner:hover {
+    background: #b91c1c;
+    cursor: pointer;
+}
+
+.map-nav-end-button-inner {
+    background: #dc2626;
+    padding:12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 25px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.map-nav-end-screen {
+    position: absolute;
+    top: 150px;
+    right: 20px;
+    z-index: 1000;
+    width: 400px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    padding: 24px;
+    text-align: center;
+    font-family: system-ui, sans-serif;
+    font-size: 30px;
+    font-weight: 500;
+}
+
+.map-nav-end-screen-button {
+    margin-top: 20px;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    background: #667eea;
+    color: white;
+    transition: all 0.2s;
 }
 
 .speed-tracker {

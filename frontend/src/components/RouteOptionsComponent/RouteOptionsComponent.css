@@ -1,0 +1,45 @@
+.toggleTollRoads {
+  width: 50px;
+  height: 26px;
+  background-color: #ccc;
+  border-radius: 999px;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.toggleTollRoads.on {
+  background-color: #4ade80;
+}
+.toggleTollRoadsKnob {
+  width: 22px;
+  height: 22px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.toggleTollRoads.on .toggleTollRoadsKnob {
+  transform: translateX(24px);
+}
+.routeOptions{
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.routeOptions h1{
+    font-size: large;
+    font-weight: 600;
+}
+
+.tollRoadToggle{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex-grow: 1;
+    justify-content: space-between;
+}
