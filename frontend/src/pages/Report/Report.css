@@ -3,7 +3,14 @@
 .report-container {
     width: 100vw;
     height: 100vh;
+    min-height: 100svh;
+    height: 100dvh;
     position: relative;
+    --sidebar-width: 100px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
 }
 
 .report-toast {
@@ -34,7 +41,7 @@
 .report-map-wrapper {
     position: absolute;
     top: 0;
-    left: 100px;
+    left: var(--sidebar-width);
     right: 0;
     bottom: 0;
     z-index: 1;
@@ -69,4 +76,36 @@
 
 .report-overlay-ui {
     pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .report-container {
+        --sidebar-width: 0px;
+    }
+
+    .report-toast {
+        max-width: 92vw;
+    }
+
+    .report-map-wrapper {
+        left: 0;
+    }
+
+    .report-sidebar-container {
+        left: 0;
+        right: 0;
+        top: auto;
+        bottom: calc(88px + var(--safe-bottom));
+        width: 100%;
+        height: auto;
+        align-items: flex-end;
+        padding: 0 12px 12px 12px;
+    }
+
+    .report-sidebar-content {
+        width: 100%;
+        max-width: 420px;
+        height: auto;
+        margin: 0 auto;
+    }
 }

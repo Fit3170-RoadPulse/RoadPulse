@@ -16,6 +16,12 @@
   color: #111827;
 }
 
+@media (max-width: 768px) {
+  .rp-report-card {
+    max-height: 60vh;
+  }
+}
+
 .rp-report-accent {
   height: 10px;
   margin: -18px -18px 0 -18px;
