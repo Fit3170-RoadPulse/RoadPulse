@@ -149,38 +149,16 @@ export default class MapView extends Component {
                 )}
 
                 {/* Overlay UI */}
-                <div className="overlay-ui"
-                    style={{
-                        pointerEvents: "none"
-                    }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
+                <div className="map-overlay-ui">
                     <MapPage onSearch={() => console.log("Search triggered!")} />
                 </div>
 
 
                 {/* Profile Icon with Dropdown */}
-                <div style={{
-                    position: 'absolute',
-                    top: '60px',
-                    right: '20px',
-                    zIndex: 1000,
-                    pointerEvents: 'auto'
-                }}>
+                <div className="profile-button-container">
                     <button
                         onClick={() => setShowDropdown(!showDropdown)}
-                        style={{
-                            width: '60px',
-                            height: '60px',
-                            borderRadius: '50%',
-                            backgroundColor: 'white',
-                            border: 'none',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            outline: 'none'
-                        }}
+                        className="profile-button"
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                     >

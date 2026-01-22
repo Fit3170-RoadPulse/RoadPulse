@@ -51,8 +51,8 @@
 
 .origin-toggle{
     position: absolute;
-    top: 80px;
-    left: 110px;
+    top: calc(80px + var(--safe-top));
+    left: calc(var(--sidebar-width) + 10px);
     z-index: 1000;
     pointer-events: auto;
     animation: slideDown 0.3s ease-out;
@@ -112,8 +112,8 @@
 /* Time Picker Styles */
 .time-picker-container {
     position: absolute;
-    top: 80px;
-    right: 20px;
+    top: calc(80px + var(--safe-top));
+    right: calc(var(--ui-edge-gap) + var(--safe-right));
     z-index: 1000;
     pointer-events: auto;
     animation: slideDown 0.3s ease-out;
@@ -234,8 +234,8 @@
 /* Route Info Card Styles */
 .route-info-container {
     position: absolute;
-    top: 8vh;
-    left: 120px;
+    top: calc(8vh + var(--safe-top));
+    left: calc(var(--sidebar-width) + 20px);
     z-index: 1000;
     pointer-events: auto;
     display: flex;
@@ -395,8 +395,8 @@
 /* Clear Button Styles */
 .clear-button-container {
     position: absolute;
-    top: 60px;
-    right: 90px;
+    top: calc(60px + var(--safe-top));
+    right: calc(90px + var(--safe-right));
     z-index: 1000;
     pointer-events: auto;
 }
@@ -424,8 +424,8 @@
 /* Profile Dropdown Base Styles */
 .profile-button-container {
     position: absolute;
-    top: 60px;
-    right: 20px;
+    top: calc(60px + var(--safe-top));
+    right: calc(var(--ui-edge-gap) + var(--safe-right));
     z-index: 1000;
     pointer-events: auto;
 }
@@ -466,6 +466,7 @@
     padding: 32px 24px;
     border-radius: 12px;
     width: 320px;
+    max-width: 90vw;
     text-align: center;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
@@ -519,14 +520,23 @@
 .map-page-container {
     width: 100vw;
     height: 100vh;
+    min-height: 100svh;
+    height: 100dvh;
     position: relative;
+    overflow: hidden;
+    --sidebar-width: 100px;
+    --ui-edge-gap: 20px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
 }
 
 /* Map wrapper */
 .map-wrapper {
     position: absolute;
     top: 0;
-    left: 100px;
+    left: var(--sidebar-width);
     right: 0;
     bottom: 0;
     z-index: 1;
@@ -702,6 +712,7 @@
     padding: 32px 24px;
     border-radius: 12px;
     width: 320px;
+    max-width: 90vw;
     text-align: center;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
@@ -751,10 +762,11 @@
 
 .map-nav-overlay {
   position: absolute;
-  top: 150px;
-  right: 20px;
+  top: calc(150px + var(--safe-top));
+  right: calc(var(--ui-edge-gap) + var(--safe-right));
   z-index: 1000;
-  width: 500px;
+  width: 92vw;
+  max-width: 500px;
   background: white;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -865,10 +877,11 @@
 
 .map-nav-end-screen {
     position: absolute;
-    top: 150px;
-    right: 20px;
+    top: calc(150px + var(--safe-top));
+    right: calc(var(--ui-edge-gap) + var(--safe-right));
     z-index: 1000;
-    width: 400px;
+    width: 92vw;
+    max-width: 400px;
     background: white;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -894,15 +907,15 @@
 
 .speed-tracker {
   position: absolute;
-  top: 16px;
-  right: 104px;
+  top: calc(16px + var(--safe-top));
+  right: calc(104px + var(--safe-right));
   z-index: 30;
 }
 
 .eta-tracker {
   position: absolute;
-  left: 110px;
-  bottom: 30px;
+  left: calc(var(--sidebar-width) + 10px);
+  bottom: calc(30px + var(--safe-bottom));
   z-index: 30;
 }
 
@@ -934,4 +947,134 @@
   margin-top: 2px;
   font-size: 12px;
   color: #6b7280;
+}
+
+@media (max-width: 768px) {
+    .map-page-container {
+        --sidebar-width: 0px;
+        --ui-edge-gap: 12px;
+    }
+
+    .origin-toggle {
+        top: calc(64px + var(--safe-top));
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+    }
+
+    .origin-toggle-container {
+        width: 92vw;
+        max-width: 360px;
+        height: 36px;
+    }
+
+    .origin-toggle-option {
+        font-size: 12px;
+    }
+
+    .time-picker-container {
+        top: calc(64px + var(--safe-top));
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+    }
+
+    .time-picker-card {
+        margin-top: 0;
+        width: 92vw;
+        max-width: 320px;
+        max-height: 60vh;
+    }
+
+    .route-info-container {
+        left: 50%;
+        right: auto;
+        top: auto;
+        bottom: calc(88px + var(--safe-bottom));
+        transform: translateX(-50%);
+        height: auto;
+        max-height: 60vh;
+        gap: 12px;
+        scale: 1;
+        width: 92vw;
+        max-width: 360px;
+        overflow-y: auto;
+    }
+
+    .route-info-card {
+        min-width: 0;
+        width: 100%;
+        padding: 16px 18px;
+    }
+
+    .map-incident-panel {
+        left: 0;
+        right: 0;
+        top: auto;
+        bottom: calc(88px + var(--safe-bottom));
+        width: 100vw;
+        height: auto;
+    }
+
+    .map-incident-panel-content {
+        height: auto;
+        padding: 0 12px 12px 12px;
+    }
+
+    .map-nav-overlay {
+        top: calc(92px + var(--safe-top));
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+    }
+
+    .map-nav-end-screen {
+        top: calc(92px + var(--safe-top));
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+    }
+
+    .map-nav-overlay h2 {
+        font-size: 16px;
+    }
+
+    .map-nav-overlay li {
+        font-size: 14px;
+    }
+
+    .map-nav-end-screen {
+        font-size: 22px;
+        padding: 20px;
+    }
+
+    .map-nav-end-screen-button {
+        font-size: 14px;
+    }
+
+    .clear-button-container {
+        top: calc(12px + var(--safe-top));
+        right: calc(68px + var(--safe-right));
+    }
+
+    .profile-button-container {
+        top: calc(12px + var(--safe-top));
+        right: calc(12px + var(--safe-right));
+    }
+
+    .clear-button,
+    .profile-button {
+        width: 48px;
+        height: 48px;
+    }
+
+    .speed-tracker {
+        top: calc(70px + var(--safe-top));
+        right: calc(12px + var(--safe-right));
+    }
+
+    .eta-tracker {
+        left: calc(12px + var(--safe-left));
+        bottom: calc(88px + var(--safe-bottom));
+    }
 }

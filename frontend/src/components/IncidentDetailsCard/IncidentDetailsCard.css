@@ -21,6 +21,18 @@
     overflow-x: hidden;
 }
 
+@media (max-width: 768px) {
+    .incident-card {
+        max-height: 50vh;
+        padding: 16px 16px 14px 16px;
+        border-radius: 16px;
+    }
+
+    .incident-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Accent bar at top - gradient uses dynamic theme border color */
 .incident-card-accent {
     height: 10px;
