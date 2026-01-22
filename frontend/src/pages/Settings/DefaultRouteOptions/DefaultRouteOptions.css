@@ -1,5 +1,7 @@
-.change-password-root {
+.change-password-root,
+.route-options-box {
   min-height: 100vh;
+  min-height: 100svh;
   background-color: #f5f5f5;
   position: relative;
 }
@@ -34,7 +36,7 @@
 
 .settings-main-column {
   flex: 1;
-  margin-left: 0; 
+  margin-left: 250px;
   display: flex;
   justify-content: center; 
   align-items: center;     
@@ -61,4 +63,32 @@
   border-radius: 12px;
   padding: 40px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+  .settings-layout {
+    flex-direction: column;
+  }
+
+  .settings-left-column {
+    position: relative;
+    width: 100%;
+    height: auto;
+    border-right: none;
+  }
+
+  .settings-main-column {
+    padding: 24px 16px 80px;
+    min-height: auto;
+    margin-left: 0;
+  }
+
+  .settings-panel {
+    padding: 24px;
+  }
+
+  .close-btn {
+    top: 12px;
+    right: 12px;
+  }
 }
