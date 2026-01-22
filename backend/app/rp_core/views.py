@@ -472,7 +472,7 @@ class ChangePasswordView(views.APIView):
 
     
 @api_view(["GET"])
-def list_exchange_items(_req):
+def list_exchange_items(request):
     items = ExchangeItem.objects.filter(is_active=True).order_by("name")
     data = [{
         "id": item.id,
@@ -480,7 +480,27 @@ def list_exchange_items(_req):
         "description": item.description,
         "points_cost": item.points_cost,
         "stock": item.stock,
+        "image": request.build_absolute_uri(item.image.url) if item.image else None,
     } for item in items]
+    return Response(data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_redemptions(request):
+    redemptions = RewardRedemption.objects.filter(user=request.user).select_related('item')
+    data = [{
+        "id": redemption.id,
+        "item": {
+            "id": redemption.item.id,
+            "name": redemption.item.name,
+            "description": redemption.item.description,
+        },
+        "quantity": redemption.quantity,
+        "points_spent": redemption.points_spent,
+        "created_at": redemption.created_at.isoformat(),
+        "code": f"VOUCHER-{redemption.id}-{request.user.id}",
+    } for redemption in redemptions]
     return Response(data)
 
 
@@ -609,7 +629,9 @@ def redeem_reward(request):
 
         # Deduct points and stock, create redemption record
         try:
-            deduct_points(user, total_cost, reason="redeem_reward", ref=f"Redeem: Item {item.id} with quantity of {quantity}")
+            import time
+            unique_ref = f"Redeem: Item {item.id} with quantity of {quantity} at {int(time.time() * 1000000)}"
+            deduct_points(user, total_cost, reason="redeem_reward", ref=unique_ref)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

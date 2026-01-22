@@ -141,3 +141,11 @@ export async function fetchExchangeItems() {
 export async function redeemReward(itemId, quantity = 1) {
   return apiPost("/rewards/redeem/", { item_id: itemId, quantity });
 }
+
+/**
+ * Fetch user's redemptions
+ * @returns {Promise<array>} The user's redemptions
+ */
+export async function fetchUserRedemptions() {
+  return apiGet("/rewards/my-redemptions/");
+}
