@@ -1313,6 +1313,10 @@ body.rp-incident-dragging .map-incident-scroll {
         height: auto;
     }
 
+    .map-incident-panel-active {
+        z-index: 1200;
+    }
+
     .map-incident-panel-content {
         height: auto;
         padding: 0;
