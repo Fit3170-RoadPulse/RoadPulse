@@ -274,11 +274,21 @@ export default class MapView extends Component {
 
                         <div className="eta-tracker">
                             <div className="eta-card">
-                                <div className="eta-title">ETA</div>
-                                <div className="eta-arrival">{routeInfo?.arrival_time ?? "--"}</div>
-                                <div className="eta-duration">
-                                    {routeInfo?.eta ? `(${routeInfo?.eta} remaining)` : ""}
+                                <div className="eta-info">
+                                    <div className="eta-title">ETA</div>
+                                    <div className="eta-arrival">{routeInfo?.arrival_time ?? "--"}</div>
+                                    <div className="eta-duration">
+                                        {routeInfo?.eta ? `(${routeInfo?.eta} remaining)` : ""}
+                                    </div>
                                 </div>
+                                <button
+                                    className="eta-end-button"
+                                    onClick={() => {
+                                        showNavEndScreen();
+                                    }}
+                                >
+                                    End Navigation
+                                </button>
                             </div>
                         </div>
 
