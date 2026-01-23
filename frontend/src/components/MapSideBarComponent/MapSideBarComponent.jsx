@@ -8,10 +8,22 @@ import SearchIcon from "../../assets/search.png";
 import GoIcon from "../../assets/go.png";
 
 
-export default function MapPage({ onSearch }) {
+export default function MapPage({ onSearch, showRouteUI = false }) {
   useEffect(() => {
     if (typeof document === "undefined") return;
     const className = "rp-map-type-menu-open";
+    const infoClassName = "rp-map-info-open";
+    const routeClassName = "rp-route-ui-open";
+
+    const isElementVisible = (el) => {
+      if (!el) return false;
+      const style = window.getComputedStyle(el);
+      if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+        return false;
+      }
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
 
     const updateMenuState = () => {
       const menus = document.querySelectorAll(".gm-style-mtc ul[role='menu']");
@@ -23,6 +35,22 @@ export default function MapPage({ onSearch }) {
         }
       });
       document.body.classList.toggle(className, isOpen);
+
+      const infoWindows = document.querySelectorAll(
+        ".gm-style-iw, .gm-style-iw-c, .gm-style-iw-d, .gm-style-iw-t, .gm-style-iw-a, [class*='gm-style-iw']"
+      );
+      let infoOpen = false;
+      infoWindows.forEach((node) => {
+        if (isElementVisible(node)) infoOpen = true;
+      });
+      document.body.classList.toggle(infoClassName, infoOpen);
+
+      const routeNodes = document.querySelectorAll(".route-info-container, .route-info-card");
+      let routeOpen = false;
+      routeNodes.forEach((node) => {
+        if (isElementVisible(node)) routeOpen = true;
+      });
+      document.body.classList.toggle(routeClassName, showRouteUI || routeOpen);
     };
 
     updateMenuState();
@@ -33,14 +61,18 @@ export default function MapPage({ onSearch }) {
       attributes: true,
       attributeFilter: ["style", "class", "aria-expanded", "aria-hidden"],
     });
+    const intervalId = window.setInterval(updateMenuState, 250);
     window.addEventListener("resize", updateMenuState);
 
     return () => {
       observer.disconnect();
+      window.clearInterval(intervalId);
       window.removeEventListener("resize", updateMenuState);
       document.body.classList.remove(className);
+      document.body.classList.remove(infoClassName);
+      document.body.classList.remove(routeClassName);
     };
-  }, []);
+  }, [showRouteUI]);
 
   return (
     <div className="overlay"> {/* <- positioned and non-blocking by default */}
