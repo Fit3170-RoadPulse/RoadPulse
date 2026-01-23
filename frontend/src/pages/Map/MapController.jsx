@@ -582,17 +582,17 @@ export default class MapController extends Component {
             this.setSelectedReport(null);
         });
 
-        const showNavigationScreen = this.state.showNavigationScreen;
-        const isNavigationBegun = this.state.isNavigationBegun;
-
         map.addListener("click", (e) => {
-            if (showNavigationScreen || isNavigationBegun) { return; }
+            if (this.state.showNavigationScreen || this.state.isNavigationBegun) { return; }
 
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
             console.log(this.isAToBRef.current, "isAToB");
             console.log("currentlocation ", this.prevLocationRef.current);
 
-            if (!this.isAToBRef.current && this.prevLocationRef.current) {
+            let originMarker = this.state.mapMarkers.origin;
+            let destinationMarker = this.state.mapMarkers.destination;
+
+            if (!this.isAToBRef.current && this.prevLocationRef.current && !originMarker) {
                 console.log("Setting origin to user location:", this.prevLocationRef.current);
                 originMarker = new AdvancedMarkerElement({
                     map: map,
@@ -607,6 +607,7 @@ export default class MapController extends Component {
                     position: clicked,
                     title: "A",
                 });
+                this.setState({ mapMarkers: { origin: originMarker, destination: null } });
             } else if (!destinationMarker) {
                 destinationMarker = new AdvancedMarkerElement({
                     map: map,

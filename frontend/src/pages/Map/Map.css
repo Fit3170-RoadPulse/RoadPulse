@@ -247,6 +247,14 @@ body.rp-route-ui-open .origin-toggle {
     justify-content: center;
 }
 
+.time-picker-sheet-container {
+    display: none;
+}
+
+.time-picker-back {
+    display: none;
+}
+
 /* Route Info Card Styles */
 .route-info-container {
     position: absolute;
@@ -273,6 +281,18 @@ body.rp-route-ui-open .origin-toggle {
     min-width: 320px;
     position: relative;
     overflow: hidden;
+}
+
+.route-info-sheet {
+    display: contents;
+}
+
+.route-info-handle {
+    display: none;
+}
+
+.route-info-close {
+    display: none;
 }
 
 .route-info-gradient-bar {
@@ -572,6 +592,22 @@ body.rp-route-ui-open .origin-toggle {
 /* Overlay UI container */
 .map-overlay-ui {
     pointer-events: none;
+}
+
+body.rp-route-dragging {
+    overscroll-behavior: none;
+}
+
+body.rp-route-dragging .map-wrapper {
+    pointer-events: none;
+}
+
+body.rp-route-dragging .route-info-sheet {
+    touch-action: none;
+}
+
+body.rp-route-dragging .route-info-scroll {
+    overflow: hidden;
 }
 
 /* Profile dropdown */
@@ -1005,6 +1041,7 @@ body.rp-route-ui-open .origin-toggle {
     }
 
     .time-picker-container {
+        display: none;
         top: calc(124px + var(--safe-top));
         left: 50%;
         right: auto;
@@ -1019,24 +1056,198 @@ body.rp-route-ui-open .origin-toggle {
     }
 
     .route-info-container {
-        left: 50%;
-        right: auto;
+        left: 0;
+        right: 0;
         top: auto;
-        bottom: calc(88px + var(--safe-bottom));
-        transform: translateX(-50%);
+        bottom: calc(72px + var(--safe-bottom));
+        transform: none;
         height: auto;
-        max-height: 60vh;
-        gap: 12px;
+        max-height: 80vh;
+        gap: 0;
         scale: 1;
-        width: 92vw;
-        max-width: 360px;
+        width: 100vw;
+        max-width: none;
+        overflow: visible;
+        padding: 0;
+        pointer-events: auto;
+        touch-action: pan-y;
+        overscroll-behavior: contain;
+    }
+
+    .route-info-sheet {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        background: rgba(255, 255, 255, 0.96);
+        border-radius: 18px 18px 0 0;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        overflow: hidden;
+        height: var(--route-sheet-height, 38vh);
+        max-height: 78vh;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        width: 100%;
+        margin: 0;
+        padding-bottom: calc(6px + var(--safe-bottom));
+    }
+
+    body.rp-time-selector-open .route-info-container {
+        display: none;
+    }
+
+    .time-picker-sheet-container {
+        position: absolute;
+        display: block;
+        left: 0;
+        right: 0;
+        bottom: calc(72px + var(--safe-bottom));
+        z-index: 1001;
+        width: 100vw;
+        max-width: 100vw;
+        box-sizing: border-box;
+        pointer-events: auto;
+    }
+
+    .time-picker-sheet {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .route-info-handle {
+        display: block;
+        width: 100%;
+        height: 28px;
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        touch-action: none;
+    }
+
+    .route-info-close {
+        position: absolute;
+        top: 6px;
+        right: 12px;
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        border: none;
+        background: #ffffff;
+        color: #ef4444;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+        z-index: 2;
+    }
+
+    .time-picker-back {
+        position: absolute;
+        top: 6px;
+        right: 12px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: none;
+        background: #ffffff;
+        color: #111827;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+        z-index: 2;
+    }
+
+    .route-info-handle::after {
+        content: "";
+        display: block;
+        width: 56px;
+        height: 6px;
+        border-radius: 999px;
+        background: #d1d5db;
+        margin: 10px auto 0 auto;
+    }
+
+    .route-info-handle:active::after {
+        background: #9ca3af;
+    }
+
+    .route-info-scroll {
+        flex: 1;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        padding-bottom: calc(72px + var(--safe-bottom) + 16px);
+        min-height: 0;
+    }
+
+    .route-info-container.route-info-collapsed .route-info-sheet {
+        max-height: 38vh;
+    }
+
+    .route-info-container.route-info-expanded .route-info-sheet {
+        max-height: 78vh;
     }
 
     .route-info-card {
         min-width: 0;
         width: 100%;
-        padding: 16px 18px;
+        padding: 14px 16px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .time-picker-sheet .route-info-card {
+        padding-top: 22px;
+    }
+
+    .time-picker-sheet .time-picker-card {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .route-info-card + .route-info-card {
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .route-info-gradient-bar {
+        display: none;
+    }
+
+    .route-info-items {
+        max-height: none;
+        overflow: visible;
+        padding-right: 4px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .route-info-item {
+        flex: none;
+    }
+
+    .route-time-select-item,
+    .route-info-directions-item {
+        grid-column: 1 / -1;
     }
 
     .map-incident-panel {
@@ -1089,6 +1300,10 @@ body.rp-route-ui-open .origin-toggle {
         right: calc(12px + var(--safe-right) + var(--map-top-right-reserve) + var(--map-top-button-size) + var(--map-top-row-gap));
         left: auto;
         z-index: 1100;
+    }
+
+    body.rp-route-ui-open .clear-button-container {
+        display: none;
     }
 
     .profile-button-container {

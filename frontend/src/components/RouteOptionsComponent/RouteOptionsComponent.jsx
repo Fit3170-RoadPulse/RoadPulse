@@ -1,9 +1,10 @@
 import "./RouteOptionsComponent.css"
 
-export default function RouteOptionsComponent({isTollRoadsOn, toggleTollRoads}) {
-    return (<div class="routeOptions">
+export default function RouteOptionsComponent({ isTollRoadsOn, toggleTollRoads }) {
+    return (
+            <div className="routeOptions">
                 <h1>Route Options</h1>
-                <div class="tollRoadToggle">
+                <div className="tollRoadToggle">
                     <div>Avoid toll roads?</div>
                     <div
                         className={`toggleTollRoads ${isTollRoadsOn ? "on" : ""}`}
@@ -13,5 +14,5 @@ export default function RouteOptionsComponent({isTollRoadsOn, toggleTollRoads}) 
                     </div>
                 </div>
             </div>
-    )
+    );
 }
