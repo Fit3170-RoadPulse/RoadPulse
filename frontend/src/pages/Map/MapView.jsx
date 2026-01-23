@@ -615,6 +615,8 @@ export default class MapView extends Component {
                                     <button
                                         type="button"
                                         className="map-incident-handle"
+                                        onPointerDown={this.handleIncidentPointerDown}
+                                        onTouchStart={this.handleIncidentTouchStart}
                                         aria-label="Drag to resize incident details"
                                     />
                                     <div className="map-incident-scroll">

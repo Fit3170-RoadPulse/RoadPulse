@@ -771,6 +771,18 @@ body.rp-incident-dragging .map-incident-scroll {
     pointer-events: auto;
 }
 
+.map-incident-sheet {
+    display: contents;
+}
+
+.map-incident-handle {
+    display: none;
+}
+
+.map-incident-scroll {
+    display: contents;
+}
+
 /* Logout confirmation overlay */
 .map-logout-overlay {
     position: fixed;
@@ -1353,6 +1365,8 @@ body.rp-incident-dragging .map-incident-scroll {
         cursor: pointer;
         touch-action: none;
         pointer-events: auto;
+        position: relative;
+        z-index: 2;
     }
 
     .map-incident-handle::after {
@@ -1361,7 +1375,7 @@ body.rp-incident-dragging .map-incident-scroll {
         width: 56px;
         height: 6px;
         border-radius: 999px;
-        background: #d1d5db;
+        background: #cbd5e1;
         margin: 12px auto 0 auto;
     }
 
@@ -1375,8 +1389,11 @@ body.rp-incident-dragging .map-incident-scroll {
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
         touch-action: pan-y;
+        padding-top: 6px;
         padding-bottom: calc(72px + var(--safe-bottom) + 16px);
         min-height: 0;
+        position: relative;
+        z-index: 1;
     }
 
     .map-incident-scroll > .incident-card {
@@ -1385,17 +1402,9 @@ body.rp-incident-dragging .map-incident-scroll {
         overflow: visible;
     }
 
-.map-incident-sheet {
-    display: contents;
-}
-
-.map-incident-handle {
-    display: none;
-}
-
-.map-incident-scroll {
-    display: contents;
-}
+    .map-incident-scroll .incident-card-accent {
+        margin-top: 0;
+    }
 
     .map-nav-overlay {
         top: calc(70px + var(--safe-top));
