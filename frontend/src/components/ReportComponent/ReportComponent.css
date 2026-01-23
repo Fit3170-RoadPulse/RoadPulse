@@ -13,12 +13,123 @@
   padding: 18px 18px 16px 18px;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   color: #111827;
 }
 
 @media (max-width: 768px) {
   .rp-report-card {
-    max-height: 60vh;
+    max-height: calc(100vh - 200px);
+    padding: 14px 14px 12px 14px;
+    gap: 10px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+}
+
+@media (max-width: 480px) {
+  .rp-report-card {
+    max-height: calc(100vh - 220px);
+    padding: 12px 12px calc(10px + env(safe-area-inset-bottom)) 12px;
+    border-radius: 14px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .rp-report-accent {
+    height: 8px;
+    margin: -14px -14px 0 -14px;
+  }
+
+  .rp-report-header {
+    align-items: center;
+  }
+
+  .rp-report-title {
+    font-size: 1.05rem;
+  }
+
+  .rp-report-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .rp-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    font-size: 16px;
+  }
+
+  .rp-report-section {
+    padding: 8px 9px;
+  }
+
+  .rp-section-title {
+    font-size: 0.74rem;
+  }
+
+  .rp-section-main {
+    font-size: 0.86rem;
+    word-break: break-word;
+  }
+
+  .rp-section-meta {
+    font-size: 0.7rem;
+    overflow-wrap: anywhere;
+  }
+
+  .rp-form {
+    gap: 10px;
+  }
+
+  .rp-label {
+    font-size: 0.76rem;
+  }
+
+  .rp-helper {
+    font-size: 0.7rem;
+  }
+
+  .rp-input,
+  .rp-select,
+  .rp-textarea {
+    padding: 9px 10px;
+    font-size: 0.86rem;
+  }
+
+  .rp-textarea {
+    min-height: 84px;
+  }
+
+  .rp-actions {
+    justify-content: stretch;
+    position: sticky;
+    bottom: 0;
+    padding-top: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #ffffff 45%, #ffffff 100%);
+  }
+
+  .rp-primary-btn {
+    width: 100%;
+    padding: 11px 14px;
+  }
+}
+
+@supports (height: 100dvh) {
+  @media (max-width: 768px) {
+    .rp-report-card {
+      max-height: calc(100dvh - 200px);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .rp-report-card {
+      max-height: calc(100dvh - 220px);
+    }
   }
 }
 
