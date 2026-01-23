@@ -10,6 +10,7 @@ import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteO
 export default class MapView extends Component {
     state = {
         routeSheetHeightVh: 38,
+        incidentSheetHeightVh: 42,
     };
 
     componentDidMount = () => {
@@ -20,6 +21,9 @@ export default class MapView extends Component {
         if (prevProps.showRouteOptions && !this.props.showRouteOptions && this.state.routeSheetHeightVh !== 38) {
             this.setState({ routeSheetHeightVh: 38 });
         }
+        if (prevProps.selectedReport && !this.props.selectedReport && this.state.incidentSheetHeightVh !== 42) {
+            this.setState({ incidentSheetHeightVh: 42 });
+        }
         if (prevProps.showTimeSelector !== this.props.showTimeSelector) {
             this.syncTimeSelectorClass();
         }
@@ -28,6 +32,13 @@ export default class MapView extends Component {
     componentWillUnmount = () => {
         document.body.classList.remove("rp-time-selector-open");
         document.body.classList.remove("rp-route-dragging");
+        document.body.classList.remove("rp-incident-dragging");
+        window.removeEventListener("pointermove", this.handleIncidentPointerMove);
+        window.removeEventListener("pointerup", this.handleIncidentPointerUp);
+        window.removeEventListener("pointercancel", this.handleIncidentPointerUp);
+        window.removeEventListener("touchmove", this.handleIncidentTouchMove);
+        window.removeEventListener("touchend", this.handleIncidentTouchEnd);
+        window.removeEventListener("touchcancel", this.handleIncidentTouchEnd);
     };
 
     syncTimeSelectorClass = () => {
@@ -43,11 +54,22 @@ export default class MapView extends Component {
     routeDragStartHeight = 38;
     routeDragRaf = null;
     routeDragPointerType = null;
+    incidentDragActive = false;
+    incidentDragStartY = 0;
+    incidentDragStartHeight = 42;
+    incidentDragRaf = null;
 
     setRouteSheetHeight = (nextHeight) => {
         if (this.routeDragRaf) cancelAnimationFrame(this.routeDragRaf);
         this.routeDragRaf = requestAnimationFrame(() => {
             this.setState({ routeSheetHeightVh: nextHeight });
+        });
+    };
+
+    setIncidentSheetHeight = (nextHeight) => {
+        if (this.incidentDragRaf) cancelAnimationFrame(this.incidentDragRaf);
+        this.incidentDragRaf = requestAnimationFrame(() => {
+            this.setState({ incidentSheetHeightVh: nextHeight });
         });
     };
 
@@ -57,6 +79,13 @@ export default class MapView extends Component {
         this.routeDragStartHeight = this.state.routeSheetHeightVh;
         this.routeDragPointerType = pointerType;
         document.body.classList.add("rp-route-dragging");
+    };
+
+    startIncidentDrag = (clientY) => {
+        this.incidentDragActive = true;
+        this.incidentDragStartY = clientY;
+        this.incidentDragStartHeight = this.state.incidentSheetHeightVh;
+        document.body.classList.add("rp-incident-dragging");
     };
 
     handleRoutePointerDown = (event) => {
@@ -72,6 +101,19 @@ export default class MapView extends Component {
         window.addEventListener("pointercancel", this.handleRoutePointerUp);
     };
 
+    handleIncidentPointerDown = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.pointerId != null && event.currentTarget?.setPointerCapture) {
+            event.currentTarget.setPointerCapture(event.pointerId);
+        }
+        const clientY = event.clientY;
+        this.startIncidentDrag(clientY);
+        window.addEventListener("pointermove", this.handleIncidentPointerMove, { passive: false });
+        window.addEventListener("pointerup", this.handleIncidentPointerUp);
+        window.addEventListener("pointercancel", this.handleIncidentPointerUp);
+    };
+
     handleRouteSheetPointerDown = (event) => {
         if (window.innerWidth > 768) return;
         if (!event.currentTarget) return;
@@ -79,6 +121,15 @@ export default class MapView extends Component {
         const offsetY = event.clientY - rect.top;
         if (offsetY > 44) return;
         this.handleRoutePointerDown(event);
+    };
+
+    handleIncidentSheetPointerDown = (event) => {
+        if (window.innerWidth > 768) return;
+        if (!event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const offsetY = event.clientY - rect.top;
+        if (offsetY > 120) return;
+        this.handleIncidentPointerDown(event);
     };
 
     handleRoutePointerMove = (event) => {
@@ -96,6 +147,21 @@ export default class MapView extends Component {
         this.setRouteSheetHeight(nextHeight);
     };
 
+    handleIncidentPointerMove = (event) => {
+        if (!this.incidentDragActive) return;
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+        event.stopPropagation();
+        const clientY = event.clientY;
+        const deltaY = this.incidentDragStartY - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, this.incidentDragStartHeight + deltaVh));
+        this.setIncidentSheetHeight(nextHeight);
+    };
+
     handleRoutePointerUp = () => {
         if (!this.routeDragActive) return;
         this.routeDragActive = false;
@@ -111,6 +177,20 @@ export default class MapView extends Component {
         this.routeDragPointerType = null;
     };
 
+    handleIncidentPointerUp = () => {
+        if (!this.incidentDragActive) return;
+        this.incidentDragActive = false;
+        window.removeEventListener("pointermove", this.handleIncidentPointerMove);
+        window.removeEventListener("pointerup", this.handleIncidentPointerUp);
+        window.removeEventListener("pointercancel", this.handleIncidentPointerUp);
+        document.body.classList.remove("rp-incident-dragging");
+        const minVh = 32;
+        const maxVh = 78;
+        const midpoint = (minVh + maxVh) / 2;
+        const target = this.state.incidentSheetHeightVh >= midpoint ? maxVh : minVh;
+        this.setIncidentSheetHeight(target);
+    };
+
     handleRouteTouchStart = (event) => {
         if (this.routeDragActive) return;
         event.preventDefault();
@@ -123,6 +203,18 @@ export default class MapView extends Component {
         window.addEventListener("touchcancel", this.handleRouteTouchEnd);
     };
 
+    handleIncidentTouchStart = (event) => {
+        if (this.incidentDragActive) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        this.startIncidentDrag(clientY);
+        window.addEventListener("touchmove", this.handleIncidentTouchMove, { passive: false });
+        window.addEventListener("touchend", this.handleIncidentTouchEnd);
+        window.addEventListener("touchcancel", this.handleIncidentTouchEnd);
+    };
+
     handleRouteSheetTouchStart = (event) => {
         if (window.innerWidth > 768) return;
         if (!event.currentTarget) return;
@@ -131,6 +223,16 @@ export default class MapView extends Component {
         const rect = event.currentTarget.getBoundingClientRect();
         if (clientY - rect.top > 44) return;
         this.handleRouteTouchStart(event);
+    };
+
+    handleIncidentSheetTouchStart = (event) => {
+        if (window.innerWidth > 768) return;
+        if (!event.currentTarget) return;
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (clientY - rect.top > 120) return;
+        this.handleIncidentTouchStart(event);
     };
 
     handleTimeSlotSelect = (index) => {
@@ -154,11 +256,31 @@ export default class MapView extends Component {
         this.setRouteSheetHeight(nextHeight);
     };
 
+    handleIncidentTouchMove = (event) => {
+        if (!this.incidentDragActive) return;
+        event.preventDefault();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const deltaY = this.incidentDragStartY - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, this.incidentDragStartHeight + deltaVh));
+        this.setIncidentSheetHeight(nextHeight);
+    };
+
     handleRouteTouchEnd = () => {
         this.handleRoutePointerUp();
         window.removeEventListener("touchmove", this.handleRouteTouchMove);
         window.removeEventListener("touchend", this.handleRouteTouchEnd);
         window.removeEventListener("touchcancel", this.handleRouteTouchEnd);
+    };
+
+    handleIncidentTouchEnd = () => {
+        this.handleIncidentPointerUp();
+        window.removeEventListener("touchmove", this.handleIncidentTouchMove);
+        window.removeEventListener("touchend", this.handleIncidentTouchEnd);
+        window.removeEventListener("touchcancel", this.handleIncidentTouchEnd);
     };
 
     render() {
@@ -205,7 +327,7 @@ export default class MapView extends Component {
             showLogoutConfirm,
             handleLogout,
         } = this.props;
-        const { routeSheetHeightVh } = this.state;
+        const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
 
         return (
             <div className="map-page-container">
@@ -484,19 +606,33 @@ export default class MapView extends Component {
                     <div className={`map-incident-panel ${selectedReport ? "map-incident-panel-active" : "map-incident-panel-inactive"}`}>
                         <div className="map-incident-panel-content">
                             {selectedReport ? (
-                                <IncidentDetailsCard
-                                    report={selectedReport}
-                                    onClose={() => setSelectedReport(null)}
-                                    userLocation={userLocation}
-                                    onReportUpdated={(updated) => {
-                                        if (!updated?.id) return;
-                                        setSelectedReport(updated);
-                                        setReports((prev) => {
-                                            const next = prev.map((r) => (r.id === updated.id ? updated : r));
-                                            return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
-                                        });
-                                    }}
-                                />
+                                <div
+                                    className="map-incident-sheet"
+                                    style={{ "--incident-sheet-height": `${incidentSheetHeightVh}vh` }}
+                                    onPointerDown={this.handleIncidentSheetPointerDown}
+                                    onTouchStart={this.handleIncidentSheetTouchStart}
+                                >
+                                    <button
+                                        type="button"
+                                        className="map-incident-handle"
+                                        aria-label="Drag to resize incident details"
+                                    />
+                                    <div className="map-incident-scroll">
+                                        <IncidentDetailsCard
+                                            report={selectedReport}
+                                            onClose={() => setSelectedReport(null)}
+                                            userLocation={userLocation}
+                                            onReportUpdated={(updated) => {
+                                                if (!updated?.id) return;
+                                                setSelectedReport(updated);
+                                                setReports((prev) => {
+                                                    const next = prev.map((r) => (r.id === updated.id ? updated : r));
+                                                    return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
+                                                });
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             ) : null}
                         </div>
                     </div>
