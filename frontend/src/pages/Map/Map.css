@@ -78,6 +78,10 @@
     cursor: pointer;
     z-index: 1000;
     color: #374151;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .origin-toggle-options {
@@ -419,6 +423,16 @@
 .clear-button:hover {
     background-color: #fee2e2;
     transform: scale(1.05);
+}
+
+.clear-button-x {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    color: #dc2626;
+    display: block;
+    transform: translateY(-1px);
+    user-select: none;
 }
 
 /* Profile Dropdown Base Styles */
@@ -953,10 +967,16 @@
     .map-page-container {
         --sidebar-width: 0px;
         --ui-edge-gap: 12px;
+        --map-type-control-width: clamp(190px, 58vw, 260px);
+        --map-top-row-gap: 10px;
+        --map-top-button-size: 40px;
+        --map-top-right-reserve: 56px;
+        --map-top-row-offset: calc(12px + var(--safe-top));
+        --map-top-row-nudge: -4px;
     }
 
     .origin-toggle {
-        top: calc(64px + var(--safe-top));
+        top: calc(124px + var(--safe-top));
         left: 50%;
         right: auto;
         transform: translateX(-50%);
@@ -973,7 +993,7 @@
     }
 
     .time-picker-container {
-        top: calc(64px + var(--safe-top));
+        top: calc(124px + var(--safe-top));
         left: 50%;
         right: auto;
         transform: translateX(-50%);
@@ -1053,19 +1073,86 @@
     }
 
     .clear-button-container {
-        top: calc(12px + var(--safe-top));
-        right: calc(68px + var(--safe-right));
+        top: var(--map-top-row-offset);
+        right: calc(12px + var(--safe-right) + var(--map-top-right-reserve) + var(--map-top-button-size) + var(--map-top-row-gap));
+        left: auto;
+        z-index: 1100;
     }
 
     .profile-button-container {
-        top: calc(12px + var(--safe-top));
-        right: calc(12px + var(--safe-right));
+        top: var(--map-top-row-offset);
+        right: calc(12px + var(--safe-right) + var(--map-top-right-reserve));
+        left: auto;
+        z-index: 1100;
     }
 
     .clear-button,
     .profile-button {
-        width: 48px;
-        height: 48px;
+        width: var(--map-top-button-size);
+        height: var(--map-top-button-size);
+    }
+
+    .clear-button-x {
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1;
+        color: #dc2626;
+        display: block;
+        transform: translateY(-1px);
+        user-select: none;
+    }
+
+    .map-page-container .gm-style .gm-style-mtc {
+        margin-top: calc(var(--map-top-row-offset) + var(--map-top-row-nudge)) !important;
+        margin-left: calc(12px + var(--safe-left));
+        box-shadow: none;
+        max-width: calc(100% - var(--map-top-right-reserve) - (var(--map-top-button-size) * 2) - (var(--map-top-row-gap) * 3));
+        width: auto !important;
+        max-width: none;
+        display: inline-flex !important;
+        align-items: center;
+        flex-wrap: nowrap;
+        z-index: 1000;
+        float: left !important;
+        margin-right: 2px !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border-radius: 999px;
+    }
+
+    .map-page-container .gm-style .gm-style-mtc ul {
+        z-index: 1001 !important;
+    }
+
+    .map-page-container .gm-style .gm-style-mtc:last-of-type {
+        margin-right: 0 !important;
+    }
+
+    .map-page-container .gm-style .gm-style-mtc > button {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        height: var(--map-top-button-size) !important;
+        padding: 0 14px !important;
+        border-radius: 999px !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.01em;
+        background: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        color: #374151 !important;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    .map-page-container .gm-style .gm-style-mtc button[aria-pressed="true"],
+    .map-page-container .gm-style .gm-style-mtc button[aria-checked="true"],
+    .map-page-container .gm-style .gm-style-mtc button[aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #ffffff;
+    }
+
+    .map-page-container .gm-style .gm-style-mtc button:focus {
+        outline: none;
     }
 
     .speed-tracker {

@@ -514,7 +514,7 @@ export default class MapView extends Component {
                             className="clear-button"
                             title="Clear all pins and routes"
                         >
-                            <X size={24} color="#dc2626" />
+                            <span className="clear-button-x" aria-hidden="true">×</span>
                         </button>
                     </div>
 

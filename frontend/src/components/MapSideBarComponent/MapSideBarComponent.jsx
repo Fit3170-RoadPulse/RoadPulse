@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./MapSideBarComponent.css";
 import MapIcon from "../../assets/map.png";
 import PhoneCallIcon from "../../assets/phone-call.png";
@@ -9,6 +9,38 @@ import GoIcon from "../../assets/go.png";
 
 
 export default function MapPage({ onSearch }) {
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const className = "rp-map-type-menu-open";
+
+    const updateMenuState = () => {
+      const menus = document.querySelectorAll(".gm-style-mtc ul[role='menu']");
+      let isOpen = false;
+      menus.forEach((menu) => {
+        const style = window.getComputedStyle(menu);
+        if (style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0") {
+          isOpen = true;
+        }
+      });
+      document.body.classList.toggle(className, isOpen);
+    };
+
+    updateMenuState();
+    const observer = new MutationObserver(updateMenuState);
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["style", "class", "aria-expanded", "aria-hidden"],
+    });
+    window.addEventListener("resize", updateMenuState);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateMenuState);
+      document.body.classList.remove(className);
+    };
+  }, []);
 
   return (
     <div className="overlay"> {/* <- positioned and non-blocking by default */}
@@ -63,4 +95,3 @@ export default function MapPage({ onSearch }) {
     </div>
   );
 }
-
