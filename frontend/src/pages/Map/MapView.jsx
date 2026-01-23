@@ -150,7 +150,7 @@ export default class MapView extends Component {
 
                 {/* Overlay UI */}
                 <div className="map-overlay-ui">
-                    <MapPage onSearch={() => console.log("Search triggered!")} />
+                    <MapPage onSearch={() => console.log("Search triggered!")} showRouteUI={showRouteOptions} />
                 </div>
 
 

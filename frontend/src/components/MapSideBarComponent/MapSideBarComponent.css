@@ -151,7 +151,9 @@
         z-index: 900;
     }
 
-    body.rp-map-type-menu-open .search-bar {
+    body.rp-map-type-menu-open .search-bar,
+    body.rp-map-info-open .search-bar,
+    body.rp-route-ui-open .search-bar {
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
