@@ -125,6 +125,7 @@ export default class MapView extends Component {
 
     handleIncidentSheetPointerDown = (event) => {
         if (window.innerWidth > 768) return;
+        if (event.target?.closest?.(".incident-close-btn")) return;
         if (!event.currentTarget) return;
         const rect = event.currentTarget.getBoundingClientRect();
         const offsetY = event.clientY - rect.top;
@@ -227,6 +228,7 @@ export default class MapView extends Component {
 
     handleIncidentSheetTouchStart = (event) => {
         if (window.innerWidth > 768) return;
+        if (event.target?.closest?.(".incident-close-btn")) return;
         if (!event.currentTarget) return;
         const clientY = event.touches?.[0]?.clientY;
         if (typeof clientY !== "number") return;
