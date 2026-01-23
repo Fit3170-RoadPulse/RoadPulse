@@ -1344,15 +1344,15 @@ body.rp-incident-dragging .map-incident-scroll {
         box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
         border: 1px solid rgba(255, 255, 255, 0.7);
         overflow: hidden;
-        height: var(--incident-sheet-height, 42vh);
-        max-height: 78vh;
+        height: auto;
+        max-height: var(--incident-sheet-height, 42vh);
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
         touch-action: pan-y;
         width: 100vw;
         max-width: 100vw;
         margin: 0;
-        padding-bottom: calc(6px + var(--safe-bottom));
+        padding-bottom: 0;
     }
 
     .map-incident-handle {
@@ -1390,7 +1390,7 @@ body.rp-incident-dragging .map-incident-scroll {
         overscroll-behavior: contain;
         touch-action: pan-y;
         padding-top: 6px;
-        padding-bottom: calc(72px + var(--safe-bottom) + 16px);
+        padding-bottom: calc(12px + var(--safe-bottom));
         min-height: 0;
         position: relative;
         z-index: 1;
