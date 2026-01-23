@@ -610,6 +610,22 @@ body.rp-route-dragging .route-info-scroll {
     overflow: hidden;
 }
 
+body.rp-incident-dragging {
+    overscroll-behavior: none;
+}
+
+body.rp-incident-dragging .map-wrapper {
+    pointer-events: none;
+}
+
+body.rp-incident-dragging .map-incident-sheet {
+    touch-action: none;
+}
+
+body.rp-incident-dragging .map-incident-scroll {
+    overflow: hidden;
+}
+
 /* Profile dropdown */
 .profile-dropdown {
     position: absolute;
@@ -1292,15 +1308,90 @@ body.rp-route-dragging .route-info-scroll {
         left: 0;
         right: 0;
         top: auto;
-        bottom: calc(88px + var(--safe-bottom));
+        bottom: calc(72px + var(--safe-bottom));
         width: 100vw;
         height: auto;
     }
 
     .map-incident-panel-content {
         height: auto;
-        padding: 0 12px 12px 12px;
+        padding: 0;
     }
+
+    .map-incident-sheet {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        background: rgba(255, 255, 255, 0.96);
+        border-radius: 18px 18px 0 0;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        overflow: hidden;
+        height: var(--incident-sheet-height, 42vh);
+        max-height: 78vh;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        width: 100vw;
+        max-width: 100vw;
+        margin: 0;
+        padding-bottom: calc(6px + var(--safe-bottom));
+    }
+
+    .map-incident-handle {
+        display: block;
+        width: 100%;
+        height: 34px;
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        touch-action: none;
+        pointer-events: auto;
+    }
+
+    .map-incident-handle::after {
+        content: "";
+        display: block;
+        width: 56px;
+        height: 6px;
+        border-radius: 999px;
+        background: #d1d5db;
+        margin: 12px auto 0 auto;
+    }
+
+    .map-incident-handle:active::after {
+        background: #9ca3af;
+    }
+
+    .map-incident-scroll {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        padding-bottom: calc(72px + var(--safe-bottom) + 16px);
+        min-height: 0;
+    }
+
+    .map-incident-scroll > .incident-card {
+        max-height: none;
+        height: auto;
+        overflow: visible;
+    }
+
+.map-incident-sheet {
+    display: contents;
+}
+
+.map-incident-handle {
+    display: none;
+}
+
+.map-incident-scroll {
+    display: contents;
+}
 
     .map-nav-overlay {
         top: calc(70px + var(--safe-top));
