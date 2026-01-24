@@ -289,6 +289,8 @@ export default class MapView extends Component {
         const {
             mapData,
             setMarker,
+            hasOrigin,
+            hasDestination,
             isAToBRef,
             prevLocationRef,
             setUserLocation,
@@ -328,6 +330,18 @@ export default class MapView extends Component {
             setShowLogoutConfirm,
             showLogoutConfirm,
             handleLogout,
+            showSaveMenu,
+            toggleSaveMenu,
+            closeSaveMenu,
+            onSaveOriginPlace,
+            onSaveDestinationPlace,
+            mapMarkers,
+            openSavedDestinations,
+            showSavedDestinations,
+            isLoadingSavedDestinations,
+            savedDestinations,
+            closeSavedDestinations,
+            selectSavedDestination,
         } = this.props;
         const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
 
@@ -816,12 +830,22 @@ export default class MapView extends Component {
 
                                 <div className="route-info-scroll">
                                     {/* Route Options */}
-                                    <div className="route-info-card">
+                                    <div class="route-info-card">
                                         <div className="route-info-gradient-bar" />
-                                        <RouteOptionsComponent
-                                            isTollRoadsOn={isTollRoadsOn}
-                                            toggleTollRoads={toggleTollRoads}
-                                        />
+                                        <RouteOptionsComponent 
+                                            isTollRoadsOn={isTollRoadsOn} 
+                                            toggleTollRoads={toggleTollRoads}>
+                                        </RouteOptionsComponent>
+
+                                        <div
+                                            className="tollRoadToggle savedDestinationsOption"
+                                            onClick={openSavedDestinations}
+                                            role="button"
+                                            tabIndex={0}
+                                        >
+                                            <div>Saved destinations</div>
+                                            <div className="route-option-arrow">›</div>
+                                        </div>
                                     </div>
 
                                     {/* Route Info */}
@@ -834,23 +858,23 @@ export default class MapView extends Component {
                                             </div>
                                         )}
 
-                                        <h3 className="route-info-title">
-                                            Route Information
-                                        </h3>
+                                <h3 className="route-info-title">
+                                    Route Information
+                                </h3>
 
-                                        <div className="route-info-items">
-                                            {/* Distance */}
-                                            <div className="route-info-item">
-                                                <div className="route-info-icon distance">
-                                                    <span>📍</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-label">Distance</div>
-                                                    <div className="route-info-value">
-                                                        {routeInfo?.distanceKm ?? "N/A"} <span className="route-info-unit">km</span>
-                                                    </div>
-                                                </div>
+                                <div className="route-info-items">
+                                    {/* Distance */}
+                                    <div className="route-info-item">
+                                        <div className="route-info-icon distance">
+                                            <span>📍</span>
+                                        </div>
+                                        <div>
+                                            <div className="route-info-label">Distance</div>
+                                            <div className="route-info-value">
+                                                {routeInfo?.distanceKm ?? "N/A"} <span className="route-info-unit">km</span>
                                             </div>
+                                        </div>
+                                    </div>
 
                                             {/* Departure Time */}
                                             <div className="route-info-item">
@@ -895,19 +919,53 @@ export default class MapView extends Component {
                                                 </div>
                                             </button>
 
-                                            {/* Directions */}
-                                            <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
-                                                <div className="route-info-icon">
-                                                    <span>🗺️</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-value">Directions {"->"}</div>
-                                                </div>
-                                            </button>
+                                    {/* Directions */}
+                                    <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
+                                        <div className="route-info-icon">
+                                            <span>🗺️</span>
                                         </div>
-                                    </div>
+                                        <div>
+                                            <div className="route-info-value">Directions {"->"}</div>
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
+
+                            {showSavedDestinations && (
+                                <div className="saved-destinations-overlay" onClick={closeSavedDestinations}>
+                                    <div className="route-info-card saved-destinations-card" onClick={(e) => e.stopPropagation()}>
+                                        <div className="route-info-gradient-bar" />
+                                    
+                                        <div className="saved-destinations-header">
+                                            <h3>Saved destinations</h3>
+                                            <button className="saved-destinations-close" onClick={closeSavedDestinations}>✕</button>
+                                        </div>
+
+                                        {isLoadingSavedDestinations ? (
+                                            <div className="saved-destinations-loading">Loading...</div>
+                                        ) : (
+                                            <div className="saved-destinations-list">
+                                            {savedDestinations?.length ? savedDestinations.map((d) => (
+                                                <button
+                                                key={d.id}
+                                                className="saved-destinations-item"
+                                                onClick={() => selectSavedDestination(d)}
+                                                >
+                                                <div className="saved-destinations-title">{d.label}</div>
+                                                <div className="saved-destinations-sub">
+                                                    {d.address?.trim()
+                                                        ? d.address
+                                                        : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
+                                                </div>
+                                                </button>
+                                            )) : (
+                                                <div className="saved-destinations-empty">No saved destinations yet.</div>
+                                            )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 

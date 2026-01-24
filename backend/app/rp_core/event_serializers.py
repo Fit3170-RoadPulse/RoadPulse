@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ExchangeItem, AppUser
+from .models import ExchangeItem, AppUser, SavedDestination
 
 
 class RewardSerializer(serializers.ModelSerializer):
@@ -44,3 +44,8 @@ class AdminProfileSerializer(serializers.ModelSerializer):
         model = AppUser
         fields = ['id', 'username', 'email', 'is_staff', 'is_superuser', 'date_joined']
         read_only_fields = fields
+
+class SavedDestinationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SavedDestination
+        fields = ("id", "label", "latitude", "longitude", "address", "created_at")

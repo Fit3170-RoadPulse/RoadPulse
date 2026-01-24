@@ -7,7 +7,8 @@ from .models import (
     IncidentReportVote,
     OfficialEmergencyNumber,
     RewardRedemption,
-    PointTransaction
+    PointTransaction,
+    SavedDestination
 )
 
 
@@ -72,3 +73,9 @@ class PointTransactionAdmin(admin.ModelAdmin):
     list_display = ("user", "kind", "amount", "reason", "reference", "created_at")
     list_filter = ("kind", "created_at")
     search_fields = ("user__username", "reason", "reference")
+    
+@admin.register(SavedDestination)
+class SavedDestinationAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "label", "latitude", "longitude", "address", "created_at")
+    search_fields = ("user__username", "label")
+    list_filter = ("created_at",)

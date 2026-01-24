@@ -1,6 +1,6 @@
 import { Component } from "react";
 import axios from "axios";
-import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../lib/api";
+import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet } from "../../lib/api";
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
@@ -15,6 +15,8 @@ export default class MapController extends Component {
             username: "",
             routeInfo: null,
             mapMarkers: { origin: null, destination: null },
+            hasOrigin: false,
+            hasDestination: false,
             mapPolylines: [],
             availableTimes: [],
             selectedOffsetMinutes: 1,
@@ -42,6 +44,10 @@ export default class MapController extends Component {
             etaRemainingMinutes: null,
             isTollRoadsOn: false,
             chosenRouteState: null,
+            showSaveMenu: false,
+            showSavedDestinations: false,
+            savedDestinations: [],
+            isLoadingSavedDestinations: false,
         };
 
         this.lastRouteSelectionRef = null;
@@ -557,6 +563,8 @@ export default class MapController extends Component {
             showRouteOptions: false,
             availableTimes: [],
             selectedOffsetMinutes: 1,
+            showSaveMenu: false,
+            showSavedDestinations: false,
         });
     };
 
@@ -583,21 +591,25 @@ export default class MapController extends Component {
         });
 
         map.addListener("click", (e) => {
-            if (this.state.showNavigationScreen || this.state.isNavigationBegun) { return; }
+            const { showNavigationScreen, isNavigationBegun } = this.state;
+            if (showNavigationScreen || isNavigationBegun) { return; }
 
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
             console.log(this.isAToBRef.current, "isAToB");
             console.log("currentlocation ", this.prevLocationRef.current);
 
-            let originMarker = this.state.mapMarkers.origin;
-            let destinationMarker = this.state.mapMarkers.destination;
+            originMarker = this.state.mapMarkers.origin;
+            destinationMarker = this.state.mapMarkers.destination;
 
-            if (!this.isAToBRef.current && this.prevLocationRef.current && !originMarker) {
+            if (!this.isAToBRef.current && this.prevLocationRef.current) {
                 console.log("Setting origin to user location:", this.prevLocationRef.current);
                 originMarker = new AdvancedMarkerElement({
                     map: map,
                     position: { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude },
                     title: "A",
+                });
+                this.setState({ mapMarkers: { origin: originMarker, destination: null },
+                    hasOrigin: true,
                 });
             }
 
@@ -607,37 +619,44 @@ export default class MapController extends Component {
                     position: clicked,
                     title: "A",
                 });
-                this.setState({ mapMarkers: { origin: originMarker, destination: null } });
+                this.setState({ mapMarkers: { origin: originMarker, destination: null },
+                    hasOrigin: true,
+                });
             } else if (!destinationMarker) {
                 destinationMarker = new AdvancedMarkerElement({
                     map: map,
                     position: clicked,
                     title: "B",
                 });
-                this.setState({ mapMarkers: { origin: originMarker, destination: destinationMarker } });
-
                 const times = this.generateStartTimes();
                 this.setState({
+                    mapMarkers: { origin: originMarker, destination: destinationMarker },
+                    showSaveMenu: false,
                     availableTimes: times,
                     selectedOffsetMinutes: times[0]?.offsetMinutes ?? 1,
                     showRouteOptions: true,
-                });
+                    hasOrigin: true,
+                    hasDestination: true,
+                },
+                () => {
+                    console.log("After destination set:", this.state.mapMarkers);
+                }
+            );
                 
                 this.fetchRoute(originMarker.position, destinationMarker.position, times[0].offsetMinutes, map);
             } else {
                 originMarker.map = null;
                 destinationMarker.map = null;
 
-                this.setState((prevState) => {
-                    prevState.mapPolylines.forEach((polyline) => polyline.setMap(null));
-                    return { mapPolylines: [] };
-                });
+                this.state.mapPolylines.forEach((polyline) => polyline.setMap(null));
 
                 this.setState({
+                    mapPolylines: [],
                     routeInfo: null,
                     showRouteOptions: false,
                     availableTimes: [],
                     selectedOffsetMinutes: 1,
+                    showSaveMenu: false,
                 });
 
                 if (!this.isAToBRef.current && this.prevLocationRef.current) {
@@ -647,16 +666,21 @@ export default class MapController extends Component {
                         position: { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude },
                         title: "A",
                     });
+                    this.setState({ mapMarkers: { origin: originMarker, destination: null },
+                        hasOrigin: true,
+                    });
                 } else {
                     originMarker = new AdvancedMarkerElement({
                         map: map,
                         position: clicked,
                         title: "A",
                     });
+                    this.setState({ mapMarkers: { origin: originMarker, destination: null },
+                        hasOrigin: true,
+                    });
                 }
-                destinationMarker = null;
-                this.setState({ mapMarkers: { origin: originMarker, destination: null } });
             }
+        console.log("mapMarkers in state:", this.state.mapMarkers);
         });
     };
     handleTollRouteChange = async () => {
@@ -810,6 +834,103 @@ export default class MapController extends Component {
         });
 
         return polyline;
+    };
+
+    getMarkerCoords = (marker) => {
+        if (!marker || !marker.position) return null;
+
+        const { lat, lng } = this.normalizeLatLng(marker.position);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+        return {
+            latitude: lat,
+            longitude: lng,
+        };
+    };
+
+    saveMarkerPlace = async (marker, type) => {
+        if (!marker?.position) {
+            console.error("Marker has no position");
+            return;
+        }
+
+        const label = window.prompt(`Name this ${type.toLowerCase()}`);
+        if (!label || !label.trim()) {
+            console.warn("Empty label, aborting save");
+            return;
+        }
+
+        const pos = marker.position;
+
+        const rawLat =
+            typeof pos.lat === "function" ? pos.lat() : pos.lat;
+
+        const rawLng =
+            typeof pos.lng === "function" ? pos.lng() : pos.lng;
+
+        const latitude = Number(rawLat.toFixed(6));
+        const longitude = Number(rawLng.toFixed(6));
+
+        if (
+            typeof latitude !== "number" ||
+            typeof longitude !== "number"
+        ) {
+            console.error("Invalid lat/lng", latitude, longitude);
+            return;
+        }
+
+        // const address = await this.getAddressForLatLng(latitude, longitude);
+        const geocoder = new window.google.maps.Geocoder();
+
+        const address = await new Promise((resolve, reject) => {
+            geocoder.geocode(
+                { location: { lat: latitude, lng: longitude } },
+                (results, status) => {
+                    if (status === "OK" && results?.[0]) {
+                        resolve(results[0].formatted_address);
+                    } else {
+                        reject("Failed to reverse geocode");
+                    }
+                }
+            );
+        });
+
+        const payload = {
+            label: label.trim(),
+            latitude,
+            longitude,
+            address,
+        };
+
+        try {
+
+            await apiPost("/user/saved-destinations/", payload);
+
+            console.log("Saved place:", label, address);
+        } catch (e) {
+            console.error("Failed to save place:", e);
+            
+            const status = e?.response?.status;
+            if (status === 401) alert("Not logged in / token expired.");
+            else if (status === 400) alert("Bad request (backend field mismatch).");
+            else if (status === 404) alert("Endpoint not found (/user/frequent-routes/).");
+            alert("Failed to save place.");
+        }
+    };
+
+    saveOriginPlace = async () => {
+        const { mapMarkers } = this.state;
+        if (!mapMarkers?.origin) return;
+
+        await this.saveMarkerPlace(mapMarkers.origin, "Origin");
+    };
+
+    saveDestinationPlace = async () => {
+        const { mapMarkers } = this.state;
+        if (!mapMarkers?.destination) return;
+
+        await this.saveMarkerPlace(mapMarkers.destination, "Destination");
     };
 
     generateStartTimes = () => {
@@ -1143,11 +1264,94 @@ export default class MapController extends Component {
         this.setState({ isTollRoadsOn: !this.state.isTollRoadsOn });
     };
 
+    toggleSaveMenu = () => {
+        this.setState((prev) => ({ showSaveMenu: !prev.showSaveMenu }));
+    };
+
+    closeSaveMenu = () => {
+        this.setState({ showSaveMenu: false });
+    };
+
+    handleSaveOriginClick = async () => {
+        await this.saveOriginPlace();
+        this.closeSaveMenu();
+    };
+
+    handleSaveDestinationClick = async () => {
+        await this.saveDestinationPlace();
+        this.closeSaveMenu();
+    };
+
+    openSavedDestinations = async () => {
+        this.setState({ showSavedDestinations: true });
+
+        await this.fetchSavedDestinations();
+    };
+
+    closeSavedDestinations = () => {
+        this.setState({ showSavedDestinations: false });
+    };
+
+    fetchSavedDestinations = async () => {
+        try {
+            this.setState({ isLoadingSavedDestinations: true });
+
+            const res = await apiGet("/user/saved-destinations/");
+            const data = Array.isArray(res) ? res : (res?.data ?? []);
+            this.setState({ savedDestinations: data });
+        } catch (e) {
+            console.error("Failed to fetch saved destinations:", e);
+            alert("Failed to load saved destinations.");
+        } finally {
+            this.setState({ isLoadingSavedDestinations: false });
+        }
+    };
+
+    selectSavedDestination = async (dest) => {
+        const map = this.state.mapRef || this.mapInstanceRef;
+        const cur = this.prevLocationRef?.current;
+        if (!map || !cur) {
+            alert("Current location not available yet.");
+            return;
+        }
+
+        this.setState({ showSavedDestinations: false });
+
+        this.clearMap();
+
+        const g = window.google;
+        if (!g?.maps?.importLibrary) return;
+        const { AdvancedMarkerElement } = await g.maps.importLibrary("marker");
+
+        const originMarker = new AdvancedMarkerElement({
+            map,
+            position: { lat: cur.latitude, lng: cur.longitude },
+            title: "A",
+        });
+
+        const destinationMarker = new AdvancedMarkerElement({
+            map,
+            position: { lat: Number(dest.latitude), lng: Number(dest.longitude) },
+            title: "B",
+        });
+
+        this.setState({
+            mapMarkers: { origin: originMarker, destination: destinationMarker },
+            showRouteOptions: true,
+            showSaveMenu: false,
+        });
+
+        const selectedOffsetMinutes = this.state.selectedOffsetMinutes ?? 1;
+        await this.fetchRoute(originMarker.position, destinationMarker.position, selectedOffsetMinutes, map);
+    };
+
     render() {
         return (
             <MapView
                 mapData={this.state.mapData}
                 setMarker={this.setMarker}
+                hasOrigin={this.state.hasOrigin}
+                hasDestination={this.state.hasDestination}
                 isAToBRef={this.isAToBRef}
                 prevLocationRef={this.prevLocationRef}
                 setUserLocation={this.setUserLocation}
@@ -1187,6 +1391,17 @@ export default class MapController extends Component {
                 setShowLogoutConfirm={this.setShowLogoutConfirm}
                 showLogoutConfirm={this.state.showLogoutConfirm}
                 handleLogout={this.handleLogout}
+                showSaveMenu={this.state.showSaveMenu}
+                toggleSaveMenu={this.toggleSaveMenu}
+                closeSaveMenu={this.closeSaveMenu}
+                onSaveOriginPlace={this.handleSaveOriginClick}
+                onSaveDestinationPlace={this.handleSaveDestinationClick}
+                openSavedDestinations={this.openSavedDestinations}
+                closeSavedDestinations={this.closeSavedDestinations}
+                savedDestinations={this.state.savedDestinations}
+                showSavedDestinations={this.state.showSavedDestinations}
+                isLoadingSavedDestinations={this.state.isLoadingSavedDestinations}
+                selectSavedDestination={this.selectSavedDestination}
             />
         );
     };

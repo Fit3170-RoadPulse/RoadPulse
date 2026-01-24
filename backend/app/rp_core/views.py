@@ -30,8 +30,8 @@ from .incidentReport import (
     IncidentReportVoteCreateSerializer,
     RegisterSerializerIncidentReport,
 )
-from .event_serializers import RewardSerializer, RewardCreateUpdateSerializer, AdminProfileSerializer
-from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption
+from .event_serializers import RewardSerializer, RewardCreateUpdateSerializer, AdminProfileSerializer, SavedDestinationSerializer
+from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption, SavedDestination
 
 
 import hashlib
@@ -711,3 +711,22 @@ def admin_profile(request):
     serializer = AdminProfileSerializer(request.user)
     return Response(serializer.data)
 
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def saved_destinations(request):
+    """
+    GET: list current user's saved destinations
+    POST: create a new saved destination for current user
+    """
+    if request.method == "GET":
+        qs = SavedDestination.objects.filter(user=request.user).order_by("-created_at")
+        serializer = SavedDestinationSerializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # POST
+    serializer = SavedDestinationSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=request.user)  # attach user here (don't trust client)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

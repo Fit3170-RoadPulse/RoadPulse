@@ -16,4 +16,5 @@ urlpatterns = [
     path("admin/rewards/", views.admin_rewards, name="admin-rewards"),
     path("admin/rewards/<int:reward_id>/", views.admin_reward_detail, name="admin-reward-detail"),
     path("admin/profile/", views.admin_profile, name="admin-profile"),
+    path("user/saved-destinations/", views.saved_destinations, name="saved-destinations"),
 ]
