@@ -207,10 +207,40 @@ def reward_account(request):
     user = request.user
     return Response({
         "id": user.id,
-        "username": user.get_username(),
+        "username": user.username,
+        "email": user.email,
         "reward_points": user.reward_points,
         "cumulative_distance": user.cumulative_distance,
         "provisional_points": getattr(user, "provisional_points", 0),
+        "date_joined": user.date_joined.isoformat() if user.date_joined else None,
+    })
+
+
+# Update authenticated user's profile
+@api_view(["PUT", "PATCH"])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    data = request.data
+    
+    # Update username if provided
+    if "username" in data:
+        new_username = data["username"].strip()
+        if not new_username:
+            return Response({"detail": "Username cannot be empty."}, status=400)
+        # Check if username is already taken by another user
+        from .models import AppUser
+        if AppUser.objects.filter(username=new_username).exclude(id=user.id).exists():
+            return Response({"detail": "Username is already taken."}, status=400)
+        user.username = new_username
+    
+    user.save()
+    
+    return Response({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "detail": "Profile updated successfully."
     })
 
 

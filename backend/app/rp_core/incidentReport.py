@@ -54,7 +54,7 @@ class IncidentReportSerializer(serializers.ModelSerializer):
     def get_reporter(self, obj):
         if not obj.reporter_id:
             return None
-        return {"id": obj.reporter_id, "username": obj.reporter.get_username()}
+        return {"id": obj.reporter_id, "username": obj.reporter.username}
 
 
 class IncidentReportVoteCreateSerializer(serializers.Serializer):

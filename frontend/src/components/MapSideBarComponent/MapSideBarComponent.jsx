@@ -6,6 +6,7 @@ import RouteIcon from "../../assets/route.png";
 import ReportIcon from "../../assets/report.png";
 import SearchIcon from "../../assets/search.png";
 import GoIcon from "../../assets/go.png";
+import ProfileIcon from "../../assets/profile.png";
 
 
 export default function MapPage({ onSearch, showRouteUI = false }) {
@@ -87,12 +88,6 @@ export default function MapPage({ onSearch, showRouteUI = false }) {
           </button>
 
           <button className="sidebar-button sidebar-button-clickable"
-            onClick={() => (window.location.href = "/navigate")}>
-            <img src={RouteIcon} alt="Navigate" />
-            <span>Navigate</span>
-          </button>
-
-          <button className="sidebar-button sidebar-button-clickable"
             onClick={() => (window.location.href = "/Emergency")}>
             <img src={PhoneCallIcon} alt="Emergency" />
             <span>Emergency</span>
@@ -103,7 +98,15 @@ export default function MapPage({ onSearch, showRouteUI = false }) {
             <img src={ReportIcon} alt="Reports" />
             <span>Reports</span>
           </button>
+
+          <button className="sidebar-button sidebar-button-clickable"
+            onClick={() => (window.location.href = "/profile-page")}>
+            <img src={ProfileIcon} alt="Profile" />
+            <span>Profile</span>
+          </button>
+
         </div>
+        
 
         <div className="content">
           <div className="search-bar">

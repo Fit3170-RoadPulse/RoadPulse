@@ -141,3 +141,24 @@ export async function fetchExchangeItems() {
 export async function redeemReward(itemId, quantity = 1) {
   return apiPost("/rewards/redeem/", { item_id: itemId, quantity });
 }
+
+/**
+ * Update the current user's profile
+ * @param {object} data - Profile data to update (e.g., { username: "newName" })
+ * @returns {Promise<object>} The updated profile details
+ */
+export async function updateProfile(data) {
+  const response = await authenticatedFetch("/profile/update/", {
+    method: "PUT",
+    body: JSON.stringify(data)
+  });
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Request failed" }));
+    throw new Error(error.detail || "Request failed");
+  }
+
+  return response.json();
+}
