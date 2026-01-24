@@ -930,42 +930,6 @@ export default class MapView extends Component {
                                             </button>
                                         </div>
                                     </div>
-
-                                    {showSavedDestinations && (
-                                        <div className="saved-destinations-overlay" onClick={closeSavedDestinations}>
-                                            <div className="route-info-card saved-destinations-card" onClick={(e) => e.stopPropagation()}>
-                                                <div className="route-info-gradient-bar" />
-                                            
-                                                <div className="saved-destinations-header">
-                                                    <h3>Saved destinations</h3>
-                                                    <button className="saved-destinations-close" onClick={closeSavedDestinations}>✕</button>
-                                                </div>
-
-                                                {isLoadingSavedDestinations ? (
-                                                    <div className="saved-destinations-loading">Loading...</div>
-                                                ) : (
-                                                    <div className="saved-destinations-list">
-                                                    {savedDestinations?.length ? savedDestinations.map((d) => (
-                                                        <button
-                                                        key={d.id}
-                                                        className="saved-destinations-item"
-                                                        onClick={() => selectSavedDestination(d)}
-                                                        >
-                                                        <div className="saved-destinations-title">{d.label}</div>
-                                                        <div className="saved-destinations-sub">
-                                                            {d.address?.trim()
-                                                                ? d.address
-                                                                : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
-                                                        </div>
-                                                        </button>
-                                                    )) : (
-                                                        <div className="saved-destinations-empty">No saved destinations yet.</div>
-                                                    )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1109,6 +1073,41 @@ export default class MapView extends Component {
                         </div>
                     )}
                 </div>
+                )}
+                {showSavedDestinations && (
+                    <div className="saved-destinations-overlay" onClick={closeSavedDestinations}>
+                        <div className="route-info-card saved-destinations-card" onClick={(e) => e.stopPropagation()}>
+                            <div className="route-info-gradient-bar" />
+                        
+                            <div className="saved-destinations-header">
+                                <h3>Saved destinations</h3>
+                                <button className="saved-destinations-close" onClick={closeSavedDestinations}>✕</button>
+                            </div>
+
+                            {isLoadingSavedDestinations ? (
+                                <div className="saved-destinations-loading">Loading...</div>
+                            ) : (
+                                <div className="saved-destinations-list">
+                                {savedDestinations?.length ? savedDestinations.map((d) => (
+                                    <button
+                                    key={d.id}
+                                    className="saved-destinations-item"
+                                    onClick={() => selectSavedDestination(d)}
+                                    >
+                                    <div className="saved-destinations-title">{d.label}</div>
+                                    <div className="saved-destinations-sub">
+                                        {d.address?.trim()
+                                            ? d.address
+                                            : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
+                                    </div>
+                                    </button>
+                                )) : (
+                                    <div className="saved-destinations-empty">No saved destinations yet.</div>
+                                )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 )}
             </div>
         );
