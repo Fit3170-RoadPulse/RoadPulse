@@ -30,14 +30,16 @@
 
 .back-button {
     position: absolute;
-    right: 16px;
     top: 50%;
+    right: 16px;
     transform: translateY(-50%);
-    padding: 8px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
     border: none;
     background-color: transparent;
     cursor: pointer;
-    border-radius: 8px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -48,6 +50,18 @@
 .back-button:hover {
     background-color: #f3f4f6;
     outline: none;
+}
+
+@media (max-width: 768px) {
+    .back-button {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        transform: none;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        z-index: 100;
+    }
 }
 
 .page-title {
