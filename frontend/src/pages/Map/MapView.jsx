@@ -1,0 +1,1056 @@
+import { Component } from "react";
+import { User, Award, Settings, LogOut, X, AlertTriangle } from "lucide-react";
+import MapComponent from "../../components/MapComponent/MapComponent";
+import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
+import "./Map.css";
+import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
+import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
+import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent.jsx";
+
+export default class MapView extends Component {
+    state = {
+        routeSheetHeightVh: 38,
+        incidentSheetHeightVh: 42,
+    };
+
+    componentDidMount = () => {
+        this.syncTimeSelectorClass();
+    };
+
+    componentDidUpdate = (prevProps) => {
+        if (prevProps.showRouteOptions && !this.props.showRouteOptions && this.state.routeSheetHeightVh !== 38) {
+            this.setState({ routeSheetHeightVh: 38 });
+        }
+        if (prevProps.selectedReport && !this.props.selectedReport && this.state.incidentSheetHeightVh !== 42) {
+            this.setState({ incidentSheetHeightVh: 42 });
+        }
+        if (prevProps.showTimeSelector !== this.props.showTimeSelector) {
+            this.syncTimeSelectorClass();
+        }
+    };
+
+    componentWillUnmount = () => {
+        document.body.classList.remove("rp-time-selector-open");
+        document.body.classList.remove("rp-route-dragging");
+        document.body.classList.remove("rp-incident-dragging");
+        window.removeEventListener("pointermove", this.handleIncidentPointerMove);
+        window.removeEventListener("pointerup", this.handleIncidentPointerUp);
+        window.removeEventListener("pointercancel", this.handleIncidentPointerUp);
+        window.removeEventListener("touchmove", this.handleIncidentTouchMove);
+        window.removeEventListener("touchend", this.handleIncidentTouchEnd);
+        window.removeEventListener("touchcancel", this.handleIncidentTouchEnd);
+    };
+
+    syncTimeSelectorClass = () => {
+        if (this.props.showTimeSelector) {
+            document.body.classList.add("rp-time-selector-open");
+        } else {
+            document.body.classList.remove("rp-time-selector-open");
+        }
+    };
+
+    routeDragActive = false;
+    routeDragStartY = 0;
+    routeDragStartHeight = 38;
+    routeDragRaf = null;
+    routeDragPointerType = null;
+    incidentDragActive = false;
+    incidentDragStartY = 0;
+    incidentDragStartHeight = 42;
+    incidentDragRaf = null;
+
+    setRouteSheetHeight = (nextHeight) => {
+        if (this.routeDragRaf) cancelAnimationFrame(this.routeDragRaf);
+        this.routeDragRaf = requestAnimationFrame(() => {
+            this.setState({ routeSheetHeightVh: nextHeight });
+        });
+    };
+
+    setIncidentSheetHeight = (nextHeight) => {
+        if (this.incidentDragRaf) cancelAnimationFrame(this.incidentDragRaf);
+        this.incidentDragRaf = requestAnimationFrame(() => {
+            this.setState({ incidentSheetHeightVh: nextHeight });
+        });
+    };
+
+    startRouteDrag = (clientY, pointerType = "pointer") => {
+        this.routeDragActive = true;
+        this.routeDragStartY = clientY;
+        this.routeDragStartHeight = this.state.routeSheetHeightVh;
+        this.routeDragPointerType = pointerType;
+        document.body.classList.add("rp-route-dragging");
+    };
+
+    startIncidentDrag = (clientY) => {
+        this.incidentDragActive = true;
+        this.incidentDragStartY = clientY;
+        this.incidentDragStartHeight = this.state.incidentSheetHeightVh;
+        document.body.classList.add("rp-incident-dragging");
+    };
+
+    handleRoutePointerDown = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.pointerId != null && event.currentTarget?.setPointerCapture) {
+            event.currentTarget.setPointerCapture(event.pointerId);
+        }
+        const clientY = event.clientY;
+        this.startRouteDrag(clientY, event.pointerType || "pointer");
+        window.addEventListener("pointermove", this.handleRoutePointerMove, { passive: false });
+        window.addEventListener("pointerup", this.handleRoutePointerUp);
+        window.addEventListener("pointercancel", this.handleRoutePointerUp);
+    };
+
+    handleIncidentPointerDown = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.pointerId != null && event.currentTarget?.setPointerCapture) {
+            event.currentTarget.setPointerCapture(event.pointerId);
+        }
+        const clientY = event.clientY;
+        this.startIncidentDrag(clientY);
+        window.addEventListener("pointermove", this.handleIncidentPointerMove, { passive: false });
+        window.addEventListener("pointerup", this.handleIncidentPointerUp);
+        window.addEventListener("pointercancel", this.handleIncidentPointerUp);
+    };
+
+    handleRouteSheetPointerDown = (event) => {
+        if (window.innerWidth > 768) return;
+        if (!event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const offsetY = event.clientY - rect.top;
+        if (offsetY > 44) return;
+        this.handleRoutePointerDown(event);
+    };
+
+    handleIncidentSheetPointerDown = (event) => {
+        if (window.innerWidth > 768) return;
+        if (event.target?.closest?.(".incident-close-btn")) return;
+        if (!event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const offsetY = event.clientY - rect.top;
+        if (offsetY > 120) return;
+        this.handleIncidentPointerDown(event);
+    };
+
+    handleRoutePointerMove = (event) => {
+        if (!this.routeDragActive) return;
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+        event.stopPropagation();
+        const clientY = event.clientY;
+        const deltaY = this.routeDragStartY - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, this.routeDragStartHeight + deltaVh));
+        this.setRouteSheetHeight(nextHeight);
+    };
+
+    handleIncidentPointerMove = (event) => {
+        if (!this.incidentDragActive) return;
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+        event.stopPropagation();
+        const clientY = event.clientY;
+        const deltaY = this.incidentDragStartY - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, this.incidentDragStartHeight + deltaVh));
+        this.setIncidentSheetHeight(nextHeight);
+    };
+
+    handleRoutePointerUp = () => {
+        if (!this.routeDragActive) return;
+        this.routeDragActive = false;
+        window.removeEventListener("pointermove", this.handleRoutePointerMove);
+        window.removeEventListener("pointerup", this.handleRoutePointerUp);
+        window.removeEventListener("pointercancel", this.handleRoutePointerUp);
+        document.body.classList.remove("rp-route-dragging");
+        const minVh = 32;
+        const maxVh = 78;
+        const midpoint = (minVh + maxVh) / 2;
+        const target = this.state.routeSheetHeightVh >= midpoint ? maxVh : minVh;
+        this.setRouteSheetHeight(target);
+        this.routeDragPointerType = null;
+    };
+
+    handleIncidentPointerUp = () => {
+        if (!this.incidentDragActive) return;
+        this.incidentDragActive = false;
+        window.removeEventListener("pointermove", this.handleIncidentPointerMove);
+        window.removeEventListener("pointerup", this.handleIncidentPointerUp);
+        window.removeEventListener("pointercancel", this.handleIncidentPointerUp);
+        document.body.classList.remove("rp-incident-dragging");
+        const minVh = 32;
+        const maxVh = 78;
+        const midpoint = (minVh + maxVh) / 2;
+        const target = this.state.incidentSheetHeightVh >= midpoint ? maxVh : minVh;
+        this.setIncidentSheetHeight(target);
+    };
+
+    handleRouteTouchStart = (event) => {
+        if (this.routeDragActive) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        this.startRouteDrag(clientY, "touch");
+        window.addEventListener("touchmove", this.handleRouteTouchMove, { passive: false });
+        window.addEventListener("touchend", this.handleRouteTouchEnd);
+        window.addEventListener("touchcancel", this.handleRouteTouchEnd);
+    };
+
+    handleIncidentTouchStart = (event) => {
+        if (this.incidentDragActive) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        this.startIncidentDrag(clientY);
+        window.addEventListener("touchmove", this.handleIncidentTouchMove, { passive: false });
+        window.addEventListener("touchend", this.handleIncidentTouchEnd);
+        window.addEventListener("touchcancel", this.handleIncidentTouchEnd);
+    };
+
+    handleRouteSheetTouchStart = (event) => {
+        if (window.innerWidth > 768) return;
+        if (!event.currentTarget) return;
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (clientY - rect.top > 44) return;
+        this.handleRouteTouchStart(event);
+    };
+
+    handleIncidentSheetTouchStart = (event) => {
+        if (window.innerWidth > 768) return;
+        if (event.target?.closest?.(".incident-close-btn")) return;
+        if (!event.currentTarget) return;
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (clientY - rect.top > 120) return;
+        this.handleIncidentTouchStart(event);
+    };
+
+    handleTimeSlotSelect = (index) => {
+        const { handleTimeChange, showTimeSelectorFunction } = this.props;
+        handleTimeChange(index);
+        if (window.innerWidth <= 768) {
+            showTimeSelectorFunction();
+        }
+    };
+
+    handleRouteTouchMove = (event) => {
+        if (!this.routeDragActive) return;
+        event.preventDefault();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const deltaY = this.routeDragStartY - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, this.routeDragStartHeight + deltaVh));
+        this.setRouteSheetHeight(nextHeight);
+    };
+
+    handleIncidentTouchMove = (event) => {
+        if (!this.incidentDragActive) return;
+        event.preventDefault();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const deltaY = this.incidentDragStartY - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, this.incidentDragStartHeight + deltaVh));
+        this.setIncidentSheetHeight(nextHeight);
+    };
+
+    handleRouteTouchEnd = () => {
+        this.handleRoutePointerUp();
+        window.removeEventListener("touchmove", this.handleRouteTouchMove);
+        window.removeEventListener("touchend", this.handleRouteTouchEnd);
+        window.removeEventListener("touchcancel", this.handleRouteTouchEnd);
+    };
+
+    handleIncidentTouchEnd = () => {
+        this.handleIncidentPointerUp();
+        window.removeEventListener("touchmove", this.handleIncidentTouchMove);
+        window.removeEventListener("touchend", this.handleIncidentTouchEnd);
+        window.removeEventListener("touchcancel", this.handleIncidentTouchEnd);
+    };
+
+    render() {
+        const {
+            mapData,
+            setMarker,
+            isAToBRef,
+            prevLocationRef,
+            setUserLocation,
+            showNavigationScreen,
+            routeInfo,
+            navigationIndex,
+            showNavEndScreen,
+            speedKmh,
+            showNavigationEndScreen,
+            finishNavigation,
+            showAll,
+            selectedReport,
+            setSelectedReport,
+            userLocation,
+            setReports,
+            isAToBState,
+            setIsAToBState,
+            isTollRoadsOn,
+            toggleTollRoads,
+            showTimeSelector,
+            showTimeSelectorFunction,
+            showRouteOptions,
+            availableTimes,
+            selectedOffsetMinutes,
+            isLoadingRoute,
+            handleTimeChange,
+            liveNavigateToDestination,
+            clearMap,
+            showErrorPopup,
+            setShowErrorPopup,
+            showDropdown,
+            setShowDropdown,
+            username,
+            points,
+            handleRewardsClick,
+            handleSettingsClick,
+            setShowLogoutConfirm,
+            showLogoutConfirm,
+            handleLogout,
+        } = this.props;
+        const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
+
+        return (
+            <div className="map-page-container">
+                <div className="map-wrapper">
+                    <MapComponent
+                        API_KEY={mapData?.GMAPS_KEY}
+                        MAP_ID={mapData?.GMAPS_ID}
+                        map_function={setMarker}
+                        showUserLocation
+                        toggleSelectionType={isAToBRef}
+                        currentLocation={prevLocationRef}
+                        onUserLocation={setUserLocation}
+                    />
+                </div>
+
+                {showNavigationScreen && (
+                    <>
+                        <div className="map-nav-overlay">
+                            <h2>Directions</h2>
+                            <div className="map-nav-container">
+                                <ol>
+                                    {routeInfo?.steps?.map((step, index) => (
+                                        <li key={index}
+                                            className={index === navigationIndex ? "active" : ""}
+                                        >
+                                            <div>{step?.navigationInstruction.instructions}</div>
+                                            <div>{step?.distanceMeters}m</div>
+                                            {/* <div>{step?.startLocation.latLng.latitude}</div>
+                                            <div>{step?.startLocation.latLng.longitude}</div>
+                                            <div>{step?.endLocation.latLng.latitude}</div>
+                                            <div>{step?.endLocation.latLng.longitude}</div> */}
+                                        </li>
+                                    ))}
+                                </ol>
+                            </div>
+
+                            {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
+                            {/* <div className="map-nav-controls">
+                                <button
+                                    onClick={() => setNavigationIndex((s) => Math.max(s - 1, 0))}
+                                    disabled={navigationIndex === 0}
+                                >
+                                    Previous
+                                </button>
+                                <button
+                                    onClick={() =>
+                                        setNavigationIndex((s) => Math.min(s + 1, routeInfo?.steps.length ?? 0))
+                                    }
+                                    disabled={navigationIndex === routeInfo?.steps.length ?? 0}
+                                >
+                                    Next
+                                </button>
+                            </div> */}
+
+                            <div className="map-nav-end-button">
+                                <button
+                                    onClick={() => {
+                                        showNavEndScreen();
+                                    }}
+                                    className="map-nav-end-button-inner"
+                                >
+                                    End Navigation
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="eta-tracker">
+                            <div className="eta-card">
+                                <div className="eta-info">
+                                    <div className="eta-title">ETA</div>
+                                    <div className="eta-arrival">{routeInfo?.arrival_time ?? "--"}</div>
+                                    <div className="eta-duration">
+                                        {routeInfo?.eta ? `(${routeInfo?.eta} remaining)` : ""}
+                                    </div>
+                                </div>
+                                <button
+                                    className="eta-end-button"
+                                    onClick={() => {
+                                        showNavEndScreen();
+                                    }}
+                                >
+                                    End Navigation
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="speed-tracker">
+                            <SpeedTracker speedKmh={speedKmh} />
+                        </div>
+                    </>
+                )}
+
+                {showNavigationEndScreen && (
+                    <div className="map-nav-end-screen">
+                        <h2>Thank you for travelling with us!</h2>
+                        <button
+                            onClick={() => {
+                                finishNavigation();
+                            }}
+                            className="map-nav-end-screen-button"
+                        >
+                            Close
+                        </button>
+                    </div>
+                )}
+
+                {/* Overlay UI */}
+                <div className="map-overlay-ui">
+                    <MapPage onSearch={() => console.log("Search triggered!")} showRouteUI={showRouteOptions} />
+                </div>
+
+
+                {/* Profile Icon with Dropdown */}
+                <div className="profile-button-container">
+                    <button
+                        onClick={() => setShowDropdown(!showDropdown)}
+                        className="profile-button"
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                    >
+                        <User size={24} color="#374151" />
+                    </button>
+
+                    {showDropdown && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '60px',
+                            right: '0',
+                            width: '240px',
+                            backgroundColor: 'white',
+                            borderRadius: '12px',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                            border: '1px solid #e5e7eb',
+                            overflow: 'hidden',
+                            zIndex: 1001
+                        }}>
+                            {/* User Info Section */}
+                            <div style={{
+                                padding: '16px',
+                                borderBottom: '1px solid #e5e7eb'
+                            }}>
+                                <p style={{
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    color: '#1f2937',
+                                    margin: '0 0 4px 0'
+                                }}>{username || "Guest"}</p>
+                                <p style={{
+                                    fontSize: '12px',
+                                    color: '#6b7280',
+                                    margin: 0
+                                }}>{points} Points</p>
+                            </div>
+
+                            {/* Menu Items */}
+                            <div>
+                                <button
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 16px',
+                                        border: 'none',
+                                        backgroundColor: 'transparent',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        transition: 'background-color 0.2s',
+                                        color: '#374151',
+                                        outline: 'none'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                    <User size={20} color="#374151" />
+                                    <span style={{ fontSize: '14px' }}>Profile</span>
+                                </button>
+
+                                <button
+                                    onClick={handleRewardsClick}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 16px',
+                                        border: 'none',
+                                        backgroundColor: 'transparent',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        transition: 'background-color 0.2s',
+                                        color: '#374151',
+                                        outline: 'none'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fefaefff'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                    <Award size={20} color="#FFB20F" />
+                                    <span style={{ fontWeight: '500', fontSize: '14px' }}>Rewards</span>
+                                </button>
+
+                                <button
+                                    onClick={handleSettingsClick}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 16px',
+                                        border: 'none',
+                                        backgroundColor: 'transparent',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        transition: 'background-color 0.2s',
+                                        color: '#374151',
+                                        outline: 'none'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                    <Settings size={20} color="#374151" />
+                                    <span style={{ fontSize: '14px' }}>Settings</span>
+                                </button>
+                            </div>
+
+                            {/* Logout Section */}
+                            <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px' }}>
+                                <button
+                                    onClick={() => {
+                                        setShowDropdown(false);
+                                        setShowLogoutConfirm(true);
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 16px',
+                                        border: 'none',
+                                        backgroundColor: 'transparent',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        transition: 'background-color 0.2s',
+                                        color: '#dc2626',
+                                        outline: 'none'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                    <LogOut size={20} color="#dc2626" />
+                                    <span style={{ fontSize: '14px' }}>Logout</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Testing button to check if distance and points gets updated correctly */}
+                {/* <button
+                    style={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999 }}
+                    onClick={async () => {
+                        const distance = 1000; // meters
+                        setCumulativeDistance((prev) => prev + distance);
+
+                        if (isAuthenticated()) {
+                        try {
+                            const res = await apiPost("/user/distance/", { distance_m: distance });
+                            console.log("Backend updated:", res);
+                        } catch (e) {
+                            console.error("Backend update failed:", e);
+                        }
+                        }
+                    }}
+                    >
+                    Simulate +1km
+                </button> */}
+
+                {showAll && (<div>
+                    {/* Incident details panel (same UI as Report tab) */}
+                    <div className={`map-incident-panel ${selectedReport ? "map-incident-panel-active" : "map-incident-panel-inactive"}`}>
+                        <div className="map-incident-panel-content">
+                            {selectedReport ? (
+                                <div
+                                    className="map-incident-sheet"
+                                    style={{ "--incident-sheet-height": `${incidentSheetHeightVh}vh` }}
+                                    onPointerDown={this.handleIncidentSheetPointerDown}
+                                    onTouchStart={this.handleIncidentSheetTouchStart}
+                                >
+                                    <button
+                                        type="button"
+                                        className="map-incident-handle"
+                                        onPointerDown={this.handleIncidentPointerDown}
+                                        onTouchStart={this.handleIncidentTouchStart}
+                                        aria-label="Drag to resize incident details"
+                                    />
+                                    <div className="map-incident-scroll">
+                                        <IncidentDetailsCard
+                                            report={selectedReport}
+                                            onClose={() => setSelectedReport(null)}
+                                            userLocation={userLocation}
+                                            onReportUpdated={(updated) => {
+                                                if (!updated?.id) return;
+                                                setSelectedReport(updated);
+                                                setReports((prev) => {
+                                                    const next = prev.map((r) => (r.id === updated.id ? updated : r));
+                                                    return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
+                                                });
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+
+                    {/* Selection mode toggle button */}
+                    <div className="origin-toggle" style={{ pointerEvents: "auto" }}>
+                        <div className="origin-toggle-container">
+                            {/* Change to be usestate blah blah blah */}
+                            <div className={`origin-toggle-slider ${isAToBState ? "left" : "right"}`} />
+
+                            <div className="origin-toggle-options">
+                            <button
+                                className={`origin-toggle-option ${isAToBState ? "active" : ""}`}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setIsAToBState(true);
+                                }}
+                            >
+                                A to B
+                            </button>
+
+                            <button
+                                className={`origin-toggle-option ${!isAToBState ? "active" : ""}`}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setIsAToBState(false);
+                                }}
+                            >
+                                Current location
+                            </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Time Selector - Scrollable Picker */}
+                    {showTimeSelector && (
+                        <div className="time-picker-container">
+                            <div className="time-picker-card">
+                                <div className="time-picker-header">
+                                    <h3 className="time-picker-title">
+                                        Select Departure Time
+                                    </h3>
+                                    <p className="time-picker-subtitle">
+                                        Choose when you want to start your trip
+                                    </p>
+                                </div>
+
+                                <div className="time-picker-list custom-scrollbar">
+                                    {availableTimes.map((timeSlot, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => this.handleTimeSlotSelect(index)}
+                                            disabled={isLoadingRoute}
+                                            className={`time-slot-button ${selectedOffsetMinutes === timeSlot.offsetMinutes ? 'selected' : ''}`}
+                                        >
+                                            <div className="time-slot-info">
+                                                <div className="time-slot-display-time">
+                                                    {timeSlot.displayTime}
+                                                </div>
+                                                <div className="time-slot-label">
+                                                    {timeSlot.label}
+                                                </div>
+                                            </div>
+                                            {selectedOffsetMinutes === timeSlot.offsetMinutes && (
+                                                <div className="time-slot-checkmark">
+                                                    <span style={{ fontSize: '14px' }}>✓</span>
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Mobile Time Picker Sheet */}
+                    {showTimeSelector && (
+                        <div
+                            className="time-picker-sheet-container"
+                            style={{ "--route-sheet-height": `${routeSheetHeightVh}vh` }}
+                        >
+                            <div
+                                className="route-info-sheet time-picker-sheet"
+                                onPointerDown={this.handleRouteSheetPointerDown}
+                                onTouchStart={this.handleRouteSheetTouchStart}
+                            >
+                                <button
+                                    type="button"
+                                    className="time-picker-back"
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                    onTouchStart={(event) => event.stopPropagation()}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        showTimeSelectorFunction();
+                                    }}
+                                    aria-label="Back to route details"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    type="button"
+                                    className="route-info-handle"
+                                    aria-label="Drag to resize time picker"
+                                />
+                                <div className="route-info-scroll">
+                                    <div className="route-info-card time-picker-card">
+                                        <div className="time-picker-header">
+                                            <h3 className="time-picker-title">
+                                                Select Departure Time
+                                            </h3>
+                                            <p className="time-picker-subtitle">
+                                                Choose when you want to start your trip
+                                            </p>
+                                        </div>
+
+                                        <div className="time-picker-list custom-scrollbar">
+                                            {availableTimes.map((timeSlot, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => this.handleTimeSlotSelect(index)}
+                                                    disabled={isLoadingRoute}
+                                                    className={`time-slot-button ${selectedOffsetMinutes === timeSlot.offsetMinutes ? 'selected' : ''}`}
+                                                >
+                                                    <div className="time-slot-info">
+                                                        <div className="time-slot-display-time">
+                                                            {timeSlot.displayTime}
+                                                        </div>
+                                                        <div className="time-slot-label">
+                                                            {timeSlot.label}
+                                                        </div>
+                                                    </div>
+                                                    {selectedOffsetMinutes === timeSlot.offsetMinutes && (
+                                                        <div className="time-slot-checkmark">
+                                                            <span style={{ fontSize: '14px' }}>✓</span>
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Modern Route Info Card */}
+                    {showRouteOptions && (
+                        <div
+                            className="route-info-container"
+                            style={{ "--route-sheet-height": `${routeSheetHeightVh}vh` }}
+                        >
+                            <div
+                                className="route-info-sheet"
+                                onPointerDown={this.handleRouteSheetPointerDown}
+                                onTouchStart={this.handleRouteSheetTouchStart}
+                            >
+                                <button
+                                    type="button"
+                                    className="route-info-close"
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                    onTouchStart={(event) => event.stopPropagation()}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        clearMap();
+                                    }}
+                                    aria-label="Close route details"
+                                >
+                                    ×
+                                </button>
+                                <button
+                                    type="button"
+                                    className="route-info-handle"
+                                    aria-label="Drag to resize route details"
+                                />
+
+                                <div className="route-info-scroll">
+                                    {/* Route Options */}
+                                    <div className="route-info-card">
+                                        <div className="route-info-gradient-bar" />
+                                        <RouteOptionsComponent
+                                            isTollRoadsOn={isTollRoadsOn}
+                                            toggleTollRoads={toggleTollRoads}
+                                        />
+                                    </div>
+
+                                    {/* Route Info */}
+                                    <div className="route-info-card">
+                                        <div className="route-info-gradient-bar" />
+
+                                        {isLoadingRoute && (
+                                            <div className="route-info-loading">
+                                                <div className="route-info-spinner" />
+                                            </div>
+                                        )}
+
+                                        <h3 className="route-info-title">
+                                            Route Information
+                                        </h3>
+
+                                        <div className="route-info-items">
+                                            {/* Distance */}
+                                            <div className="route-info-item">
+                                                <div className="route-info-icon distance">
+                                                    <span>📍</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-label">Distance</div>
+                                                    <div className="route-info-value">
+                                                        {routeInfo?.distanceKm ?? "N/A"} <span className="route-info-unit">km</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Departure Time */}
+                                            <div className="route-info-item">
+                                                <div className="route-info-icon departure">
+                                                    <span>🚗</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-label">Departure</div>
+                                                    <div className="route-info-value">{routeInfo?.starting_time ?? "N/A"}</div>
+                                                </div>
+                                            </div>
+
+                                            {/* ETA */}
+                                            <div className="route-info-item">
+                                                <div className="route-info-icon duration">
+                                                    <span>🕒</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-label">ETA</div>
+                                                    <div className="route-info-value">{routeInfo?.arrival_time ?? "N/A"}</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Duration */}
+                                            <div className="route-info-item">
+                                                <div className="route-info-icon duration">
+                                                    <span>⏱️</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-label">Travel Time</div>
+                                                    <div className="route-info-value">{routeInfo?.eta ?? "N/A"}</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Directions */}
+                                            <button className="route-time-select-item" onClick={showTimeSelectorFunction}>
+                                                <div className="route-info-icon">
+                                                    <span>⌚</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-value">Choose a time</div>
+                                                </div>
+                                            </button>
+
+                                            {/* Directions */}
+                                            <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
+                                                <div className="route-info-icon">
+                                                    <span>🗺️</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-value">Directions {"->"}</div>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Clear Map Button */}
+                    <div className="clear-button-container">
+                        <button
+                            onClick={clearMap}
+                            className="clear-button"
+                            title="Clear all pins and routes"
+                        >
+                            <span className="clear-button-x" aria-hidden="true">×</span>
+                        </button>
+                    </div>
+
+
+                    {/* Error Popup */}
+                    {showErrorPopup && (
+                        <div style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 2000,
+                            backdropFilter: 'blur(4px)'
+                        }}>
+                            <div style={{
+                                backgroundColor: 'white',
+                                borderRadius: '16px',
+                                padding: '24px',
+                                width: '90%',
+                                maxWidth: '400px',
+                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                                textAlign: 'center',
+                                position: 'relative',
+                                animation: 'fadeIn 0.2s ease-out'
+                            }}>
+                                <button
+                                    onClick={() => setShowErrorPopup(false)}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '16px',
+                                        right: '16px',
+                                        border: 'none',
+                                        background: 'transparent',
+                                        cursor: 'pointer',
+                                        padding: '4px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    <X size={20} color="#9ca3af" />
+                                </button>
+
+                                <div style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    backgroundColor: '#fef2f2',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    margin: '0 auto 16px auto'
+                                }}>
+                                    <AlertTriangle size={24} color="#dc2626" />
+                                </div>
+
+                                <h3 style={{
+                                    fontSize: '18px',
+                                    fontWeight: '600',
+                                    color: '#111827',
+                                    marginBottom: '8px',
+                                    marginTop: 0
+                                }}>
+                                    Server Error
+                                </h3>
+
+                                <p style={{
+                                    fontSize: '14px',
+                                    color: '#6b7280',
+                                    marginBottom: '24px',
+                                    lineHeight: '1.5'
+                                }}>
+                                    We encountered a 502 Bad Gateway error. The server is currently unavailable. Please try again later.
+                                </p>
+
+                                <button
+                                    onClick={() => setShowErrorPopup(false)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: '#dc2626',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: '500',
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Click outside to close dropdown */}
+                    {
+                        showDropdown && (
+                            <div
+                                onClick={() => setShowDropdown(false)}
+                                style={{
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    zIndex: 999
+                                }}
+                            />
+                        )}
+                    {/* Logout Confirmation Modal */}
+                    {showLogoutConfirm && (
+                        <div className="logout-modal">
+                            <div className="logout-box">
+                                <h3>Confirm Logout</h3>
+                                <p>Are you sure you want to log out?</p>
+                                <button onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
+                                <button onClick={handleLogout}>Log Out</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                )}
+            </div>
+        );
+    }
+}

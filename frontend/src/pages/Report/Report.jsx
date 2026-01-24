@@ -20,6 +20,12 @@ export default function Report() {
     const reportMarkersRef = useRef(new Map()); // id -> AdvancedMarkerElement
     const reportsByIdRef = useRef(new Map()); // id -> report
     const draftMarkerRef = useRef(null);
+    const [reportSheetHeightVh, setReportSheetHeightVh] = useState(42);
+    const reportSheetHeightRef = useRef(42);
+    const reportDragActiveRef = useRef(false);
+    const reportDragStartYRef = useRef(0);
+    const reportDragStartHeightRef = useRef(42);
+    const reportDragRafRef = useRef(null);
 
     function getAccessToken() {
         const raw = (localStorage.getItem("access") || "").trim();
@@ -79,6 +85,116 @@ export default function Report() {
     useEffect(() => {
         selectedReportRef.current = selectedReport;
     }, [selectedReport]);
+
+    useEffect(() => {
+        reportSheetHeightRef.current = reportSheetHeightVh;
+    }, [reportSheetHeightVh]);
+
+
+    const setReportSheetHeight = useCallback((nextHeight) => {
+        if (reportDragRafRef.current) cancelAnimationFrame(reportDragRafRef.current);
+        reportDragRafRef.current = requestAnimationFrame(() => {
+            setReportSheetHeightVh(nextHeight);
+        });
+    }, []);
+
+    const startReportDrag = useCallback((clientY) => {
+        reportDragActiveRef.current = true;
+        reportDragStartYRef.current = clientY;
+        reportDragStartHeightRef.current = reportSheetHeightRef.current;
+        document.body.classList.add("rp-report-dragging");
+    }, []);
+
+    const handleReportPointerMove = useCallback((event) => {
+        if (!reportDragActiveRef.current) return;
+        if (event.cancelable) event.preventDefault();
+        event.stopPropagation();
+        const deltaY = reportDragStartYRef.current - event.clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, reportDragStartHeightRef.current + deltaVh));
+        setReportSheetHeight(nextHeight);
+    }, [setReportSheetHeight]);
+
+    const handleReportPointerUp = useCallback(() => {
+        if (!reportDragActiveRef.current) return;
+        reportDragActiveRef.current = false;
+        window.removeEventListener("pointermove", handleReportPointerMove);
+        window.removeEventListener("pointerup", handleReportPointerUp);
+        window.removeEventListener("pointercancel", handleReportPointerUp);
+        document.body.classList.remove("rp-report-dragging");
+        const minVh = 32;
+        const maxVh = 78;
+        const midpoint = (minVh + maxVh) / 2;
+        const current = reportSheetHeightRef.current;
+        const target = current >= midpoint ? maxVh : minVh;
+        setReportSheetHeight(target);
+    }, [handleReportPointerMove, setReportSheetHeight]);
+
+    const handleReportPointerDown = useCallback((event) => {
+        if (window.innerWidth > 768) return;
+        event.preventDefault();
+        event.stopPropagation();
+        startReportDrag(event.clientY);
+        window.addEventListener("pointermove", handleReportPointerMove, { passive: false });
+        window.addEventListener("pointerup", handleReportPointerUp);
+        window.addEventListener("pointercancel", handleReportPointerUp);
+    }, [handleReportPointerMove, handleReportPointerUp, startReportDrag]);
+
+    const handleReportTouchMove = useCallback((event) => {
+        if (!reportDragActiveRef.current) return;
+        event.preventDefault();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const deltaY = reportDragStartYRef.current - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, reportDragStartHeightRef.current + deltaVh));
+        setReportSheetHeight(nextHeight);
+    }, [setReportSheetHeight]);
+
+    const handleReportTouchEnd = useCallback(() => {
+        handleReportPointerUp();
+        window.removeEventListener("touchmove", handleReportTouchMove);
+        window.removeEventListener("touchend", handleReportTouchEnd);
+        window.removeEventListener("touchcancel", handleReportTouchEnd);
+    }, [handleReportPointerUp, handleReportTouchMove]);
+
+    const handleReportSheetPointerDown = useCallback((event) => {
+        if (window.innerWidth > 768) return;
+        if (!event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const offsetY = event.clientY - rect.top;
+        if (offsetY > 44) return;
+        handleReportPointerDown(event);
+    }, [handleReportPointerDown]);
+
+    const handleReportSheetTouchStart = useCallback((event) => {
+        if (window.innerWidth > 768) return;
+        if (!event.currentTarget) return;
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (clientY - rect.top > 44) return;
+        startReportDrag(clientY);
+        window.addEventListener("touchmove", handleReportTouchMove, { passive: false });
+        window.addEventListener("touchend", handleReportTouchEnd);
+        window.addEventListener("touchcancel", handleReportTouchEnd);
+    }, [handleReportTouchEnd, handleReportTouchMove, startReportDrag]);
+
+    useEffect(() => {
+        return () => {
+            document.body.classList.remove("rp-report-dragging");
+            window.removeEventListener("pointermove", handleReportPointerMove);
+            window.removeEventListener("pointerup", handleReportPointerUp);
+            window.removeEventListener("pointercancel", handleReportPointerUp);
+            window.removeEventListener("touchmove", handleReportTouchMove);
+            window.removeEventListener("touchend", handleReportTouchEnd);
+            window.removeEventListener("touchcancel", handleReportTouchEnd);
+        };
+    }, [handleReportPointerMove, handleReportPointerUp, handleReportTouchMove, handleReportTouchEnd]);
 
     useEffect(() => {
         const map = mapInstanceRef.current;
@@ -299,37 +415,53 @@ export default function Report() {
             </div>
             <div className={`report-sidebar-container ${(isClicked || selectedReport) ? "report-sidebar-container-active" : "report-sidebar-container-inactive"}`}>
                 <div className="report-sidebar-content">
-                    {selectedReport ? (
-                        <IncidentDetailsCard
-                            report={selectedReport}
-                            onClose={() => setSelectedReport(null)}
-                            userLocation={userLocation}
-                            onReportUpdated={(updated) => {
-                                if (!updated?.id) return;
-                                setSelectedReport(updated);
-                                setReports((prev) => {
-                                    const next = prev.map((r) => (r.id === updated.id ? updated : r));
-                                    return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
-                                });
-                            }}
-                        />
-                    ) : isClicked ? (
-                        <ReportComponent
-                            location={selectedLocation}
-                            onClose={() => setIsClicked(false)}
-                            onSubmitted={(newReport) => {
-                                if (newReport?.id) {
-                                    setReports((prev) => [newReport, ...prev.filter((r) => r.id !== newReport.id)]);
-                                }
-                                if (draftMarkerRef.current) {
-                                    draftMarkerRef.current.map = null;
-                                    draftMarkerRef.current = null;
-                                }
-                                setToast({ type: "success", message: "Report submitted." });
-                                setIsClicked(false);
-                                if (newReport?.id) setSelectedReport(newReport);
-                            }}
-                        />
+                    {(selectedReport || isClicked) ? (
+                        <div
+                            className="report-sheet"
+                            style={{ "--report-sheet-height": `${reportSheetHeightVh}vh` }}
+                            onPointerDown={handleReportSheetPointerDown}
+                            onTouchStart={handleReportSheetTouchStart}
+                        >
+                            <button
+                                type="button"
+                                className="report-sheet-handle"
+                                aria-label="Drag to resize report sheet"
+                            />
+                            <div className="report-sheet-scroll">
+                                {selectedReport ? (
+                                    <IncidentDetailsCard
+                                        report={selectedReport}
+                                        onClose={() => setSelectedReport(null)}
+                                        userLocation={userLocation}
+                                        onReportUpdated={(updated) => {
+                                            if (!updated?.id) return;
+                                            setSelectedReport(updated);
+                                            setReports((prev) => {
+                                                const next = prev.map((r) => (r.id === updated.id ? updated : r));
+                                                return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
+                                            });
+                                        }}
+                                    />
+                                ) : (
+                                    <ReportComponent
+                                        location={selectedLocation}
+                                        onClose={() => setIsClicked(false)}
+                                        onSubmitted={(newReport) => {
+                                            if (newReport?.id) {
+                                                setReports((prev) => [newReport, ...prev.filter((r) => r.id !== newReport.id)]);
+                                            }
+                                            if (draftMarkerRef.current) {
+                                                draftMarkerRef.current.map = null;
+                                                draftMarkerRef.current = null;
+                                            }
+                                            setToast({ type: "success", message: "Report submitted." });
+                                            setIsClicked(false);
+                                            if (newReport?.id) setSelectedReport(newReport);
+                                        }}
+                                    />
+                                )}
+                            </div>
+                        </div>
                     ) : null}
                 </div>
             </div>

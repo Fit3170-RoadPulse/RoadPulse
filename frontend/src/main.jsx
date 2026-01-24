@@ -15,6 +15,7 @@ import LoginPage from "./pages/LoginPage/Login.jsx";
 import RewardsPage from './pages/Rewards/RewardsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import DefaultRouteOptions from './pages/Settings/DefaultRouteOptions/DefaultRouteOptions';
 
 
 createRoot(document.getElementById('root')).render(
@@ -47,6 +48,11 @@ createRoot(document.getElementById('root')).render(
           <Route path="/change-password" element={
             <ProtectedRoute>
               <ChangePassword />
+            </ProtectedRoute>
+          } />
+            <Route path="/default-route-options" element={
+            <ProtectedRoute>
+              <DefaultRouteOptions />
             </ProtectedRoute>
           } />
           <Route path="/report" element={

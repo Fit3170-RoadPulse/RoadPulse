@@ -3,7 +3,7 @@
 .overlay {
   position: absolute;
   inset: 0;
-  z-index: 2;          /* above the map visuals */
+  z-index: auto;          /* allow map controls to layer above when needed */
 }
 
 .map-page {
@@ -11,6 +11,7 @@
     height: 100vh;
     font-family: "Helvetica";
     position: relative;
+    width: 100%;
 }
 
 .sidebar {
@@ -20,6 +21,15 @@
     flex-direction: column;
     align-items: center;
     padding-top: 30px;
+    pointer-events: auto;
+}
+
+.content {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
 }
 
 /* MapSideBarComponent.jsx inline styles */
@@ -58,14 +68,17 @@
 .search-bar {
     display: flex;
     align-items: center;
-    margin-top: 30px;
-    margin-bottom: 20px;
-    margin-left: 200px;
+    margin: calc(16px + var(--safe-top, 0px)) auto 20px;
     border: 1px solid white;
     border-radius: 6px;
     padding: 5px 10px;
-    width: 250px;
+    width: min(520px, calc(100% - 48px));
+    max-width: calc(100% - 48px);
     background: #fff;
+    pointer-events: auto;
+    position: relative;
+    z-index: 1002;
+    transition: opacity 120ms ease, transform 120ms ease;
 }
 
 .search-icon img {
@@ -87,4 +100,63 @@
     height: 20px;
     cursor: pointer;
     margin-left: 8px;
+}
+
+@media (max-width: 768px) {
+    .map-page {
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .sidebar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 72px;
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-around;
+        padding: 8px 12px calc(8px + var(--safe-bottom));
+        border-top: 1px solid #e5e7eb;
+        box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.98);
+        z-index: 950;
+    }
+
+    .sidebar-emoji {
+        display: none;
+    }
+
+    .sidebar-button {
+        margin: 0;
+        font-size: 11px;
+    }
+
+    .sidebar-button img {
+        width: 22px;
+        height: 22px;
+    }
+
+    .content {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .search-bar {
+        margin: calc(64px + var(--safe-top, 0px)) auto 0;
+        width: min(420px, calc(100% - 24px));
+        max-width: 420px;
+        z-index: 900;
+    }
+
+    body.rp-map-type-menu-open .search-bar,
+    body.rp-map-info-open .search-bar,
+    body.rp-route-ui-open .search-bar {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateY(-4px);
+    }
 }

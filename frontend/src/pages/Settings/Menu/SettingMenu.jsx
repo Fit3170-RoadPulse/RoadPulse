@@ -33,6 +33,7 @@ export default function SettingMenu() {
           <h2 className="settings-title">Settings</h2>
           <ul className="settings-menu">
             <li><Link className="settings-block" to="/change-password">Change Password</Link></li>
+            <li><Link className="settings-block" to="/default-route-options">Default route options</Link></li>
             {/* <li><Link className="settings-block" to="/preferences">Preferences</Link></li>
             <li><Link className="settings-block" to="/display">Display</Link></li>
             <li><Link className="settings-block" to="/saved-places">My Saved Places</Link></li>

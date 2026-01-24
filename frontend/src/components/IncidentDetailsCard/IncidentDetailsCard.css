@@ -19,6 +19,34 @@
     gap: 14px;
     overflow-y: auto;
     overflow-x: hidden;
+    scrollbar-width: thin;
+}
+
+@media (max-width: 768px) {
+    .incident-card {
+        max-height: 70vh;
+        padding: 16px 16px 14px 16px;
+        border-radius: 16px;
+        border-left-width: 0;
+        background: #fbfcfe;
+        box-shadow: 0 18px 40px rgba(17, 24, 39, 0.12);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+    }
+
+    .incident-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .incident-card-accent {
+        height: 6px;
+        margin: -16px -16px 0 -16px;
+        background: linear-gradient(90deg, var(--theme-border, #111827) 0%, rgba(17, 24, 39, 0.06) 70%);
+    }
 }
 
 /* Accent bar at top - gradient uses dynamic theme border color */

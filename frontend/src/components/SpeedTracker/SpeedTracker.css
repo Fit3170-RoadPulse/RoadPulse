@@ -56,4 +56,24 @@
   font-size: 12px;
   font-weight: 600;
   color: #dc2626;
+<<<<<<< HEAD
 }
+=======
+}
+
+@media (max-width: 768px) {
+  .speed-card {
+    width: 160px;
+    max-width: 44vw;
+    padding: 12px;
+  }
+
+  .speed-card-title {
+    font-size: 16px;
+  }
+
+  .speed-value {
+    font-size: 28px;
+  }
+}
+>>>>>>> testing
