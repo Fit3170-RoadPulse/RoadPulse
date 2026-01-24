@@ -451,16 +451,22 @@ body.rp-route-ui-open .origin-toggle {
 }
 
 .route-info-star-btn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+
   border: none;
   background: transparent;
   cursor: pointer;
-  margin: 0 0 20px 0;
-  font-size: 25px;
+
+  font-size: 22px;
+  line-height: 1;
   padding: 6px;
   border-radius: 8px;
-  line-height: 1;
+
+  color: #6b7280; /* subtle gray */
+
   transition: background-color 0.15s ease, transform 0.1s ease;
-  pointer-events: auto;
 }
 
 .route-info-star-btn:hover {

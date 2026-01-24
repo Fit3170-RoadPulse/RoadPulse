@@ -830,7 +830,7 @@ export default class MapView extends Component {
 
                                 <div className="route-info-scroll">
                                     {/* Route Options */}
-                                    <div className="route-info-card">
+                                    <div class="route-info-card">
                                         <div className="route-info-gradient-bar" />
                                         <RouteOptionsComponent 
                                             isTollRoadsOn={isTollRoadsOn} 
@@ -861,6 +861,53 @@ export default class MapView extends Component {
                                         <h3 className="route-info-title">
                                             Route Information
                                         </h3>
+
+                                        <button
+                                            className="route-info-star-btn"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                toggleSaveMenu();
+                                            }}
+                                            title="Save places"
+                                            type="button"
+                                        >
+                                            ⋮
+                                        </button>
+
+                                        {showSaveMenu && (
+                                            <div className="route-info-save-menu" onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    className="route-info-save-menu-item"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        onSaveOriginPlace();
+                                                    }}
+                                                    type="button"
+                                                    // disabled={!mapMarkers?.origin}
+                                                    disabled={!hasOrigin}
+                                                    title={!mapMarkers?.origin ? "Set an origin first" : "Save origin"}
+                                                >
+                                                    Save origin <span className="route-info-star">⭐</span>
+                                                </button>
+
+                                                <button
+                                                    className="route-info-save-menu-item"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        onSaveDestinationPlace();
+                                                    }}
+                                                    type="button"
+                                                    // disabled={!mapMarkers?.destination}
+                                                    disabled={!hasDestination}
+                                                    title={!mapMarkers?.destination ? "Set a destination first" : "Save destination"}
+                                                >
+                                                    Save destination <span className="route-info-star">⭐</span>
+                                                </button>
+                                            </div>
+                                        )}
 
                                         <div className="route-info-items">
                                             {/* Distance */}
