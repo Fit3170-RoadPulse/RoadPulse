@@ -513,6 +513,31 @@ def list_exchange_items(_req):
     } for item in items]
     return Response(data)
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_user_redemptions(request):
+    redemptions = (
+        RewardRedemption.objects
+        .filter(user=request.user)
+        .select_related("item")
+        .order_by("-created_at")
+    )
+    data = []
+    for redemption in redemptions:
+        data.append({
+            "id": redemption.id,
+            "item": {
+                "id": redemption.item.id,
+                "name": redemption.item.name,
+                "description": redemption.item.description,
+            },
+            "quantity": redemption.quantity,
+            "points_spent": redemption.points_spent,
+            "created_at": redemption.created_at.isoformat(),
+            "code": f"RWD-{redemption.id:06d}",
+        })
+    return Response(data)
+
 
 POINTS_PER_10KM = Decimal("0.1")
 KM_BLOCK = Decimal("10")
@@ -740,4 +765,3 @@ def admin_profile(request):
     """Get admin profile information"""
     serializer = AdminProfileSerializer(request.user)
     return Response(serializer.data)
-

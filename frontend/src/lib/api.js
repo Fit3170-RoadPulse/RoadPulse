@@ -143,6 +143,14 @@ export async function redeemReward(itemId, quantity = 1) {
 }
 
 /**
+ * Fetch the current user's reward redemptions (vouchers)
+ * @returns {Promise<Array>}
+ */
+export async function fetchUserRedemptions() {
+  return apiGet("/rewards/redemptions/");
+}
+
+/**
  * Update the current user's profile
  * @param {object} data - Profile data to update (e.g., { username: "newName" })
  * @returns {Promise<object>} The updated profile details
