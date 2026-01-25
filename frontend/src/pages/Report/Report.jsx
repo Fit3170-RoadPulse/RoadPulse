@@ -506,7 +506,7 @@ export default function Report() {
             </div>
 
             <div className="overlay-ui report-overlay-ui">  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
-                <MapPage onSearch={() => console.log("Search triggered!")} />
+                <MapPage onSearch={() => console.log("Search triggered!")} showSearch={false} />
             </div>
         </div>
     );

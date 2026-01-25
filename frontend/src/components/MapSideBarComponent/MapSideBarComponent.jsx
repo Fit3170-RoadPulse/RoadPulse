@@ -10,7 +10,14 @@ import ProfileIcon from "../../assets/profile.png";
 import { loadMapsLibrary } from "../../lib/googleMapsLoader";
 
 
-export default function MapPage({ onSearch, onPlaceSelected, showRouteUI = false, userLocation = null, mapData = null }) {
+export default function MapPage({
+  onSearch,
+  onPlaceSelected,
+  showRouteUI = false,
+  userLocation = null,
+  mapData = null,
+  showSearch = true,
+}) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -274,6 +281,11 @@ export default function MapPage({ onSearch, onPlaceSelected, showRouteUI = false
 
   useEffect(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    if (!showSearch) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
     if (useNativeAutocomplete) {
       setSuggestions([]);
       setShowSuggestions(false);
@@ -297,7 +309,7 @@ export default function MapPage({ onSearch, onPlaceSelected, showRouteUI = false
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [query, userLocation, mapData?.GMAPS_KEY, mapData?.GMAPS_ID, useNativeAutocomplete]);
+  }, [query, userLocation, mapData?.GMAPS_KEY, mapData?.GMAPS_ID, useNativeAutocomplete, showSearch]);
 
   const handleSelectSuggestion = async (suggestion) => {
     const fallbackPlace = suggestion?.__place;
@@ -364,67 +376,69 @@ export default function MapPage({ onSearch, onPlaceSelected, showRouteUI = false
         </div>
         
 
-        <div className="content">
-          <div className="search-bar" ref={searchRef}>
-            <div className="search-icon">
-              <img src={SearchIcon} alt="Search" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search..."
-              className="search-input"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => {
-                if (suggestions.length > 0) setShowSuggestions(true);
-              }}
-              ref={inputRef}
-            />
-            <img
-              src={GoIcon}
-              alt="Go"
-              className="go-icon"
-              onClick={async () => {
-                if (!query || query.trim().length < 2) return;
-                if (useNativeAutocomplete) {
-                  inputRef.current?.focus();
-                  onSearch?.();
-                  return;
-                }
-                const results = await requestSuggestions(query.trim());
-                if (!results.length) {
-                  setSuggestions([]);
-                  setShowSuggestions(false);
-                  return;
-                }
-                setSuggestions(results);
-                setShowSuggestions(true);
-                onSearch?.();
-              }}
-            />
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="search-suggestions">
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion.place_id}
-                    type="button"
-                    className="search-suggestion"
-                    onClick={() => handleSelectSuggestion(suggestion)}
-                  >
-                    <span className="search-suggestion-main">
-                      {suggestion.structured_formatting?.main_text || suggestion.description}
-                    </span>
-                    {suggestion.structured_formatting?.secondary_text && (
-                      <span className="search-suggestion-secondary">
-                        {suggestion.structured_formatting.secondary_text}
-                      </span>
-                    )}
-                  </button>
-                ))}
+        {showSearch && (
+          <div className="content">
+            <div className="search-bar" ref={searchRef}>
+              <div className="search-icon">
+                <img src={SearchIcon} alt="Search" />
               </div>
-            )}
+              <input
+                type="text"
+                placeholder="Search..."
+                className="search-input"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowSuggestions(true);
+                }}
+                ref={inputRef}
+              />
+              <img
+                src={GoIcon}
+                alt="Go"
+                className="go-icon"
+                onClick={async () => {
+                  if (!query || query.trim().length < 2) return;
+                  if (useNativeAutocomplete) {
+                    inputRef.current?.focus();
+                    onSearch?.();
+                    return;
+                  }
+                  const results = await requestSuggestions(query.trim());
+                  if (!results.length) {
+                    setSuggestions([]);
+                    setShowSuggestions(false);
+                    return;
+                  }
+                  setSuggestions(results);
+                  setShowSuggestions(true);
+                  onSearch?.();
+                }}
+              />
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="search-suggestions">
+                  {suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion.place_id}
+                      type="button"
+                      className="search-suggestion"
+                      onClick={() => handleSelectSuggestion(suggestion)}
+                    >
+                      <span className="search-suggestion-main">
+                        {suggestion.structured_formatting?.main_text || suggestion.description}
+                      </span>
+                      {suggestion.structured_formatting?.secondary_text && (
+                        <span className="search-suggestion-secondary">
+                          {suggestion.structured_formatting.secondary_text}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
