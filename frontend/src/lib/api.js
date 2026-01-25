@@ -53,10 +53,14 @@ export async function authenticatedFetch(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
   const headers = {
-    "Content-Type": "application/json",
     "Authorization": `Bearer ${token}`,
     ...options.headers
   };
+
+  // Only add Content-Type if body is not FormData
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
 
   const response = await fetch(url, {
     ...options,
@@ -65,8 +69,6 @@ export async function authenticatedFetch(endpoint, options = {}) {
 
   // If unauthorized (401), token might be expired
   if (response.status === 401) {
-    // TODO: Implement token refresh logic here if needed
-    // For now, just clear auth and throw error
     clearAuth();
     throw new Error("Authentication failed. Please login again.");
   }
@@ -97,13 +99,13 @@ export async function apiGet(endpoint) {
 /**
  * Make an authenticated POST request
  * @param {string} endpoint - The API endpoint
- * @param {object} data - The data to send in the request body
+ * @param {object|FormData} data - The data to send in the request body
  * @returns {Promise<any>} The parsed JSON response
  */
 export async function apiPost(endpoint, data) {
   const response = await authenticatedFetch(endpoint, {
     method: "POST",
-    body: JSON.stringify(data)
+    body: data instanceof FormData ? data : JSON.stringify(data)
   });
 
   if (!response.ok) {
@@ -111,6 +113,53 @@ export async function apiPost(endpoint, data) {
       .json()
       .catch(() => ({ detail: "Request failed" }));
     throw new Error(error.detail || "Request failed");
+  }
+
+  return response.json();
+}
+
+/**
+ * Make an authenticated PUT request
+ * @param {string} endpoint - The API endpoint
+ * @param {object|FormData} data - The data to send in the request body
+ * @returns {Promise<any>} The parsed JSON response
+ */
+export async function apiPut(endpoint, data) {
+  const response = await authenticatedFetch(endpoint, {
+    method: "PUT",
+    body: data instanceof FormData ? data : JSON.stringify(data)
+  });
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Request failed" }));
+    throw new Error(error.detail || "Request failed");
+  }
+
+  return response.json();
+}
+
+/**
+ * Make an authenticated DELETE request
+ * @param {string} endpoint - The API endpoint
+ * @returns {Promise<any>} The parsed JSON response
+ */
+export async function apiDelete(endpoint) {
+  const response = await authenticatedFetch(endpoint, {
+    method: "DELETE"
+  });
+
+  if (!response.ok && response.status !== 204) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Request failed" }));
+    throw new Error(error.detail || "Request failed");
+  }
+
+  // 204 No Content responses have no body
+  if (response.status === 204) {
+    return { success: true };
   }
 
   return response.json();
@@ -151,13 +200,23 @@ export async function fetchUserRedemptions() {
 }
 
 /**
- * Update the current user's profile
- * @param {object} data - Profile data to update (e.g., { username: "newName" })
- * @returns {Promise<object>} The updated profile details
+ * Mark a voucher as redeemed
+ * @param {number} redemptionId - The ID of the voucher/redemption
+ * @returns {Promise<object>}
  */
-export async function updateProfile(data) {
-  const response = await authenticatedFetch("/profile/update/", {
-    method: "PUT",
+export async function markVoucherAsRedeemed(redemptionId) {
+  return apiPatch(`/rewards/redemptions/${redemptionId}/redeem/`, {});
+}
+
+/**
+ * Make an authenticated PATCH request
+ * @param {string} endpoint - The API endpoint
+ * @param {object} data - The data to send in the request body
+ * @returns {Promise<any>} The parsed JSON response
+ */
+export async function apiPatch(endpoint, data) {
+  const response = await authenticatedFetch(endpoint, {
+    method: "PATCH",
     body: JSON.stringify(data)
   });
 
@@ -169,4 +228,51 @@ export async function updateProfile(data) {
   }
 
   return response.json();
+}
+
+/**
+ * Update the current user's profile
+ * @param {object} data - Profile data to update (e.g., { username: "newName" })
+ * @returns {Promise<object>} The updated profile details
+ */
+export async function updateProfile(data) {
+  return apiPut("/profile/update/", data);
+}
+
+// --- Admin Rewards Management ---
+
+/**
+ * Fetch all rewards for admin (including inactive ones)
+ * @returns {Promise<Array>}
+ */
+export async function fetchAdminRewards() {
+  return apiGet("/admin/rewards/");
+}
+
+/**
+ * Create a new reward (admin only)
+ * @param {FormData} formData - The reward data including image
+ * @returns {Promise<object>}
+ */
+export async function createReward(formData) {
+  return apiPost("/admin/rewards/", formData);
+}
+
+/**
+ * Update a reward (admin only)
+ * @param {number} rewardId - The ID of the reward to update
+ * @param {FormData} formData - The updated reward data
+ * @returns {Promise<object>}
+ */
+export async function updateReward(rewardId, formData) {
+  return apiPut(`/admin/rewards/${rewardId}/`, formData);
+}
+
+/**
+ * Delete a reward (admin only)
+ * @param {number} rewardId - The ID of the reward to delete
+ * @returns {Promise<object>}
+ */
+export async function deleteReward(rewardId) {
+  return apiDelete(`/admin/rewards/${rewardId}/`);
 }

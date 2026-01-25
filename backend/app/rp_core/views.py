@@ -510,6 +510,7 @@ def list_exchange_items(_req):
         "description": item.description,
         "points_cost": item.points_cost,
         "stock": item.stock,
+        "image": _req.build_absolute_uri(item.image.url) if item.image else None,
     } for item in items]
     return Response(data)
 
@@ -534,6 +535,7 @@ def list_user_redemptions(request):
             "quantity": redemption.quantity,
             "points_spent": redemption.points_spent,
             "created_at": redemption.created_at.isoformat(),
+            "redeemed_at": redemption.redeemed_at.isoformat() if redemption.redeemed_at else None,
             "code": f"RWD-{redemption.id:06d}",
         })
     return Response(data)
@@ -665,6 +667,8 @@ def redeem_reward(request):
         # Deduct points and stock, create redemption record
         try:
             deduct_points(user, total_cost, reason="redeem_reward", ref=f"Redeem: Item {item.id} with quantity of {quantity}")
+            # CRITICAL: Refresh user to get the updated points after deduction
+            user.refresh_from_db(fields=["reward_points"])
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -680,6 +684,9 @@ def redeem_reward(request):
             quantity=quantity,
             points_spent=total_cost,
         )
+        
+        # Refresh user to get updated points after deduction
+        user.refresh_from_db(fields=["reward_points"])
 
     return Response({
         "redemption_id": redemption.id,
@@ -710,7 +717,8 @@ def admin_rewards(request):
     Admin-only endpoint
     """
     if request.method == "GET":
-        rewards = ExchangeItem.objects.all()
+        # Only show active rewards in admin interface (deleted rewards have is_active=False)
+        rewards = ExchangeItem.objects.filter(is_active=True)
         serializer = RewardSerializer(rewards, many=True)
         return Response(serializer.data)
     
@@ -752,11 +760,42 @@ def admin_reward_detail(request, reward_id):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == "DELETE":
-        reward.delete()
+        reward.is_active = False
+        reward.save(update_fields=["is_active"])
         return Response(
             {"detail": "Reward deleted successfully."},
             status=status.HTTP_204_NO_CONTENT
         )
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def mark_voucher_redeemed(request, redemption_id):
+    """
+    Mark a specific redemption/voucher as used/redeemed
+    """
+    try:
+        voucher = RewardRedemption.objects.get(pk=redemption_id, user=request.user)
+    except RewardRedemption.DoesNotExist:
+        return Response(
+            {"detail": "Voucher not found or does not belong to user."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if voucher.redeemed_at:
+         return Response(
+            {"detail": "Voucher already redeemed."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    voucher.redeemed_at = timezone.now()
+    voucher.save(update_fields=["redeemed_at"])
+    
+    return Response({
+        "id": voucher.id,
+        "redeemed_at": voucher.redeemed_at,
+        "status": "redeemed"
+    })
 
 
 @api_view(["GET"])
