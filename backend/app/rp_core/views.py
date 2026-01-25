@@ -666,7 +666,7 @@ def redeem_reward(request):
 
         # Deduct points and stock, create redemption record
         try:
-            deduct_points(user, total_cost, reason="redeem_reward", ref=f"Redeem: Item {item.id} with quantity of {quantity}")
+            deduct_points(user, total_cost, reason="redeem_reward")
             # CRITICAL: Refresh user to get the updated points after deduction
             user.refresh_from_db(fields=["reward_points"])
         except ValueError as e:
