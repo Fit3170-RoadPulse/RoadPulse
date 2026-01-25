@@ -328,6 +328,7 @@ export default class MapView extends Component {
             setShowLogoutConfirm,
             showLogoutConfirm,
             handleLogout,
+            onPlaceSelected,
         } = this.props;
         const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
 
@@ -438,7 +439,13 @@ export default class MapView extends Component {
 
                 {/* Overlay UI */}
                 <div className="map-overlay-ui">
-                    <MapPage onSearch={() => console.log("Search triggered!")} showRouteUI={showRouteOptions} />
+                    <MapPage
+                        onSearch={() => console.log("Search triggered!")}
+                        onPlaceSelected={onPlaceSelected}
+                        showRouteUI={showRouteOptions}
+                        userLocation={userLocation}
+                        mapData={mapData}
+                    />
                 </div>
 
 

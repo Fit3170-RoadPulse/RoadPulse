@@ -1,25 +1,6 @@
 import { useEffect, useRef } from "react";
-import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import "./MapComponent.css";
-
-let didSetLoaderOptions = false;
-let loaderOptionsSignature = "";
-
-const ensureLoaderOptions = (apiKey, mapId) => {
-    const signature = JSON.stringify({ apiKey, mapId });
-    if (!didSetLoaderOptions) {
-        setOptions({
-            key: apiKey,
-            mapIds: [mapId],
-        });
-        didSetLoaderOptions = true;
-        loaderOptionsSignature = signature;
-        return;
-    }
-    if (signature !== loaderOptionsSignature) {
-        console.warn("[MapComponent] Google Maps loader options already set; new values ignored.");
-    }
-};
+import { ensureMapsLoaderOptions, loadMapsLibrary } from "../../lib/googleMapsLoader";
 
 export default function MapComponent({
     API_KEY,
@@ -65,9 +46,9 @@ export default function MapComponent({
 
         if (!API_KEY || !MAP_ID) return () => { isMounted = false; };
 
-        ensureLoaderOptions(API_KEY, MAP_ID);
+        ensureMapsLoaderOptions(API_KEY, MAP_ID);
 
-        importLibrary("maps").then((lib) => {
+        loadMapsLibrary("maps", API_KEY, MAP_ID).then((lib) => {
             if (!isMounted || !mapRef.current || mapInstance.current) return;
             const MapCtor = lib?.Map || window.google?.maps?.Map;
             if (!MapCtor) return;

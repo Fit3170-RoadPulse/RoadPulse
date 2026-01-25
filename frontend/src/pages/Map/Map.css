@@ -96,6 +96,12 @@ body.rp-route-ui-open .origin-toggle {
     pointer-events: none;
 }
 
+body.rp-search-open .origin-toggle {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .origin-toggle-options {
     display: flex;
     width: 100%;

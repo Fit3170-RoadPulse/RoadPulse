@@ -97,6 +97,7 @@ export default class MapController extends Component {
         this.timeSelectorRunId = 0;
         this.etaRefreshRunId = 0;
         this.reportMarkersRunId = 0;
+        this.searchMarkerRef = null;
     }
 
     componentDidMount() {
@@ -547,6 +548,10 @@ export default class MapController extends Component {
         const { mapMarkers, mapPolylines } = this.state;
         if (mapMarkers.origin) mapMarkers.origin.map = null;
         if (mapMarkers.destination) mapMarkers.destination.map = null;
+        if (this.searchMarkerRef) {
+            this.searchMarkerRef.setMap(null);
+            this.searchMarkerRef = null;
+        }
 
         mapPolylines.forEach((polyline) => polyline.setMap(null));
 
@@ -559,6 +564,85 @@ export default class MapController extends Component {
             availableTimes: [],
             selectedOffsetMinutes: 1,
         });
+    };
+
+    handlePlaceSelected = async (place) => {
+        const map = this.state.mapRef || this.mapInstanceRef;
+        const location = place?.geometry?.location;
+        if (!map || !location) return;
+        if (this.state.showNavigationScreen || this.state.isNavigationBegun) return;
+
+        const coords = this.normalizeLatLng(location);
+        if (!Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
+
+        map.panTo(coords);
+        map.setZoom(15);
+
+        const g = window.google;
+        if (!g?.maps?.importLibrary) return;
+        const { AdvancedMarkerElement } = await g.maps.importLibrary("marker");
+
+        if (this.searchMarkerRef) {
+            this.searchMarkerRef.setMap(null);
+            this.searchMarkerRef = null;
+        }
+
+        let originMarker = this.state.mapMarkers.origin;
+        let destinationMarker = this.state.mapMarkers.destination;
+
+        const current = this.prevLocationRef.current;
+        const hasCurrent = Number.isFinite(current?.latitude) && Number.isFinite(current?.longitude);
+        const currentPos = hasCurrent ? { lat: current.latitude, lng: current.longitude } : null;
+
+        if (!originMarker) {
+            if (currentPos) {
+                originMarker = new AdvancedMarkerElement({
+                    map,
+                    position: currentPos,
+                    title: "A",
+                });
+            } else {
+                originMarker = new AdvancedMarkerElement({
+                    map,
+                    position: coords,
+                    title: "A",
+                });
+                this.setState({
+                    mapMarkers: { origin: originMarker, destination: null },
+                    routeInfo: null,
+                    showRouteOptions: false,
+                    availableTimes: [],
+                    selectedOffsetMinutes: 1,
+                });
+                return;
+            }
+        } else if (!originMarker.map) {
+            originMarker.map = map;
+        }
+
+        if (destinationMarker) {
+            destinationMarker.map = null;
+        }
+        destinationMarker = new AdvancedMarkerElement({
+            map,
+            position: coords,
+            title: "B",
+        });
+
+        this.state.mapPolylines.forEach((polyline) => polyline.setMap(null));
+        const times = this.generateStartTimes();
+        const selectedOffset = times[0]?.offsetMinutes ?? 1;
+
+        this.setState({
+            mapMarkers: { origin: originMarker, destination: destinationMarker },
+            mapPolylines: [],
+            routeInfo: null,
+            availableTimes: times,
+            selectedOffsetMinutes: selectedOffset,
+            showRouteOptions: true,
+        });
+
+        this.fetchRoute(originMarker.position, destinationMarker.position, selectedOffset, map);
     };
 
     setMarker = async (map) => {
@@ -1149,6 +1233,7 @@ export default class MapController extends Component {
             <MapView
                 mapData={this.state.mapData}
                 setMarker={this.setMarker}
+                onPlaceSelected={this.handlePlaceSelected}
                 isAToBRef={this.isAToBRef}
                 prevLocationRef={this.prevLocationRef}
                 setUserLocation={this.setUserLocation}

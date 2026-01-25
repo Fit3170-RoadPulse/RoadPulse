@@ -81,6 +81,47 @@
     transition: opacity 120ms ease, transform 120ms ease;
 }
 
+.search-suggestions {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 1003;
+}
+
+.search-suggestion {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 10px 12px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.search-suggestion:hover {
+    background: #f3f4f6;
+}
+
+.search-suggestion-main {
+    font-size: 14px;
+    color: #111827;
+    font-weight: 600;
+}
+
+.search-suggestion-secondary {
+    font-size: 12px;
+    color: #6b7280;
+}
+
 .search-icon img {
     width: 18px;
     height: 18px;
