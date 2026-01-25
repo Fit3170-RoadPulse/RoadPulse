@@ -541,6 +541,19 @@ def list_user_redemptions(request):
     return Response(data)
 
 
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def redeem_user_redemption(request, redemption_id):
+    try:
+        redemption = RewardRedemption.objects.get(pk=redemption_id, user=request.user)
+    except RewardRedemption.DoesNotExist:
+        return Response({"detail": "Redemption not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # No "used" field in model yet, so consume by deleting the record
+    redemption.delete()
+    return Response({"detail": "Voucher redeemed."})
+
+
 POINTS_PER_10KM = Decimal("0.1")
 KM_BLOCK = Decimal("10")
 
@@ -783,10 +796,11 @@ def mark_voucher_redeemed(request, redemption_id):
         )
     
     if voucher.redeemed_at:
-         return Response(
-            {"detail": "Voucher already redeemed."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+         return Response({
+            "id": voucher.id,
+            "redeemed_at": voucher.redeemed_at,
+            "status": "redeemed"
+        })
     
     voucher.redeemed_at = timezone.now()
     voucher.save(update_fields=["redeemed_at"])

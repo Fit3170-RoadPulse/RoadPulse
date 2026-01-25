@@ -9,6 +9,7 @@ import {
     fetchExchangeItems, 
     redeemReward, 
     fetchUserRedemptions,
+    markVoucherAsRedeemed,
     fetchAdminRewards,
     createReward,
     updateReward,
@@ -109,15 +110,17 @@ function RewardsPage() {
     useEffect(() => {
         async function loadUserVouchers() {
             try {                
-                const vouchers = await fetchUserRedemptions();                
-                setUserVouchers(vouchers.map(voucher => ({
+                const vouchers = await fetchUserRedemptions();
+                const mappedVouchers = vouchers.map(voucher => ({
                     id: voucher.id,
                     name: voucher.item.name,
                     description: voucher.item.description,
-                    redeemed_at: voucher.created_at,
-                    status: "active", // Assuming all are active for now
+                    redeemed_at: voucher.redeemed_at ?? null,
+                    purchased_at: voucher.created_at,
+                    status: voucher.redeemed_at ? "used" : "active",
                     code: voucher.code,
-                })))                
+                }));
+                setUserVouchers(mappedVouchers.filter(voucher => voucher.status === "active"));
             } catch (err) {
                 console.error("Failed to fetch user vouchers:", err);
                 // Don't set error state for vouchers, just log
@@ -177,15 +180,17 @@ function RewardsPage() {
             setTimeout(() => setShowSuccessNotification(false), 3000);
             
             // Refresh vouchers            
-            const vouchers = await fetchUserRedemptions();            
-            setUserVouchers(vouchers.map(voucher => ({
+            const vouchers = await fetchUserRedemptions();
+            const mappedVouchers = vouchers.map(voucher => ({
                 id: voucher.id,
                 name: voucher.item.name,
                 description: voucher.item.description,
-                redeemed_at: voucher.created_at,
-                status: "active",
+                redeemed_at: voucher.redeemed_at ?? null,
+                purchased_at: voucher.created_at,
+                status: voucher.redeemed_at ? "used" : "active",
                 code: voucher.code,
-            })));
+            }));
+            setUserVouchers(mappedVouchers.filter(voucher => voucher.status === "active"));
             console.log("Updated user vouchers after redemption");
         } catch (err) {
             console.error("Failed to redeem reward:", err);
@@ -217,6 +222,14 @@ function RewardsPage() {
         if (!voucherToRedeem) return;
         
         try {
+            if (voucherToRedeem.redeemed_at) {
+                setShowRedeemVoucherConfirm(false);
+                setSuccessMessage("This voucher has already been redeemed.");
+                setIsErrorNotification(true);
+                setShowSuccessNotification(true);
+                setTimeout(() => setShowSuccessNotification(false), 3000);
+                return;
+            }
             await markVoucherAsRedeemed(voucherToRedeem.id);
             
             // Remove from list or update status
@@ -503,13 +516,13 @@ function RewardsPage() {
                     <div className="vouchers-list">
                         {userVouchers.length > 0 ? (
                             userVouchers.map((voucher) => (
-                                <div key={voucher.id} className="voucher-card" onClick={() => handleVoucherClick(voucher)}>
+                                <div key={voucher.id} className="voucher-card">
                                     <div className="voucher-header">
                                         <Award size={32} className="voucher-icon" />
                                         <div className="voucher-info">
                                             <h3 className="voucher-name">{voucher.name}</h3>
                                             <p className="voucher-description">{voucher.description}</p>
-                                            <p className="voucher-date">Bought at: {new Date(voucher.redeemed_at).toLocaleDateString()}</p>
+                                            <p className="voucher-date">Bought at: {new Date(voucher.purchased_at ?? voucher.created_at).toLocaleDateString()}</p>
                                         </div>
                                         <div className={`voucher-status ${voucher.status}`}>
                                             {voucher.status === "active" ? "Active" : "Used"}
@@ -531,15 +544,15 @@ function RewardsPage() {
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: '8px',
-                                                    fontSize: '14px',
-                                                    zIndex: 10
-                                                }}
-                                            >
-                                                <Award size={16} />
-                                                Redeem
-                                            </button>
-                                        </div>
-                                    )}
+                                                fontSize: '14px',
+                                                zIndex: 10
+                                            }}
+                                        >
+                                            <Award size={16} />
+                                            Use Now
+                                        </button>
+                                    </div>
+                                )}
                                 </div>
                             ))
                         ) : (
@@ -954,16 +967,16 @@ function RewardsPage() {
                             Are you sure you want to redeem <strong>{voucherToRedeem.name}</strong>?
                             This action cannot be undone.
                         </p>
-                        <div className="flex gap-3">
+                        <div className="rewards-modal-actions">
                             <button
                                 onClick={() => setShowRedeemVoucherConfirm(false)}
-                                className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50"
+                                className="rewards-modal-button rewards-modal-button-cancel"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleConfirmVoucherRedemption}
-                                className="flex-1 py-2 px-4 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600"
+                                className="rewards-modal-button rewards-modal-button-amber"
                             >
                                 Confirm & Redeem
                             </button>

@@ -332,15 +332,15 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    cursor: pointer;
+    cursor: default;
     transition: all 0.2s;
 }
 
 .voucher-card:hover {
-    border-color: #3b82f6;
-    background-color: #eff6ff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #e5e7eb;
+    background-color: #f9fafb;
+    transform: none;
+    box-shadow: none;
 }
 
 .voucher-header {
@@ -634,6 +634,15 @@
 
 .rewards-modal-button-confirm:hover {
     background: #15803d;
+}
+
+.rewards-modal-button-amber {
+    background: #f59e0b;
+    color: #ffffff;
+}
+
+.rewards-modal-button-amber:hover {
+    background: #d97706;
 }
 
 .rewards-modal-button:disabled {
