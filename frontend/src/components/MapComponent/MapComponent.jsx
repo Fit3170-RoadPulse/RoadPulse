@@ -30,11 +30,24 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, toggleSele
             if (!isMounted || !mapRef.current || mapInstance.current) return;
             const MapCtor = lib?.Map || window.google?.maps?.Map;
             if (!MapCtor) return;
+            const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
             const map = new MapCtor(mapRef.current, {
                 center: { lat: -34.397, lng: 150.644 },
                 zoom: 8,
                 mapId: MAP_ID,
                 renderingType: google.maps.RenderingType.VECTOR,
+                ...(isMobile
+                    ? {
+                        zoomControl: false,
+                        mapTypeControl: true,
+                        fullscreenControl: true,
+                        streetViewControl: false,
+                        rotateControl: false,
+                        scaleControl: false,
+                        panControl: false,
+                        keyboardShortcuts: false,
+                    }
+                    : {}),
             });
 
             mapInstance.current = map;

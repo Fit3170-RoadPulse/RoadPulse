@@ -1558,6 +1558,35 @@ body.rp-incident-dragging .map-incident-scroll {
         outline: none;
     }
 
+    .map-page-container .gm-bundled-control.gm-bundled-control-on-bottom {
+        bottom: calc(72px + var(--safe-bottom) + 12px) !important;
+        right: calc(12px + var(--safe-right)) !important;
+    }
+
+    .map-page-container .gm-bundled-control.gm-bundled-control-on-bottom,
+    .map-page-container .gm-style .gm-svpc,
+    .map-page-container .gm-style .gm-compass {
+        display: none !important;
+    }
+
+    .map-page-container .gm-style .gm-panning-control,
+    .map-page-container .gm-style [aria-label*="Move map"],
+    .map-page-container .gm-style [aria-label*="Move Map"],
+    .map-page-container .gm-style [title*="Move map"],
+    .map-page-container .gm-style [title*="Move Map"],
+    .map-page-container .gm-style button[aria-label^="Move"],
+    .map-page-container .gm-style button[aria-label*="Move"],
+    .map-page-container .gm-style button[title^="Move"],
+    .map-page-container .gm-style button[title*="Move"],
+    .map-page-container .gm-style button[aria-label^="Pan"],
+    .map-page-container .gm-style button[aria-label*="Pan"],
+    .map-page-container .gm-style button[title^="Pan"],
+    .map-page-container .gm-style button[title*="Pan"],
+    .map-page-container .gm-style [aria-label*="Drag"],
+    .map-page-container .gm-style [title*="Drag"] {
+        display: none !important;
+    }
+
     .speed-tracker {
         top: calc(70px + var(--safe-top));
         right: calc(12px + var(--safe-right));
