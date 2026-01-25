@@ -1471,6 +1471,7 @@ body.rp-incident-dragging .map-incident-scroll {
     }
 
     .clear-button-container {
+        display: none;
         top: var(--map-top-row-offset);
         right: calc(12px + var(--safe-right) + var(--map-top-right-reserve) + var(--map-top-button-size) + var(--map-top-row-gap));
         left: auto;
