@@ -587,17 +587,17 @@ function RewardsPage() {
                                 </p>
                             </div>
 
-                            <div className="flex gap-3">
+                            <div className="rewards-modal-actions">
                                 <button
                                     onClick={() => setShowPurchaseModal(false)}
-                                    className="flex-1 px-4 py-2 text-white bg-gray-500 rounded-lg hover:bg-gray-600 transition-colors"
+                                    className="rewards-modal-button rewards-modal-button-cancel"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handlePurchaseConfirm}
                                     disabled={Number(points) < selectedItem.points_cost}
-                                    className="flex-1 px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                                    className="rewards-modal-button rewards-modal-button-confirm"
                                 >
                                     Confirm Purchase
                                 </button>

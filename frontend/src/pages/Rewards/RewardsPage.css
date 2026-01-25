@@ -600,6 +600,49 @@
     overflow-y: auto;
 }
 
+.rewards-modal-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.rewards-modal-button {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.rewards-modal-button-cancel {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.rewards-modal-button-cancel:hover {
+    background: #d1d5db;
+}
+
+.rewards-modal-button-confirm {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+.rewards-modal-button-confirm:hover {
+    background: #15803d;
+}
+
+.rewards-modal-button:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 1;
+}
+
 .rewards-modal-close-button {
     background: transparent;
     border: none;
