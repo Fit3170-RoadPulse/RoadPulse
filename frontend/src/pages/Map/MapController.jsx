@@ -4,6 +4,7 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../l
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
+import { fetchMapConfig } from "../../lib/mapConfig";
 
 export default class MapController extends Component {
     constructor(props) {
@@ -103,10 +104,9 @@ export default class MapController extends Component {
         this.setState({ isMobileDevice: isNativeApp });
         console.log("isNativeApp", isNativeApp);
 
-        const base = import.meta.env.VITE_API_URL || "";
-        axios.get(`${base}/api/map/`).then((r) => {
-            this.setState({ mapData: r.data });
-        });
+        fetchMapConfig()
+            .then((data) => this.setState({ mapData: data }))
+            .catch(() => this.setState({ mapData: null }));
 
         this.loadUserData();
         this.startReportsPolling();
@@ -298,7 +298,8 @@ export default class MapController extends Component {
         const prev = this.prevLocationRef.current;
         let distance = 0;
 
-        if (prev) {
+        const hasGeometry = !!(globalThis.google?.maps?.geometry?.spherical);
+        if (prev && hasGeometry) {
             distance = google.maps.geometry.spherical.computeDistanceBetween(
                 new google.maps.LatLng(prev.latitude, prev.longitude),
                 new google.maps.LatLng(newLocation.latitude, newLocation.longitude)

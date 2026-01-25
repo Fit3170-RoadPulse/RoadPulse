@@ -437,7 +437,8 @@ function RewardsPage() {
                             {/* Barcode under username */}
                             <div style={{marginTop: '12px', backgroundColor: 'white', padding: '8px', borderRadius: '8px', display: 'flex', justifyContent: 'center'}}>
                                 <Barcode 
-                                    value={username} 
+                                    value={username || "USER"}
+                                    format="CODE128"
                                     width={1.5}
                                     height={40}
                                     fontSize={12}
