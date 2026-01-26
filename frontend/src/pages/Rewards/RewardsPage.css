@@ -47,7 +47,8 @@
     outline: none;
 }
 
-.back-button:hover {
+.back-button:hover,
+.back-button:focus {
     background-color: #f3f4f6;
     outline: none;
 }
@@ -84,8 +85,10 @@
     outline: none;
 }
 
-.profile-button:hover {
+.profile-button:hover,
+.profile-button:focus {
     background-color: #f3f4f6;
+    outline: none;
 }
 
 /* Points Card Section */
@@ -220,12 +223,14 @@
     outline: none;
 }
 
-.tab:hover {
+.tab:hover,
+.tab:focus {
     color: #1f2937;
     outline: none;
 }
 
-.tab.active {
+.tab.active,
+.tab.active:focus {
     font-weight: 600;
     color: #1f2937;
     border-bottom-color: #6b7280;
@@ -267,6 +272,9 @@
     background-color: #f0fdf4;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.reward-card:focus {
+    outline: none;
 }
 
 .reward-image {
@@ -583,6 +591,13 @@
     border-radius: 6px;
     border: none;
     cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.rewards-barcode-button:hover,
+.rewards-barcode-button:focus {
+    background-color: #f3f4f6;
+    outline: none;
 }
 
 .rewards-distance-text {
@@ -627,6 +642,10 @@
     background: #d1d5db;
 }
 
+.rewards-modal-button-cancel:focus {
+    outline: none;
+}
+
 .rewards-modal-button-confirm {
     background: #16a34a;
     color: #ffffff;
@@ -636,6 +655,10 @@
     background: #15803d;
 }
 
+.rewards-modal-button-confirm:focus {
+    outline: none;
+}
+
 .rewards-modal-button-amber {
     background: #f59e0b;
     color: #ffffff;
@@ -643,6 +666,10 @@
 
 .rewards-modal-button-amber:hover {
     background: #d97706;
+}
+
+.rewards-modal-button-amber:focus {
+    outline: none;
 }
 
 .rewards-modal-button:disabled {
@@ -677,8 +704,10 @@
     transition: background-color 0.2s;
 }
 
-.admin-manage-btn:hover {
+.admin-manage-btn:hover,
+.admin-manage-btn:focus {
     background-color: #374151;
+    outline: none;
 }
 
 .admin-modal-content {
@@ -789,6 +818,344 @@
     gap: 12px;
 }
 
+/* Refactored Styles from JSX */
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.barcode-container {
+    margin-top: 12px;
+    background-color: white;
+    padding: 8px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+}
+
+.reward-placeholder-icon {
+    color: #9ca3af;
+}
+
+.voucher-actions {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.redeem-voucher-btn {
+    background-color: #f59e0b;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    z-index: 10;
+}
+
+.redeem-voucher-btn:hover {
+    background-color: #d97706;
+}
+
+.redeem-voucher-btn:focus {
+    outline: none;
+}
+
+.purchase-confirm-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
+
+.purchase-confirm-content {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 320px;
+    width: 90%;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.purchase-confirm-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.purchase-confirm-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #dcfce7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+
+.purchase-confirm-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.purchase-confirm-desc {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.purchase-confirm-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.purchase-confirm-btn-cancel {
+    flex: 1;
+    padding: 10px;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.purchase-confirm-btn-cancel:hover {
+    background-color: #f3f4f6;
+}
+
+.purchase-confirm-btn-cancel:focus {
+    outline: none;
+}
+
+.purchase-confirm-btn-confirm {
+    flex: 1;
+    padding: 10px;
+    background-color: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.purchase-confirm-btn-confirm:hover {
+    background-color: #15803d;
+}
+
+.purchase-confirm-btn-confirm:focus {
+    outline: none;
+}
+
+
+.admin-reward-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-action-btn {
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-action-btn:hover,
+.admin-action-btn:focus {
+    background: #f9fafb;
+    outline: none;
+}
+
+.admin-action-btn-danger {
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-action-btn-danger:hover,
+.admin-action-btn-danger:focus {
+    background: #fee2e2;
+    outline: none;
+}
+
+.no-rewards-msg {
+    text-align: center;
+    padding: 32px 0;
+    color: #9ca3af;
+}
+
+.success-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    padding: 20px 32px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: fadeInScale 0.3s ease-out;
+    min-width: 300px;
+    justify-content: center;
+}
+
+.success-notification.success {
+    background-color: #10b981;
+}
+
+.success-notification.error {
+    background-color: #ef4444;
+}
+
+.success-text {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.delete-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.delete-confirm-backdrop {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.delete-confirm-content {
+    position: relative;
+    background-color: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 100%;
+    z-index: 10;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.delete-confirm-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.delete-confirm-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #fee2e2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+
+.delete-confirm-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.delete-confirm-desc {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.delete-confirm-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.delete-confirm-btn-cancel {
+    flex: 1;
+    padding: 10px;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.delete-confirm-btn-cancel:hover {
+    background-color: #f3f4f6;
+}
+
+.delete-confirm-btn-cancel:focus {
+    outline: none;
+}
+
+.delete-confirm-btn-delete {
+    flex: 1;
+    padding: 10px;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.delete-confirm-btn-delete:hover {
+    background-color: #dc2626;
+}
+
+.delete-confirm-btn-delete:focus {
+    outline: none;
+}
+
+.btn-with-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.form-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.form-checkbox-label {
+    font-size: 14px;
+    font-weight: 500;
+}
+
 .image-preview-container {
     width: 100%;
     height: 150px;
@@ -837,8 +1204,10 @@
     transition: background-color 0.2s;
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+.btn-primary:focus {
     background-color: #d97706;
+    outline: none;
 }
 
 .btn-secondary {
@@ -852,8 +1221,10 @@
     transition: all 0.2s;
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover,
+.btn-secondary:focus {
     background-color: #f3f4f6;
+    outline: none;
 }
 
 .btn-add-new {
@@ -869,9 +1240,11 @@
     transition: all 0.2s;
 }
 
-.btn-add-new:hover {
+.btn-add-new:hover,
+.btn-add-new:focus {
     background: #e5e7eb;
     border-color: #9ca3af;
+    outline: none;
 }
 
 @media (max-width: 480px) {

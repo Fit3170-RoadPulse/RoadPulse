@@ -393,7 +393,7 @@ function RewardsPage() {
                 <div className="header-left">
                     <h1 className="page-title">Rewards - {activeTab === "redeem" ? "Redeem Points" : "My Vouchers"}</h1>
 
-                    <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    <div className="header-actions">
                         {isStaff && (
                             <button 
                                 onClick={() => setShowAdminModal(true)} 
@@ -435,7 +435,7 @@ function RewardsPage() {
                                 <p className="user-name-display">{username || "User"}</p>
                             </div>
                             {/* Barcode under username */}
-                            <div style={{marginTop: '12px', backgroundColor: 'white', padding: '8px', borderRadius: '8px', display: 'flex', justifyContent: 'center'}}>
+                            <div className="barcode-container">
                                 <Barcode 
                                     value={username || "USER"}
                                     format="CODE128"
@@ -502,7 +502,7 @@ function RewardsPage() {
                                                 alt={item.name}
                                             />
                                         ) : (
-                                            <Award size={48} style={{color: '#9ca3af'}} />
+                                            <Award size={48} className="reward-placeholder-icon" />
                                         )}
                                     </div>
                                     <p className="reward-name">{item.name}</p>
@@ -530,30 +530,16 @@ function RewardsPage() {
                                         </div>
                                     </div>
                                     {voucher.status === "active" && (
-                                        <div className="voucher-actions" style={{marginTop: '12px', display: 'flex', justifyContent: 'flex-end'}}>
+                                        <div className="voucher-actions">
                                             <button
                                                 onClick={(e) => handleRedeemVoucherClick(e, voucher)}
                                                 className="redeem-voucher-btn"
-                                                style={{
-                                                    backgroundColor: '#f59e0b',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    padding: '8px 16px',
-                                                    borderRadius: '8px',
-                                                    fontWeight: '600',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px',
-                                                fontSize: '14px',
-                                                zIndex: 10
-                                            }}
-                                        >
-                                            <Award size={16} />
-                                            Use Now
-                                        </button>
-                                    </div>
-                                )}
+                                            >
+                                                <Award size={16} />
+                                                Use Now
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ))
                         ) : (
@@ -627,78 +613,31 @@ function RewardsPage() {
                             
                             {/* Confirmation overlay inside purchase modal */}
                             {showPurchaseConfirm && (
-                                <div 
-                                    style={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                        borderRadius: '12px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        zIndex: 20
-                                    }}
-                                >
-                                    <div 
-                                        style={{
-                                            background: 'white',
-                                            borderRadius: '12px',
-                                            padding: '24px',
-                                            maxWidth: '320px',
-                                            width: '90%',
-                                            animation: 'fadeIn 0.2s ease-out'
-                                        }}
-                                    >
-                                        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                                            <div style={{
-                                                width: '48px',
-                                                height: '48px',
-                                                borderRadius: '50%',
-                                                backgroundColor: '#dcfce7',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                margin: '0 auto 16px'
-                                            }}>
+
+                                <div className="purchase-confirm-overlay">
+                                    <div className="purchase-confirm-content">
+                                        <div className="purchase-confirm-header">
+                                            <div className="purchase-confirm-icon-wrapper">
                                                 <Award size={24} color="#16a34a" />
                                             </div>
-                                            <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>
+                                            <h4 className="purchase-confirm-title">
                                                 Confirm Purchase
                                             </h4>
-                                            <p style={{ fontSize: '14px', color: '#6b7280' }}>
+                                            <p className="purchase-confirm-desc">
                                                 Are you sure you want to purchase this reward?
                                             </p>
                                         </div>
                                         
-                                        <div style={{ display: 'flex', gap: '12px' }}>
+                                        <div className="purchase-confirm-actions">
                                             <button
                                                 onClick={() => setShowPurchaseConfirm(false)}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '10px',
-                                                    backgroundColor: 'white',
-                                                    border: '1px solid #d1d5db',
-                                                    borderRadius: '8px',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    fontSize: '14px'
-                                                }}
+                                                className="purchase-confirm-btn-cancel"
                                             >
                                                 Cancel
                                             </button>
                                             <button
                                                 onClick={handleConfirmPurchaseAction}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '10px',
-                                                    backgroundColor: '#16a34a',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '8px',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    fontSize: '14px'
-                                                }}
+                                                className="purchase-confirm-btn-confirm"
                                             >
                                                 Confirm
                                             </button>
@@ -859,19 +798,19 @@ function RewardsPage() {
                                     </div>
                                 </div>
 
-                                <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px'}}>
+                                <div className="form-checkbox-wrapper">
                                     <input 
                                         type="checkbox" 
                                         id="is_active" 
                                         checked={editReward.is_active}
                                         onChange={(e) => setEditReward({...editReward, is_active: e.target.checked})}
                                     />
-                                    <label htmlFor="is_active" style={{fontSize: '14px', fontWeight: 500}}>Active and visible to users</label>
+                                    <label htmlFor="is_active" className="form-checkbox-label">Active and visible to users</label>
                                 </div>
 
                                 <div className="form-actions">
                                     <button type="button" className="btn-secondary" onClick={() => setIsEditing(false)}>Cancel</button>
-                                    <button type="submit" className="btn-primary" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
+                                    <button type="submit" className="btn-primary btn-with-icon">
                                         <Save size={18} />
                                         Save Reward
                                     </button>
@@ -879,7 +818,7 @@ function RewardsPage() {
                             </form>
                         ) : (
                             <>
-                                <button className="btn-add-new" onClick={handleAddNew} style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
+                                <button className="btn-add-new btn-with-icon" onClick={handleAddNew}>
                                     <Plus size={20} />
                                     Create New Reward
                                 </button>
@@ -896,15 +835,15 @@ function RewardsPage() {
                                                 <p className="admin-reward-name">{reward.name}</p>
                                                 <p className="admin-reward-points">{reward.points_cost} Points • {reward.stock ?? 'Unlimited'} • {reward.is_active ? 'Active' : 'Inactive'}</p>
                                             </div>
-                                            <div style={{display: 'flex', gap: '8px'}}>
+                                            <div className="admin-reward-actions">
                                                 <button 
-                                                    style={{padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', background: 'white', cursor: 'pointer'}}
+                                                    className="admin-action-btn"
                                                     onClick={() => handleAdminEdit(reward)}
                                                 >
                                                     <Edit2 size={16} />
                                                 </button>
                                                 <button 
-                                                    style={{padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', background: 'white', cursor: 'pointer', color: '#ef4444'}}
+                                                    className="admin-action-btn-danger"
                                                     onClick={() => handleDeleteReward(reward.id)}
                                                 >
                                                     <Trash2 size={16} />
@@ -912,7 +851,7 @@ function RewardsPage() {
                                             </div>
                                         </div>
                                     )) : (
-                                        <p style={{textAlign: 'center', padding: '32px 0', color: '#9ca3af'}}>No rewards created yet.</p>
+                                        <p className="no-rewards-msg">No rewards created yet.</p>
                                     )}
                                 </div>
                             </>
@@ -923,26 +862,7 @@ function RewardsPage() {
 
             {/* Custom Success Notification */}
             {showSuccessNotification && (
-                <div 
-                    style={{
-                        position: 'fixed',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        backgroundColor: isErrorNotification ? '#ef4444' : '#10b981',
-                        color: 'white',
-                        padding: '20px 32px',
-                        borderRadius: '12px',
-                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
-                        zIndex: 9999,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        animation: 'fadeInScale 0.3s ease-out',
-                        minWidth: '300px',
-                        justifyContent: 'center'
-                    }}
-                >
+                <div className={`success-notification ${isErrorNotification ? 'error' : 'success'}`}>
                     <svg 
                         width="24" 
                         height="24" 
@@ -962,7 +882,7 @@ function RewardsPage() {
                             </>
                         )}
                     </svg>
-                    <span style={{ fontWeight: 600, fontSize: '16px' }}>{successMessage}</span>
+                    <span className="success-text">{successMessage}</span>
                 </div>
             )}
 
@@ -1039,88 +959,37 @@ function RewardsPage() {
             {/* Custom Delete Confirmation Modal */}
             {showDeleteConfirm && (
                 <div 
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        zIndex: 9999,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '16px'
-                    }}
+                    className="delete-confirm-overlay"
                     role="dialog" 
                     aria-modal="true"
                 >
                     <div 
-                        style={{
-                            position: 'absolute',
-                            inset: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)'
-                        }}
+                        className="delete-confirm-backdrop"
                         onClick={() => setShowDeleteConfirm(false)} 
                     />
-                    <div 
-                        style={{
-                            position: 'relative',
-                            backgroundColor: 'white',
-                            borderRadius: '12px',
-                            padding: '24px',
-                            maxWidth: '400px',
-                            width: '100%',
-                            zIndex: 10,
-                            animation: 'fadeIn 0.2s ease-out'
-                        }}
-                    >
-                        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                            <div style={{
-                                width: '48px',
-                                height: '48px',
-                                borderRadius: '50%',
-                                backgroundColor: '#fee2e2',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                margin: '0 auto 16px'
-                            }}>
+                    <div className="delete-confirm-content">
+                        <div className="delete-confirm-header">
+                            <div className="delete-confirm-icon-wrapper">
                                 <Trash2 size={24} color="#ef4444" />
                             </div>
-                            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>
+                            <h3 className="delete-confirm-title">
                                 Delete Reward
                             </h3>
-                            <p style={{ fontSize: '14px', color: '#6b7280' }}>
+                            <p className="delete-confirm-desc">
                                 Are you sure you want to delete this reward? This action cannot be undone.
                             </p>
                         </div>
                         
-                        <div style={{ display: 'flex', gap: '12px' }}>
+                        <div className="delete-confirm-actions">
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
-                                style={{
-                                    flex: 1,
-                                    padding: '10px',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '8px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    fontSize: '14px'
-                                }}
+                                className="delete-confirm-btn-cancel"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmDeleteReward}
-                                style={{
-                                    flex: 1,
-                                    padding: '10px',
-                                    backgroundColor: '#ef4444',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    fontSize: '14px'
-                                }}
+                                className="delete-confirm-btn-delete"
                             >
                                 Delete
                             </button>
