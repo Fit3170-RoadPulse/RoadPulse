@@ -1,0 +1,167 @@
+.nav-directions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-step-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  gap: 12px;
+}
+
+.nav-step-item:last-child {
+  border-bottom: none;
+}
+
+.nav-step-item:hover {
+  background-color: #f9fafb;
+}
+
+/* Current Step Styling */
+.nav-step-item.current {
+  background-color: #eff6ff; /* light blue-50 */
+  border-left: 4px solid #3b82f6; /* blue-500 */
+}
+
+/* Icons */
+.nav-step-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: #6b7280; /* gray-500 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-step-item.current .nav-step-icon {
+  width: 32px;
+  height: 32px;
+  color: #2563eb; /* blue-600 */
+}
+
+/* Content */
+.nav-step-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* text truncation */
+  text-align: left;
+  align-items: flex-start;
+}
+
+.nav-instruction {
+  font-size: 0.95rem;
+  color: #374151; /* gray-700 */
+  line-height: 1.4;
+}
+
+.nav-step-item.current .nav-instruction {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #111827; /* gray-900 */
+}
+
+.nav-distance {
+  font-size: 0.85rem;
+  color: #6b7280; /* gray-500 */
+  margin-top: 2px;
+}
+
+/* Step Number */
+.nav-step-number {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: #9ca3af; /* gray-400 */
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.nav-step-item.current .nav-step-number {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+/* Current Badge */
+.current-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: #3b82f6;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+  text-transform: uppercase;
+  display: none; /* Shown for very prominent display or if requested, hidden by default to save space */
+}
+
+/* Mobile Layout */
+@media (max-width: 768px) {
+  .nav-directions-list {
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .nav-step-item {
+    background: white;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  /* When collapsed, hide non-current steps */
+  .nav-directions-list.collapsed .nav-step-item {
+    display: none;
+  }
+
+  .nav-directions-list.collapsed .nav-step-item.current {
+    display: flex;
+    position: relative;
+    border: 2px solid #3b82f6;
+    padding: 16px;
+    margin-bottom: 0;
+  }
+  
+  /* Make current step really big on mobile when collapsed */
+  .nav-directions-list.collapsed .nav-step-item.current .nav-step-icon {
+     width: 40px;
+     height: 40px;
+  }
+
+  .nav-directions-list.collapsed .nav-step-item.current .nav-instruction {
+      font-size: 1.1rem;
+  }
+  
+  .mobile-toggle-btn {
+      width: 100%;
+      padding: 12px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-top: 8px;
+      font-weight: 600;
+      color: #4b5563;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+  }
+}

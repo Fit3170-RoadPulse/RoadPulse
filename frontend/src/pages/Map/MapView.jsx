@@ -6,6 +6,7 @@ import "./Map.css";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
 import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent.jsx";
+import NavigationDirectionsList from "../../components/NavigationOverlay/NavigationDirectionsList";
 
 export default class MapView extends Component {
     state = {
@@ -351,20 +352,10 @@ export default class MapView extends Component {
                         <div className="map-nav-overlay">
                             <h2>Directions</h2>
                             <div className="map-nav-container">
-                                <ol>
-                                    {routeInfo?.steps?.map((step, index) => (
-                                        <li key={index}
-                                            className={index === navigationIndex ? "active" : ""}
-                                        >
-                                            <div>{step?.navigationInstruction.instructions}</div>
-                                            <div>{step?.distanceMeters}m</div>
-                                            {/* <div>{step?.startLocation.latLng.latitude}</div>
-                                            <div>{step?.startLocation.latLng.longitude}</div>
-                                            <div>{step?.endLocation.latLng.latitude}</div>
-                                            <div>{step?.endLocation.latLng.longitude}</div> */}
-                                        </li>
-                                    ))}
-                                </ol>
+                            <NavigationDirectionsList 
+                                steps={routeInfo?.steps} 
+                                currentStepIndex={navigationIndex} 
+                            />
                             </div>
 
                             {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}

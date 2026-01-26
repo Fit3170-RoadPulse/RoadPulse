@@ -50,9 +50,11 @@
     color: black;
 }
 
-.sidebar-button:hover {
+.sidebar-button:hover,
+.sidebar-button:focus {
   background-color: #f3f4f6;
   outline: none;
+  box-shadow: none;
 }
 
 .sidebar-button-clickable {
@@ -107,8 +109,11 @@
     gap: 2px;
 }
 
-.search-suggestion:hover {
+.search-suggestion:hover,
+.search-suggestion:focus {
     background: #f3f4f6;
+    outline: none;
+    box-shadow: none;
 }
 
 .search-suggestion-main {

@@ -857,6 +857,9 @@ export default class MapController extends Component {
         } catch (error) {
             if (error?.name !== "CanceledError" && error?.code !== "ERR_CANCELED") {
                 console.error("Error fetching route:", error);
+                if (error.response && error.response.data) {
+                    console.error("Backend Error Details:", error.response.data);
+                }
             }
             this.setState({ routeInfo: null });
             if (error.response && error.response.status === 502) {
@@ -904,7 +907,7 @@ export default class MapController extends Component {
         const totalSlots = 24;
 
         for (let i = 0; i < totalSlots; i++) {
-            const offsetMinutes = i === 0 ? 1 : i * intervalMinutes;
+            const offsetMinutes = i === 0 ? 5 : i * intervalMinutes;
             const futureTime = new Date(now.getTime() + offsetMinutes * 60000);
 
             const hours = futureTime.getHours();
@@ -1075,7 +1078,14 @@ export default class MapController extends Component {
         console.log("Starting live navigation animation...");
         const totalTime = 1500;
 
+        if (!this.state.mapPolylines || this.state.mapPolylines.length === 0) {
+            console.error("Cannot start navigation: No route polyline available.");
+            return;
+        }
+
         const lastPolyline = this.state.mapPolylines[this.state.mapPolylines.length - 1];
+        if (!lastPolyline) return;
+
         const navigationPathway = lastPolyline.getPath().getArray();
 
         console.log("Most recent polyline:", navigationPathway);
