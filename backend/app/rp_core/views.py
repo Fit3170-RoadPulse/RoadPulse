@@ -609,6 +609,13 @@ def update_cumulative_distance(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def redeem_reward(request):
+    # Prevent staff/admin users from redeeming rewards
+    if request.user.is_staff:
+        return Response(
+            {"detail": "Staff and admin users cannot redeem rewards."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    
     item_id = request.data.get("item_id")
     quantity = request.data.get("quantity", 1)
 
@@ -678,16 +685,21 @@ def redeem_reward(request):
             )
 
         # Deduct points and stock, create redemption record
-        try:
-            deduct_points(user, total_cost, reason="redeem_reward")
-            # CRITICAL: Refresh user to get the updated points after deduction
-            user.refresh_from_db(fields=["reward_points"])
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        # Only deduct points if total_cost > 0 (skip for 0-point rewards)
+        if total_cost > 0:
+            try:
+                deduct_points(user, total_cost, reason="redeem_reward")
+                # CRITICAL: Refresh user to get the updated points after deduction
+                user.refresh_from_db(fields=["reward_points"])
+            except ValueError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Deduct stock if not unlimited
         if item.stock is not None:
             item.stock -= quantity
+            # Automatically deactivate reward if stock reaches 0
+            if item.stock == 0:
+                item.is_active = False
         item.save()
 
         # Create redemption record
@@ -766,10 +778,20 @@ def admin_reward_detail(request, reward_id):
         return Response(serializer.data)
     
     elif request.method == "PUT":
+        # Store original stock value to detect restocking
+        original_stock = reward.stock
+        was_inactive = not reward.is_active
+        
         serializer = RewardCreateUpdateSerializer(reward, data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(RewardSerializer(reward).data)
+            updated_reward = serializer.save()
+            
+            # Automatically reactivate reward if it was inactive and now has stock
+            if was_inactive and updated_reward.stock is not None and updated_reward.stock > 0:
+                updated_reward.is_active = True
+                updated_reward.save(update_fields=["is_active"])
+            
+            return Response(RewardSerializer(updated_reward).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == "DELETE":
