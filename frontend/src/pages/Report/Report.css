@@ -125,11 +125,12 @@ body.rp-report-dragging .report-sheet-scroll {
         left: 0;
         right: 0;
         top: auto;
-        bottom: calc(72px + var(--safe-bottom));
+        bottom: 0;
         width: 100%;
         height: auto;
         align-items: flex-end;
         padding: 0;
+        z-index: 2000; /* Above sidebar (950) */
     }
 
     .report-sidebar-content {
