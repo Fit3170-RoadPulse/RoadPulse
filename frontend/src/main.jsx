@@ -16,7 +16,7 @@ import RewardsPage from './pages/Rewards/RewardsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import DefaultRouteOptions from './pages/Settings/DefaultRouteOptions/DefaultRouteOptions';
-
+import ProfilePage from './pages/Profile/ProfilePage';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -43,6 +43,11 @@ createRoot(document.getElementById('root')).render(
           <Route path="/setting-menu-page" element={
             <ProtectedRoute>
               <SettingMenu />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile-page" element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           } />
           <Route path="/change-password" element={

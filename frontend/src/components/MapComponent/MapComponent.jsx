@@ -1,98 +1,172 @@
-import { useEffect, useRef } from "react";
-import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+import { useEffect, useRef, useState } from "react";
+import { LocateFixed } from "lucide-react";
 import "./MapComponent.css";
+import { ensureMapsLoaderOptions, loadMapsLibrary } from "../../lib/googleMapsLoader";
 
-export default function MapComponent({ API_KEY, MAP_ID, map_function, toggleSelectionType = true,    
+export default function MapComponent({
+    API_KEY,
+    MAP_ID,
+    map_function,
+    toggleSelectionType = true,
     currentLocation = {
         latitude: -37.813904798147796,
         longitude: 144.98810008133233,
         accuracy: 50,
         timestamp: Date.now(),
-    }, showUserLocation = false, onUserLocation }) {
+    },
+    showUserLocation = false,
+    onUserLocation,
+    externalUserLocation = null,
+    useExternalUserLocation = false,
+    showRecenterButton = true,
+    onRecenterRequest = null,
+    recenterMinZoom = 14,
+}) {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const userMarkerRef = useRef(null);
     const userAccuracyCircleRef = useRef(null);
     const geoWatchIdRef = useRef(null);
     const hasCenteredRef = useRef(false);
+    const updateUserLocationRef = useRef(null);
+    const pendingExternalLocationRef = useRef(null);
+    const lastUserLocationRef = useRef(null);
+    const [hasLocation, setHasLocation] = useState(false);
+
+    const handleRecenterClick = () => {
+        const map = mapInstance.current;
+        const location = lastUserLocationRef.current;
+        if (!map || !location) return;
+
+        if (typeof onRecenterRequest === "function") {
+            const handled = onRecenterRequest({ map, location });
+            if (handled) return;
+        }
+
+        map.panTo({ lat: location.lat, lng: location.lng });
+        const currentZoom = map.getZoom?.();
+        if (!Number.isFinite(currentZoom) || currentZoom < recenterMinZoom) {
+            map.setZoom(recenterMinZoom);
+        }
+    };
+
+    const applyExternalLocation = (location) => {
+        if (!location) return;
+        const lat = Number(location.latitude ?? location.lat);
+        const lng = Number(location.longitude ?? location.lng);
+        const accuracy = Number(location.accuracy ?? location.accuracyMeters);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        const updater = updateUserLocationRef.current;
+        if (updater) {
+            updater(lat, lng, accuracy);
+        } else {
+            pendingExternalLocationRef.current = { lat, lng, accuracy };
+        }
+    };
 
     useEffect(() => {
         let isMounted = true;
 
         if (!API_KEY || !MAP_ID) return () => { isMounted = false; };
 
-        setOptions({
-            key: API_KEY,
-            mapIds: [MAP_ID],
-        });
+        ensureMapsLoaderOptions(API_KEY, MAP_ID);
 
-        importLibrary("maps").then((lib) => {
+        loadMapsLibrary("maps", API_KEY, MAP_ID).then((lib) => {
             if (!isMounted || !mapRef.current || mapInstance.current) return;
             const MapCtor = lib?.Map || window.google?.maps?.Map;
             if (!MapCtor) return;
+            const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
             const map = new MapCtor(mapRef.current, {
                 center: { lat: -34.397, lng: 150.644 },
                 zoom: 8,
                 mapId: MAP_ID,
                 renderingType: google.maps.RenderingType.VECTOR,
+                ...(isMobile
+                    ? {
+                        zoomControl: false,
+                        mapTypeControl: true,
+                        fullscreenControl: true,
+                        streetViewControl: false,
+                        rotateControl: false,
+                        scaleControl: false,
+                        panControl: false,
+                        keyboardShortcuts: false,
+                    }
+                    : {}),
             });
 
             mapInstance.current = map;
             if (map_function) map_function(map);
 
-            if (showUserLocation && navigator?.geolocation) {
+            const g = window.google;
+            if (!g?.maps) return;
+
+            const updateUserLocation = (lat, lng, accuracyMeters) => {
+                const pos = { lat, lng };
+                lastUserLocationRef.current = { lat, lng, accuracyMeters, timestamp: Date.now() };
+                setHasLocation(true);
+
+                if (!userMarkerRef.current) {
+                    userMarkerRef.current = new g.maps.Marker({
+                        map,
+                        position: pos,
+                        clickable: false,
+                        zIndex: 9999,
+                        title: "Your location",
+                        icon: {
+                            path: g.maps.SymbolPath.CIRCLE,
+                            scale: 7,
+                            fillColor: "#2563EB",
+                            fillOpacity: 1,
+                            strokeColor: "#FFFFFF",
+                            strokeWeight: 2,
+                        },
+                    });
+                } else {
+                    userMarkerRef.current.setPosition(pos);
+                }
+
+                if (!userAccuracyCircleRef.current) {
+                    userAccuracyCircleRef.current = new g.maps.Circle({
+                        map,
+                        center: pos,
+                        radius: Math.max(10, Number(accuracyMeters) || 0),
+                        fillColor: "#60A5FA",
+                        fillOpacity: 0.18,
+                        strokeColor: "#3B82F6",
+                        strokeOpacity: 0.55,
+                        strokeWeight: 1,
+                        clickable: false,
+                        zIndex: 9998,
+                    });
+                } else {
+                    userAccuracyCircleRef.current.setCenter(pos);
+                    userAccuracyCircleRef.current.setRadius(Math.max(10, Number(accuracyMeters) || 0));
+                }
+
+                if (!hasCenteredRef.current) {
+                    hasCenteredRef.current = true;
+                    map.panTo(pos);
+                    map.setZoom(14);
+                }
+
+                if (typeof onUserLocation === "function") onUserLocation({ lat, lng, accuracyMeters });
+            };
+
+            updateUserLocationRef.current = updateUserLocation;
+            if (pendingExternalLocationRef.current) {
+                const pending = pendingExternalLocationRef.current;
+                pendingExternalLocationRef.current = null;
+                updateUserLocation(pending.lat, pending.lng, pending.accuracy);
+            }
+
+            if (useExternalUserLocation) {
+                applyExternalLocation(externalUserLocation);
+            }
+
+            if (showUserLocation && navigator?.geolocation && !useExternalUserLocation) {
                 const g = window.google;
                 if (!g?.maps) return;
-
-                const updateUserLocation = (lat, lng, accuracyMeters) => {
-                    const pos = { lat, lng };
-
-                    if (!userMarkerRef.current) {
-                        userMarkerRef.current = new g.maps.Marker({
-                            map,
-                            position: pos,
-                            clickable: false,
-                            zIndex: 9999,
-                            title: "Your location",
-                            icon: {
-                                path: g.maps.SymbolPath.CIRCLE,
-                                scale: 7,
-                                fillColor: "#2563EB",
-                                fillOpacity: 1,
-                                strokeColor: "#FFFFFF",
-                                strokeWeight: 2,
-                            },
-                        });
-                    } else {
-                        userMarkerRef.current.setPosition(pos);
-                    }
-
-                    if (!userAccuracyCircleRef.current) {
-                        userAccuracyCircleRef.current = new g.maps.Circle({
-                            map,
-                            center: pos,
-                            radius: Math.max(10, Number(accuracyMeters) || 0),
-                            fillColor: "#60A5FA",
-                            fillOpacity: 0.18,
-                            strokeColor: "#3B82F6",
-                            strokeOpacity: 0.55,
-                            strokeWeight: 1,
-                            clickable: false,
-                            zIndex: 9998,
-                        });
-                    } else {
-                        userAccuracyCircleRef.current.setCenter(pos);
-                        userAccuracyCircleRef.current.setRadius(Math.max(10, Number(accuracyMeters) || 0));
-                    }
-
-                    if (!hasCenteredRef.current) {
-                        hasCenteredRef.current = true;
-                        map.panTo(pos);
-                        map.setZoom(14);
-                    }
-
-                    if (typeof onUserLocation === "function") onUserLocation({ lat, lng, accuracyMeters });
-                };
 
                 geoWatchIdRef.current = navigator.geolocation.watchPosition(
                     (pos) => {
@@ -129,8 +203,14 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, toggleSele
                 userAccuracyCircleRef.current = null;
             }
             hasCenteredRef.current = false;
+            setHasLocation(false);
         };
-    }, [API_KEY, MAP_ID, map_function, showUserLocation, onUserLocation, toggleSelectionType, currentLocation]);
+    }, [API_KEY, MAP_ID, map_function, showUserLocation, onUserLocation, toggleSelectionType, useExternalUserLocation]);
+
+    useEffect(() => {
+        if (!useExternalUserLocation) return;
+        applyExternalLocation(externalUserLocation);
+    }, [externalUserLocation, useExternalUserLocation]);
 
     return (
         <div className="map-holder">
@@ -138,6 +218,25 @@ export default function MapComponent({ API_KEY, MAP_ID, map_function, toggleSele
                 ref={mapRef}
                 className="map-div"
             />
+            {showRecenterButton && (
+                <div className="map-recenter-container">
+                    <button
+                        type="button"
+                        className={`map-recenter-button ${hasLocation ? "" : "is-disabled"}`}
+                        onClick={handleRecenterClick}
+                        aria-label="Recenter map on your location"
+                        title="Recenter"
+                        disabled={!hasLocation}
+                    >
+                        <LocateFixed
+                            className="map-recenter-icon"
+                            size={32}
+                            strokeWidth={2.75}
+                            absoluteStrokeWidth
+                        />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

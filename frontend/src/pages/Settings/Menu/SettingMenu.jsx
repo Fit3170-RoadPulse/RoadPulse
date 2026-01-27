@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import "./SettingMenu.css";
 import { clearAuth } from "../../../lib/api";
 
@@ -23,10 +24,10 @@ export default function SettingMenu() {
           className="close-btn"
           aria-label="Close"
           onClick={() => navigate("/map")}
-          title="Back to settings"
+          title="Back to map"
           type="button"
         >
-          ✕
+          <X size={24} />
         </button>
 
         <nav className="settings-left-nav" aria-label="Settings navigation">

@@ -4,6 +4,7 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../l
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
+import { fetchMapConfig } from "../../lib/mapConfig";
 
 export default class MapController extends Component {
     constructor(props) {
@@ -96,6 +97,7 @@ export default class MapController extends Component {
         this.timeSelectorRunId = 0;
         this.etaRefreshRunId = 0;
         this.reportMarkersRunId = 0;
+        this.searchMarkerRef = null;
     }
 
     componentDidMount() {
@@ -103,10 +105,9 @@ export default class MapController extends Component {
         this.setState({ isMobileDevice: isNativeApp });
         console.log("isNativeApp", isNativeApp);
 
-        const base = import.meta.env.VITE_API_URL || "";
-        axios.get(`${base}/api/map/`).then((r) => {
-            this.setState({ mapData: r.data });
-        });
+        fetchMapConfig()
+            .then((data) => this.setState({ mapData: data }))
+            .catch(() => this.setState({ mapData: null }));
 
         this.loadUserData();
         this.startReportsPolling();
@@ -298,7 +299,8 @@ export default class MapController extends Component {
         const prev = this.prevLocationRef.current;
         let distance = 0;
 
-        if (prev) {
+        const hasGeometry = !!(globalThis.google?.maps?.geometry?.spherical);
+        if (prev && hasGeometry) {
             distance = google.maps.geometry.spherical.computeDistanceBetween(
                 new google.maps.LatLng(prev.latitude, prev.longitude),
                 new google.maps.LatLng(newLocation.latitude, newLocation.longitude)
@@ -546,6 +548,10 @@ export default class MapController extends Component {
         const { mapMarkers, mapPolylines } = this.state;
         if (mapMarkers.origin) mapMarkers.origin.map = null;
         if (mapMarkers.destination) mapMarkers.destination.map = null;
+        if (this.searchMarkerRef) {
+            this.searchMarkerRef.setMap(null);
+            this.searchMarkerRef = null;
+        }
 
         mapPolylines.forEach((polyline) => polyline.setMap(null));
 
@@ -558,6 +564,85 @@ export default class MapController extends Component {
             availableTimes: [],
             selectedOffsetMinutes: 1,
         });
+    };
+
+    handlePlaceSelected = async (place) => {
+        const map = this.state.mapRef || this.mapInstanceRef;
+        const location = place?.geometry?.location;
+        if (!map || !location) return;
+        if (this.state.showNavigationScreen || this.state.isNavigationBegun) return;
+
+        const coords = this.normalizeLatLng(location);
+        if (!Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
+
+        map.panTo(coords);
+        map.setZoom(15);
+
+        const g = window.google;
+        if (!g?.maps?.importLibrary) return;
+        const { AdvancedMarkerElement } = await g.maps.importLibrary("marker");
+
+        if (this.searchMarkerRef) {
+            this.searchMarkerRef.setMap(null);
+            this.searchMarkerRef = null;
+        }
+
+        let originMarker = this.state.mapMarkers.origin;
+        let destinationMarker = this.state.mapMarkers.destination;
+
+        const current = this.prevLocationRef.current;
+        const hasCurrent = Number.isFinite(current?.latitude) && Number.isFinite(current?.longitude);
+        const currentPos = hasCurrent ? { lat: current.latitude, lng: current.longitude } : null;
+
+        if (!originMarker) {
+            if (currentPos) {
+                originMarker = new AdvancedMarkerElement({
+                    map,
+                    position: currentPos,
+                    title: "A",
+                });
+            } else {
+                originMarker = new AdvancedMarkerElement({
+                    map,
+                    position: coords,
+                    title: "A",
+                });
+                this.setState({
+                    mapMarkers: { origin: originMarker, destination: null },
+                    routeInfo: null,
+                    showRouteOptions: false,
+                    availableTimes: [],
+                    selectedOffsetMinutes: 1,
+                });
+                return;
+            }
+        } else if (!originMarker.map) {
+            originMarker.map = map;
+        }
+
+        if (destinationMarker) {
+            destinationMarker.map = null;
+        }
+        destinationMarker = new AdvancedMarkerElement({
+            map,
+            position: coords,
+            title: "B",
+        });
+
+        this.state.mapPolylines.forEach((polyline) => polyline.setMap(null));
+        const times = this.generateStartTimes();
+        const selectedOffset = times[0]?.offsetMinutes ?? 1;
+
+        this.setState({
+            mapMarkers: { origin: originMarker, destination: destinationMarker },
+            mapPolylines: [],
+            routeInfo: null,
+            availableTimes: times,
+            selectedOffsetMinutes: selectedOffset,
+            showRouteOptions: true,
+        });
+
+        this.fetchRoute(originMarker.position, destinationMarker.position, selectedOffset, map);
     };
 
     setMarker = async (map) => {
@@ -697,6 +782,99 @@ export default class MapController extends Component {
         return { lat, lng };
     };
 
+    extractLatLng = (value) => {
+        if (!value) return null;
+        const lat = Number(value.latitude ?? value.lat);
+        const lng = Number(value.longitude ?? value.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { lat, lng };
+    };
+
+    extractStepTarget = (step) => {
+        if (!step) return null;
+        return (
+            this.extractLatLng(step?.endLocation?.latLng) ||
+            this.extractLatLng(step?.startLocation?.latLng) ||
+            this.extractLatLng(step?.endLocation) ||
+            this.extractLatLng(step?.startLocation) ||
+            this.extractLatLng(step?.latLng) ||
+            this.extractLatLng(step)
+        );
+    };
+
+    getNavigationTarget = () => {
+        const steps = this.state.routeInfo?.steps;
+        const idx = this.state.navigationIndex;
+        if (Array.isArray(steps) && steps.length > 0) {
+            const currentTarget = this.extractStepTarget(steps[idx]);
+            if (currentTarget) return currentTarget;
+            const nextTarget = this.extractStepTarget(steps[idx + 1]);
+            if (nextTarget) return nextTarget;
+        }
+
+        const destMarker = this.state.mapMarkers?.destination;
+        if (destMarker?.position) {
+            const dest = this.normalizeLatLng(destMarker.position);
+            if (Number.isFinite(dest.lat) && Number.isFinite(dest.lng)) return dest;
+        }
+
+        return null;
+    };
+
+    getCurrentUserLatLng = (fallbackLocation) => {
+        const cur = this.prevLocationRef.current;
+        const lat = Number(cur?.latitude ?? cur?.lat ?? fallbackLocation?.lat ?? fallbackLocation?.latitude);
+        const lng = Number(cur?.longitude ?? cur?.lng ?? fallbackLocation?.lng ?? fallbackLocation?.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { lat, lng };
+    };
+
+    handleRecenterRequest = ({ map, location }) => {
+        const mapInstance = map || this.state.mapRef || this.mapInstanceRef;
+        if (!mapInstance) return false;
+
+        const curLocation = this.getCurrentUserLatLng(location);
+        if (!curLocation) return false;
+
+        const isNavigating = this.state.isNavigationBegun || this.state.showNavigationScreen;
+
+        // In navigation mode, avoid recomputing heading on recenter.
+        // Recomputing heading can cause the camera to "turn around"
+        // if the inferred next target is behind the user.
+        if (isNavigating) {
+            const g = globalThis.google?.maps;
+            const center = g?.LatLng ? new g.LatLng(curLocation.lat, curLocation.lng) : curLocation;
+            const zoom = mapInstance.getZoom?.();
+            const heading = mapInstance.getHeading?.();
+            const tilt = mapInstance.getTilt?.();
+            const nextZoom = Number.isFinite(zoom) ? Math.max(zoom, 18) : 18;
+            const nextHeading = Number.isFinite(heading) ? heading : 0;
+            const nextTilt = Number.isFinite(tilt) ? tilt : 40;
+
+            if (typeof mapInstance.moveCamera === "function") {
+                mapInstance.moveCamera({
+                    center,
+                    zoom: nextZoom,
+                    heading: nextHeading,
+                    tilt: nextTilt,
+                });
+            } else {
+                mapInstance.panTo(center);
+                if (!Number.isFinite(zoom) || zoom < nextZoom) mapInstance.setZoom(nextZoom);
+                if (typeof mapInstance.setHeading === "function") mapInstance.setHeading(nextHeading);
+                if (typeof mapInstance.setTilt === "function") mapInstance.setTilt(nextTilt);
+            }
+            return true;
+        }
+
+        mapInstance.panTo(curLocation);
+        const zoom = mapInstance.getZoom?.();
+        if (!Number.isFinite(zoom) || zoom < 14) {
+            mapInstance.setZoom(14);
+        }
+        return true;
+    };
+
     buildRouteCacheKey = (origin, destination, departureTime) => {
         const originPos = this.normalizeLatLng(origin);
         const destPos = this.normalizeLatLng(destination);
@@ -772,6 +950,9 @@ export default class MapController extends Component {
         } catch (error) {
             if (error?.name !== "CanceledError" && error?.code !== "ERR_CANCELED") {
                 console.error("Error fetching route:", error);
+                if (error.response && error.response.data) {
+                    console.error("Backend Error Details:", error.response.data);
+                }
             }
             this.setState({ routeInfo: null });
             if (error.response && error.response.status === 502) {
@@ -819,7 +1000,7 @@ export default class MapController extends Component {
         const totalSlots = 24;
 
         for (let i = 0; i < totalSlots; i++) {
-            const offsetMinutes = i === 0 ? 1 : i * intervalMinutes;
+            const offsetMinutes = i === 0 ? 5 : i * intervalMinutes;
             const futureTime = new Date(now.getTime() + offsetMinutes * 60000);
 
             const hours = futureTime.getHours();
@@ -990,7 +1171,14 @@ export default class MapController extends Component {
         console.log("Starting live navigation animation...");
         const totalTime = 1500;
 
+        if (!this.state.mapPolylines || this.state.mapPolylines.length === 0) {
+            console.error("Cannot start navigation: No route polyline available.");
+            return;
+        }
+
         const lastPolyline = this.state.mapPolylines[this.state.mapPolylines.length - 1];
+        if (!lastPolyline) return;
+
         const navigationPathway = lastPolyline.getPath().getArray();
 
         console.log("Most recent polyline:", navigationPathway);
@@ -1148,6 +1336,7 @@ export default class MapController extends Component {
             <MapView
                 mapData={this.state.mapData}
                 setMarker={this.setMarker}
+                onPlaceSelected={this.handlePlaceSelected}
                 isAToBRef={this.isAToBRef}
                 prevLocationRef={this.prevLocationRef}
                 setUserLocation={this.setUserLocation}
@@ -1187,6 +1376,7 @@ export default class MapController extends Component {
                 setShowLogoutConfirm={this.setShowLogoutConfirm}
                 showLogoutConfirm={this.state.showLogoutConfirm}
                 handleLogout={this.handleLogout}
+                onRecenterRequest={this.handleRecenterRequest}
             />
         );
     };

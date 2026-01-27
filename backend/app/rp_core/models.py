@@ -1,9 +1,35 @@
 from datetime import timedelta
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils import timezone
 from django.db.models import Q, F
 from django.conf import settings
+
+
+# Custom user manager to handle is_admin field
+class AppUserManager(BaseUserManager):
+    def create_user(self, email, username, password=None, **extra_fields):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        # Set is_admin to False by default for regular users
+        extra_fields.setdefault('is_admin', False)
+        user = self.model(email=email, username=username, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, username, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_admin', True)  # Set is_admin to True for superusers
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self.create_user(email, username, password, **extra_fields)
 
 
 # Custom user model
@@ -25,10 +51,18 @@ class AppUser(AbstractUser):
         default=0.0,
         help_text="Total distance travelled by the user (kilometres)",
     )
+    # Legacy admin field to match database schema
+    is_admin = models.BooleanField(
+        default=False,
+        help_text="Designates whether the user is an admin (legacy field).",
+    )
     
     # Use email as USERNAME_FIELD since Django requires it to be unique
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
+    
+    # Use custom manager
+    objects = AppUserManager()
 
     def __str__(self):
         return self.username
@@ -109,6 +143,7 @@ class RewardRedemption(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     points_spent = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
+    redeemed_at = models.DateTimeField(null=True, blank=True, help_text="When the voucher was actually redeemed/used")
 
     # Meta options
     class Meta:
