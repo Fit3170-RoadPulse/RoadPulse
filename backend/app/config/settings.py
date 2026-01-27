@@ -26,6 +26,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise serves collected static files in production (e.g., Render)
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -107,7 +109,15 @@ USE_I18N = True
 USE_TZ = True
 GOOGLE_MAPS_API_KEY="AIzaSyBdbRFLLwPTNe7RR9zahjksLOHovFjGM-M"
 GOOGLE_MAPS_ID = "9f96fc85ced76649d1bf190d"
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+_use_static_manifest = os.getenv("DJANGO_STATIC_MANIFEST", "0") == "1"
+if _use_static_manifest:
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+else:
+    # Fallback that works even if collectstatic is not run on the host.
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+    WHITENOISE_USE_FINDERS = True
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -119,4 +129,17 @@ ENABLE_HIGH_ACCURACY = True
 TIMEOUT = 8000
 MAXIMUM_AGE = 15000
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+# Allow configuring CORS origins via env for deployments (e.g., Render)
+_default_cors_origins = "http://localhost:5173,https://roadpulsefrontend.onrender.com"
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", _default_cors_origins).split(",")
+    if origin.strip()
+]
+
+_default_csrf_trusted_origins = "http://localhost:5173,https://roadpulsefrontend.onrender.com"
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", _default_csrf_trusted_origins).split(",")
+    if origin.strip()
+]
