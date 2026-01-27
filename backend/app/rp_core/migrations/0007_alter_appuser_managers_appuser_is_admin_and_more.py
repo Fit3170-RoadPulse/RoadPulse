@@ -15,10 +15,23 @@ class Migration(migrations.Migration):
             managers=[
             ],
         ),
-        migrations.AddField(
-            model_name='appuser',
-            name='is_admin',
-            field=models.BooleanField(default=False, help_text='Designates whether the user is an admin (legacy field).'),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddField(
+                    model_name='appuser',
+                    name='is_admin',
+                    field=models.BooleanField(default=False, help_text='Designates whether the user is an admin (legacy field).'),
+                ),
+            ],
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE rp_core_appuser "
+                        "ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT false;"
+                    ),
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+            ],
         ),
         migrations.AddField(
             model_name='exchangeitem',
