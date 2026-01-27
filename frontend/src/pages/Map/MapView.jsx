@@ -704,6 +704,26 @@ export default class MapView extends Component {
                                         </h3>
 
                                         <div className="route-info-items">
+                                            {/* Directions - MOVED TOP FOR MOBILE */}
+                                            <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
+                                                <div className="route-info-icon">
+                                                    <span>🗺️</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-value">Directions {"->"}</div>
+                                                </div>
+                                            </button>
+
+                                            {/* Directions */}
+                                            <button className="route-time-select-item" onClick={showTimeSelectorFunction}>
+                                                <div className="route-info-icon">
+                                                    <span>⌚</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-value">Choose a time</div>
+                                                </div>
+                                            </button>
+
                                             {/* Distance */}
                                             <div className="route-info-item">
                                                 <div className="route-info-icon distance">
@@ -749,26 +769,6 @@ export default class MapView extends Component {
                                                     <div className="route-info-value">{routeInfo?.eta ?? "N/A"}</div>
                                                 </div>
                                             </div>
-
-                                            {/* Directions */}
-                                            <button className="route-time-select-item" onClick={showTimeSelectorFunction}>
-                                                <div className="route-info-icon">
-                                                    <span>⌚</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-value">Choose a time</div>
-                                                </div>
-                                            </button>
-
-                                            {/* Directions */}
-                                            <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
-                                                <div className="route-info-icon">
-                                                    <span>🗺️</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-value">Directions {"->"}</div>
-                                                </div>
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
