@@ -58,14 +58,14 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",  # switch to postgis engine later if needed
-        "NAME": os.getenv("POSTGRES_DB", "roadpulse"),
-        "USER": os.getenv("POSTGRES_USER", "roadpulse"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "roadpulse"),
-        "HOST": os.getenv("POSTGRES_HOST", "db"),  # 'db' if backend runs in Docker
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "HOST": os.getenv("POSTGRES_HOST"),  # full Supabase host, no default
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
         "OPTIONS": {
-            "sslmode": os.getenv("POSTGRES_SSLMODE", "prefer"),
+            "sslmode": os.getenv("POSTGRES_SSLMODE", "require"),
         },
     }
 }
