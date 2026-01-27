@@ -5,9 +5,9 @@ services:
       dockerfile: Dockerfile
     container_name: roadpulse_backend
     env_file: .env
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
+    # dns:
+    #   - 8.8.8.8
+    #   - 8.8.4.4
     ports:
       - "8000:8000"
     volumes:
