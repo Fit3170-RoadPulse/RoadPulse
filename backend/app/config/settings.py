@@ -3,12 +3,12 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 
-BASE_DIR = Path(__file__).resolve().parent.parent       # .../backend/app
-ROOT_DIR = BASE_DIR.parent.parent                       # .../RoadPulse
-load_dotenv(ROOT_DIR / ".env")
+BASE_DIR = Path(__file__).resolve().parent.parent       
+ROOT_DIR = BASE_DIR.parent.parent                       
+load_dotenv(ROOT_DIR / ".env") # This will only work locally in development stage
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret")
-DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
+DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
 ALLOWED_HOSTS = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
 
 INSTALLED_APPS = [
@@ -98,17 +98,17 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = "your-email@gmail.com"
-EMAIL_HOST_PASSWORD = "your-app-password"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+GOOGLE_MAPS_ID = os.getenv("GOOGLE_MAPS_ID")
 AUTH_PASSWORD_VALIDATORS = []
 AUTH_USER_MODEL = 'rp_core.AppUser'
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
-GOOGLE_MAPS_API_KEY="AIzaSyBdbRFLLwPTNe7RR9zahjksLOHovFjGM-M"
-GOOGLE_MAPS_ID = "9f96fc85ced76649d1bf190d"
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 _use_static_manifest = os.getenv("DJANGO_STATIC_MANIFEST", "0") == "1"
