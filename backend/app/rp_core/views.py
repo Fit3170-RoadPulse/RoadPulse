@@ -257,15 +257,6 @@ def map(_req):
 def incident_reports(request):
     if request.method == "GET":
         # Close & settle any expired open reports (time limit reached)
-        now = timezone.now()
-        expired_open = IncidentReport.objects.filter(
-            status=IncidentReport.Status.OPEN,
-            expires_at__isnull=False,
-            expires_at__lte=now,
-        ).values_list("id", flat=True)[:200]
-        for rid in expired_open:
-            close_and_settle_report(rid)
-
         reports = IncidentReport.objects.active()[:500]
         return Response(IncidentReportSerializer(reports, many=True).data)
 
