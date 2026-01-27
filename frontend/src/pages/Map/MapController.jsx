@@ -252,14 +252,14 @@ export default class MapController extends Component {
     };
 
     fetchReports = () => {
-        const base = import.meta.env.VITE_API_URL || "";
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
         return axios
-            .get(`${base}/api/incident-reports/`)
+            .get(`${base}/api/incident-reports/`, { timeout: 10000 })
             .then((r) => {
                 const nextReports = (Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false);
                 this.setState({ reports: nextReports });
             })
-            .catch(() => { });
+            .catch((err) => { console.error("Fetch reports failed:", err); });
     };
 
     startReportsPolling = () => {
@@ -269,7 +269,7 @@ export default class MapController extends Component {
     };
 
     startLocationPolling = () => {
-        const base = import.meta.env.VITE_API_URL || "";
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
         axios.get(`${base}/api/map/location/`).then((r) => {
             this.isMountedRef = true;
             let provider = null;

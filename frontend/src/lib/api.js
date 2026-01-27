@@ -62,18 +62,31 @@ export async function authenticatedFetch(endpoint, options = {}) {
     headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-  // If unauthorized (401), token might be expired
-  if (response.status === 401) {
-    clearAuth();
-    throw new Error("Authentication failed. Please login again.");
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    // If unauthorized (401), token might be expired
+    if (response.status === 401) {
+      clearAuth();
+      throw new Error("Authentication failed. Please login again.");
+    }
+
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error("Request timed out");
+    }
+    throw error;
   }
-
-  return response;
 }
 
 /**
