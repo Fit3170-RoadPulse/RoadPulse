@@ -279,9 +279,7 @@ export default class MapController extends Component {
                 this.locationPollingData.current = r.data;
                 console.log("Location Polling Data Ref:", this.locationPollingData);
 
-                provider = this.state.isMobileDevice
-                    ? new NativeGeolocationProvider()
-                    : new WebGeolocationProvider();
+                provider = new WebGeolocationProvider();
 
                 console.log("provider", provider);
                 provider?.start(this.prevLocationRef, this.locationPollingData, this.onLocationUpdate);
@@ -726,14 +724,21 @@ export default class MapController extends Component {
                     selectedOffsetMinutes: 1,
                 });
 
-                const curPos = this.getCurrentUserLatLng(this.prevLocationRef.current);
-                if (!this.isAToBRef.current && curPos) {
-                    console.log("Setting origin to user location:", curPos);
-                    originMarker = new AdvancedMarkerElement({
-                        map: map,
-                        position: curPos,
-                        title: "A",
-                    });
+                if (!this.isAToBRef.current) {
+                    const curPos = this.getCurrentUserLatLng(this.prevLocationRef.current);
+                    if (curPos) {
+                        console.log("Setting origin to user location:", curPos);
+                        originMarker = new AdvancedMarkerElement({
+                            map: map,
+                            position: curPos,
+                            title: "A",
+                        });
+                    } else {
+                        console.warn("User location not valid yet, cannot set origin to current location.");
+                        // Do NOT fall back to manual pin if user explicitly wants 'Current Location' mode
+                        // Just return or show toast
+                        return;
+                    }
                 } else {
                     originMarker = new AdvancedMarkerElement({
                         map: map,
