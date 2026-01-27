@@ -2,10 +2,118 @@
 .map-holder {
     width: 100%;
     height: 100%;
+    position: relative;
 }
 
 .map-div {
     width: 100%;
     height: 100%;
     min-height: 400px;
+}
+
+.map-recenter-container {
+    position: absolute;
+    top: calc(60px + var(--safe-top, 0px));
+    right: calc(162px + var(--safe-right, 0px));
+    bottom: auto;
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.map-recenter-button {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    border: none;
+    padding: 0;
+    background: #ffffff;
+    color: #2563eb;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    outline: none;
+}
+
+.map-recenter-icon {
+    width: 28px;
+    height: 28px;
+    stroke-width: 2.75;
+    vector-effect: non-scaling-stroke;
+}
+
+.map-recenter-button:hover,
+.map-recenter-button:focus {
+    background-color: #eff6ff;
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.22);
+    outline: none;
+}
+
+.map-recenter-button:disabled,
+.map-recenter-button.is-disabled {
+    background: #f8fafc;
+    color: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.map-recenter-button:disabled:hover,
+.map-recenter-button:disabled:focus {
+    background: #f8fafc;
+    transform: none;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+@media (min-width: 769px) {
+    .map-recenter-container {
+        /* Keep it bottom-right, but offset left so it doesn't overlap
+           Google's bottom-right control stack. */
+        --gm-control-size: 44px;
+        --gm-control-gap: 12px;
+        top: auto;
+        right: calc(
+            24px + var(--safe-right, 0px) + var(--gm-control-size) + var(--gm-control-gap)
+        );
+        bottom: calc(24px + var(--safe-bottom, 0px));
+    }
+}
+
+@media (max-width: 768px) {
+    .map-recenter-container {
+        top: var(--map-top-row-offset, calc(12px + var(--safe-top, 0px)));
+        right: calc(
+            12px + var(--safe-right, 0px) + var(--map-top-button-size, 40px) + var(--map-top-row-gap, 10px)
+        );
+        bottom: auto;
+    }
+
+    .map-recenter-button {
+        width: var(--map-top-button-size, 40px);
+        height: var(--map-top-button-size, 40px);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    }
+
+    .map-recenter-icon {
+        width: 26px;
+        height: 26px;
+        stroke-width: 2.75;
+    }
+}
+
+@media (min-width: 769px) {
+    body.rp-search-open .map-recenter-container,
+    body.rp-map-info-open .map-recenter-container {
+        --gm-control-size: 44px;
+        --gm-control-gap: 12px;
+        top: auto;
+        right: calc(
+            24px + var(--safe-right, 0px) + var(--gm-control-size) + var(--gm-control-gap)
+        );
+        bottom: calc(24px + var(--safe-bottom, 0px));
+    }
 }

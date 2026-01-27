@@ -207,10 +207,40 @@ def reward_account(request):
     user = request.user
     return Response({
         "id": user.id,
-        "username": user.get_username(),
+        "username": user.username,
+        "email": user.email,
         "reward_points": user.reward_points,
         "cumulative_distance": user.cumulative_distance,
         "provisional_points": getattr(user, "provisional_points", 0),
+        "date_joined": user.date_joined.isoformat() if user.date_joined else None,
+    })
+
+
+# Update authenticated user's profile
+@api_view(["PUT", "PATCH"])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    data = request.data
+    
+    # Update username if provided
+    if "username" in data:
+        new_username = data["username"].strip()
+        if not new_username:
+            return Response({"detail": "Username cannot be empty."}, status=400)
+        # Check if username is already taken by another user
+        from .models import AppUser
+        if AppUser.objects.filter(username=new_username).exclude(id=user.id).exists():
+            return Response({"detail": "Username is already taken."}, status=400)
+        user.username = new_username
+    
+    user.save()
+    
+    return Response({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "detail": "Profile updated successfully."
     })
 
 
@@ -480,8 +510,48 @@ def list_exchange_items(_req):
         "description": item.description,
         "points_cost": item.points_cost,
         "stock": item.stock,
+        "image": _req.build_absolute_uri(item.image.url) if item.image else None,
     } for item in items]
     return Response(data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_user_redemptions(request):
+    redemptions = (
+        RewardRedemption.objects
+        .filter(user=request.user)
+        .select_related("item")
+        .order_by("-created_at")
+    )
+    data = []
+    for redemption in redemptions:
+        data.append({
+            "id": redemption.id,
+            "item": {
+                "id": redemption.item.id,
+                "name": redemption.item.name,
+                "description": redemption.item.description,
+            },
+            "quantity": redemption.quantity,
+            "points_spent": redemption.points_spent,
+            "created_at": redemption.created_at.isoformat(),
+            "redeemed_at": redemption.redeemed_at.isoformat() if redemption.redeemed_at else None,
+            "code": f"RWD-{redemption.id:06d}",
+        })
+    return Response(data)
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def redeem_user_redemption(request, redemption_id):
+    try:
+        redemption = RewardRedemption.objects.get(pk=redemption_id, user=request.user)
+    except RewardRedemption.DoesNotExist:
+        return Response({"detail": "Redemption not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # No "used" field in model yet, so consume by deleting the record
+    redemption.delete()
+    return Response({"detail": "Voucher redeemed."})
 
 
 POINTS_PER_10KM = Decimal("0.1")
@@ -539,6 +609,13 @@ def update_cumulative_distance(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def redeem_reward(request):
+    # Prevent staff/admin users from redeeming rewards
+    if request.user.is_staff:
+        return Response(
+            {"detail": "Staff and admin users cannot redeem rewards."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    
     item_id = request.data.get("item_id")
     quantity = request.data.get("quantity", 1)
 
@@ -608,14 +685,21 @@ def redeem_reward(request):
             )
 
         # Deduct points and stock, create redemption record
-        try:
-            deduct_points(user, total_cost, reason="redeem_reward", ref=f"Redeem: Item {item.id} with quantity of {quantity}")
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        # Only deduct points if total_cost > 0 (skip for 0-point rewards)
+        if total_cost > 0:
+            try:
+                deduct_points(user, total_cost, reason="redeem_reward")
+                # CRITICAL: Refresh user to get the updated points after deduction
+                user.refresh_from_db(fields=["reward_points"])
+            except ValueError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Deduct stock if not unlimited
         if item.stock is not None:
             item.stock -= quantity
+            # Automatically deactivate reward if stock reaches 0
+            if item.stock == 0:
+                item.is_active = False
         item.save()
 
         # Create redemption record
@@ -625,6 +709,9 @@ def redeem_reward(request):
             quantity=quantity,
             points_spent=total_cost,
         )
+        
+        # Refresh user to get updated points after deduction
+        user.refresh_from_db(fields=["reward_points"])
 
     return Response({
         "redemption_id": redemption.id,
@@ -655,7 +742,8 @@ def admin_rewards(request):
     Admin-only endpoint
     """
     if request.method == "GET":
-        rewards = ExchangeItem.objects.all()
+        # Only show active rewards in admin interface (deleted rewards have is_active=False)
+        rewards = ExchangeItem.objects.filter(is_active=True)
         serializer = RewardSerializer(rewards, many=True)
         return Response(serializer.data)
     
@@ -690,18 +778,60 @@ def admin_reward_detail(request, reward_id):
         return Response(serializer.data)
     
     elif request.method == "PUT":
+        # Store original stock value to detect restocking
+        original_stock = reward.stock
+        was_inactive = not reward.is_active
+        
         serializer = RewardCreateUpdateSerializer(reward, data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(RewardSerializer(reward).data)
+            updated_reward = serializer.save()
+            
+            # Automatically reactivate reward if it was inactive and now has stock
+            if was_inactive and updated_reward.stock is not None and updated_reward.stock > 0:
+                updated_reward.is_active = True
+                updated_reward.save(update_fields=["is_active"])
+            
+            return Response(RewardSerializer(updated_reward).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == "DELETE":
-        reward.delete()
+        reward.is_active = False
+        reward.save(update_fields=["is_active"])
         return Response(
             {"detail": "Reward deleted successfully."},
             status=status.HTTP_204_NO_CONTENT
         )
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def mark_voucher_redeemed(request, redemption_id):
+    """
+    Mark a specific redemption/voucher as used/redeemed
+    """
+    try:
+        voucher = RewardRedemption.objects.get(pk=redemption_id, user=request.user)
+    except RewardRedemption.DoesNotExist:
+        return Response(
+            {"detail": "Voucher not found or does not belong to user."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if voucher.redeemed_at:
+         return Response({
+            "id": voucher.id,
+            "redeemed_at": voucher.redeemed_at,
+            "status": "redeemed"
+        })
+    
+    voucher.redeemed_at = timezone.now()
+    voucher.save(update_fields=["redeemed_at"])
+    
+    return Response({
+        "id": voucher.id,
+        "redeemed_at": voucher.redeemed_at,
+        "status": "redeemed"
+    })
 
 
 @api_view(["GET"])
@@ -710,4 +840,3 @@ def admin_profile(request):
     """Get admin profile information"""
     serializer = AdminProfileSerializer(request.user)
     return Response(serializer.data)
-

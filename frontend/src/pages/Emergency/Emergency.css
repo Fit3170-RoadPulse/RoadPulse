@@ -8,16 +8,43 @@
     font-family: Arial, sans-serif;
 }
 
-/* Back button (contacts page) */
-.emergency-back-button {
+/* Close button - matches Rewards page style */
+.emergency-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
     background-color: transparent;
-    border: 2px solid white;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    margin-bottom: 20px;
     cursor: pointer;
-    font-weight: bold;
+    z-index: 1000;
+    color: #333;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    outline: none;
+}
+
+.emergency-close-btn:hover {
+    background-color: #f3f4f6;
+}
+
+.emergency-close-btn:focus {
+    outline: none;
+}
+
+@media (max-width: 768px) {
+    .emergency-close-btn {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
 }
 
 /* Emergency contacts grid */

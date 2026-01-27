@@ -92,6 +92,7 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
           .replace(/^\"+|\"+$/g, "");
         localStorage.setItem("access", access);
         localStorage.setItem("refresh", refresh);
+        localStorage.setItem("is_staff", !!data.is_staff);
         window.dispatchEvent(new Event("rp:auth-changed"));
 
         if (typeof onLogin === "function") onLogin({ email, password });

@@ -82,6 +82,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.origin-toggle-option:focus {
+    outline: none;
+    box-shadow: none;
 }
 
 body.rp-map-info-open .origin-toggle {
@@ -96,6 +103,12 @@ body.rp-route-ui-open .origin-toggle {
     pointer-events: none;
 }
 
+body.rp-search-open .origin-toggle {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .origin-toggle-options {
     display: flex;
     width: 100%;
@@ -105,6 +118,8 @@ body.rp-route-ui-open .origin-toggle {
 
 .origin-toggle-option.active {
     color: #ffffff;
+    border: none;
+    outline: none;
 }
 
 .origin-toggle-slider {
@@ -202,10 +217,16 @@ body.rp-route-ui-open .origin-toggle {
     overflow: hidden;
 }
 
-.time-slot-button:hover:not(.selected):not(:disabled) {
+.time-slot-button:hover:not(.selected):not(:disabled),
+.time-slot-button:focus:not(.selected):not(:disabled) {
     background: rgba(245, 247, 250, 1);
     transform: scale(1.01);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    outline: none;
+}
+
+.time-slot-button:focus {
+    outline: none;
 }
 
 .time-slot-button.selected {
@@ -361,9 +382,11 @@ body.rp-route-ui-open .origin-toggle {
     border-radius: 12px;
     transition: all 0.2s ease;
 }
-.route-info-directions-item:hover{
+.route-info-directions-item:hover,
+.route-info-directions-item:focus {
     box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
     cursor: pointer;
+    outline: none;
 }
 
 .route-time-select-item {
@@ -375,9 +398,11 @@ body.rp-route-ui-open .origin-toggle {
     border-radius: 12px;
     transition: all 0.2s ease;
 }
-.route-time-select-item:hover{
+.route-time-select-item:hover,
+.route-time-select-item:focus {
     box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
     cursor: pointer;
+    outline: none;
 }
 
 .route-info-icon {
@@ -452,9 +477,12 @@ body.rp-route-ui-open .origin-toggle {
     outline: none;
 }
 
-.clear-button:hover {
+.clear-button:hover,
+.clear-button:focus {
     background-color: #fee2e2;
     transform: scale(1.05);
+    outline: none;
+    box-shadow: none;
 }
 
 .clear-button-x {
@@ -491,8 +519,11 @@ body.rp-route-ui-open .origin-toggle {
     outline: none;
 }
 
-.profile-button:hover {
+.profile-button:hover,
+.profile-button:focus {
     background-color: #f3f4f6;
+    outline: none;
+    box-shadow: none;
 }
 .logout-modal {
     position: fixed;
@@ -547,7 +578,13 @@ body.rp-route-ui-open .origin-toggle {
     color: #1f2937;
 }
 
-.logout-box button:first-of-type:hover {
+.logout-box button:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.logout-box button:first-of-type:hover,
+.logout-box button:first-of-type:focus {
     background: #d1d5db;
 }
 
@@ -596,6 +633,15 @@ body.rp-route-ui-open .origin-toggle {
 
 body.rp-route-dragging {
     overscroll-behavior: none;
+}
+
+/* Remove focus outline from Google Maps default controls */
+.gm-style button:focus,
+.gm-control-active:focus,
+.gm-style-mtc button:focus,
+.gm-svpc:focus {
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 body.rp-route-dragging .map-wrapper {
@@ -678,8 +724,11 @@ body.rp-incident-dragging .map-incident-scroll {
     color: #1f2937;
 }
 
-.profile-menu-item:hover {
+.profile-menu-item:hover,
+.profile-menu-item:focus {
     background: #f3f4f6;
+    outline: none;
+    box-shadow: none;
 }
 
 .profile-menu-item-icon {
@@ -1000,6 +1049,15 @@ body.rp-incident-dragging .map-incident-scroll {
     font-weight: 500;
 }
 
+@media (min-width: 769px) {
+    .map-nav-end-screen {
+        top: 50%;
+        left: 50%;
+        right: auto;
+        transform: translate(-50%, -50%);
+    }
+}
+
 .map-nav-end-screen-button {
     margin-top: 20px;
     padding: 10px 24px;
@@ -1085,7 +1143,7 @@ body.rp-incident-dragging .map-incident-scroll {
         --map-top-right-reserve: 56px;
         --map-top-row-offset: calc(12px + var(--safe-top));
         --map-top-row-nudge: -4px;
-        --speed-card-width: min(160px, 44vw);
+        --speed-card-width: min(132px, 36vw);
         --top-row-card-height: 112px;
     }
 
@@ -1471,6 +1529,7 @@ body.rp-incident-dragging .map-incident-scroll {
     }
 
     .clear-button-container {
+        display: none;
         top: var(--map-top-row-offset);
         right: calc(12px + var(--safe-right) + var(--map-top-right-reserve) + var(--map-top-button-size) + var(--map-top-row-gap));
         left: auto;
@@ -1555,6 +1614,35 @@ body.rp-incident-dragging .map-incident-scroll {
 
     .map-page-container .gm-style .gm-style-mtc button:focus {
         outline: none;
+    }
+
+    .map-page-container .gm-bundled-control.gm-bundled-control-on-bottom {
+        bottom: calc(72px + var(--safe-bottom) + 12px) !important;
+        right: calc(12px + var(--safe-right)) !important;
+    }
+
+    .map-page-container .gm-bundled-control.gm-bundled-control-on-bottom,
+    .map-page-container .gm-style .gm-svpc,
+    .map-page-container .gm-style .gm-compass {
+        display: none !important;
+    }
+
+    .map-page-container .gm-style .gm-panning-control,
+    .map-page-container .gm-style [aria-label*="Move map"],
+    .map-page-container .gm-style [aria-label*="Move Map"],
+    .map-page-container .gm-style [title*="Move map"],
+    .map-page-container .gm-style [title*="Move Map"],
+    .map-page-container .gm-style button[aria-label^="Move"],
+    .map-page-container .gm-style button[aria-label*="Move"],
+    .map-page-container .gm-style button[title^="Move"],
+    .map-page-container .gm-style button[title*="Move"],
+    .map-page-container .gm-style button[aria-label^="Pan"],
+    .map-page-container .gm-style button[aria-label*="Pan"],
+    .map-page-container .gm-style button[title^="Pan"],
+    .map-page-container .gm-style button[title*="Pan"],
+    .map-page-container .gm-style [aria-label*="Drag"],
+    .map-page-container .gm-style [title*="Drag"] {
+        display: none !important;
     }
 
     .speed-tracker {

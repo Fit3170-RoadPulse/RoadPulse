@@ -235,4 +235,20 @@ body.rp-report-dragging .report-sheet-scroll {
         color: #374151 !important;
         box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12) !important;
     }
+
+    .report-container .gm-bundled-control.gm-bundled-control-on-bottom,
+    .report-container .gm-style .gm-svpc,
+    .report-container .gm-style .gm-compass {
+        display: none !important;
+    }
+
+    .report-container .gm-style .gm-panning-control,
+    .report-container .gm-style [aria-label*="Move"],
+    .report-container .gm-style [title*="Move"],
+    .report-container .gm-style [aria-label*="Pan"],
+    .report-container .gm-style [title*="Pan"],
+    .report-container .gm-style [aria-label*="Drag"],
+    .report-container .gm-style [title*="Drag"] {
+        display: none !important;
+    }
 }

@@ -6,6 +6,7 @@ import "./Map.css";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
 import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent.jsx";
+import NavigationDirectionsList from "../../components/NavigationOverlay/NavigationDirectionsList";
 
 export default class MapView extends Component {
     state = {
@@ -328,6 +329,8 @@ export default class MapView extends Component {
             setShowLogoutConfirm,
             showLogoutConfirm,
             handleLogout,
+            onPlaceSelected,
+            onRecenterRequest,
         } = this.props;
         const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
 
@@ -342,28 +345,18 @@ export default class MapView extends Component {
                         toggleSelectionType={isAToBRef}
                         currentLocation={prevLocationRef}
                         onUserLocation={setUserLocation}
+                        onRecenterRequest={onRecenterRequest}
                     />
                 </div>
 
                 {showNavigationScreen && (
                     <>
                         <div className="map-nav-overlay">
-                            <h2>Directions</h2>
                             <div className="map-nav-container">
-                                <ol>
-                                    {routeInfo?.steps?.map((step, index) => (
-                                        <li key={index}
-                                            className={index === navigationIndex ? "active" : ""}
-                                        >
-                                            <div>{step?.navigationInstruction.instructions}</div>
-                                            <div>{step?.distanceMeters}m</div>
-                                            {/* <div>{step?.startLocation.latLng.latitude}</div>
-                                            <div>{step?.startLocation.latLng.longitude}</div>
-                                            <div>{step?.endLocation.latLng.latitude}</div>
-                                            <div>{step?.endLocation.latLng.longitude}</div> */}
-                                        </li>
-                                    ))}
-                                </ol>
+                            <NavigationDirectionsList 
+                                steps={routeInfo?.steps} 
+                                currentStepIndex={navigationIndex} 
+                            />
                             </div>
 
                             {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
@@ -438,150 +431,15 @@ export default class MapView extends Component {
 
                 {/* Overlay UI */}
                 <div className="map-overlay-ui">
-                    <MapPage onSearch={() => console.log("Search triggered!")} showRouteUI={showRouteOptions} />
+                    <MapPage
+                        onSearch={() => console.log("Search triggered!")}
+                        onPlaceSelected={onPlaceSelected}
+                        showRouteUI={showRouteOptions}
+                        userLocation={userLocation}
+                        mapData={mapData}
+                    />
                 </div>
 
-
-                {/* Profile Icon with Dropdown */}
-                <div className="profile-button-container">
-                    <button
-                        onClick={() => setShowDropdown(!showDropdown)}
-                        className="profile-button"
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                    >
-                        <User size={24} color="#374151" />
-                    </button>
-
-                    {showDropdown && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '60px',
-                            right: '0',
-                            width: '240px',
-                            backgroundColor: 'white',
-                            borderRadius: '12px',
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                            border: '1px solid #e5e7eb',
-                            overflow: 'hidden',
-                            zIndex: 1001
-                        }}>
-                            {/* User Info Section */}
-                            <div style={{
-                                padding: '16px',
-                                borderBottom: '1px solid #e5e7eb'
-                            }}>
-                                <p style={{
-                                    fontSize: '14px',
-                                    fontWeight: '600',
-                                    color: '#1f2937',
-                                    margin: '0 0 4px 0'
-                                }}>{username || "Guest"}</p>
-                                <p style={{
-                                    fontSize: '12px',
-                                    color: '#6b7280',
-                                    margin: 0
-                                }}>{points} Points</p>
-                            </div>
-
-                            {/* Menu Items */}
-                            <div>
-                                <button
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#374151',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <User size={20} color="#374151" />
-                                    <span style={{ fontSize: '14px' }}>Profile</span>
-                                </button>
-
-                                <button
-                                    onClick={handleRewardsClick}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#374151',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fefaefff'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <Award size={20} color="#FFB20F" />
-                                    <span style={{ fontWeight: '500', fontSize: '14px' }}>Rewards</span>
-                                </button>
-
-                                <button
-                                    onClick={handleSettingsClick}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#374151',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <Settings size={20} color="#374151" />
-                                    <span style={{ fontSize: '14px' }}>Settings</span>
-                                </button>
-                            </div>
-
-                            {/* Logout Section */}
-                            <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px' }}>
-                                <button
-                                    onClick={() => {
-                                        setShowDropdown(false);
-                                        setShowLogoutConfirm(true);
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#dc2626',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <LogOut size={20} color="#dc2626" />
-                                    <span style={{ fontSize: '14px' }}>Logout</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
 
                 {/* Testing button to check if distance and points gets updated correctly */}
                 {/* <button
