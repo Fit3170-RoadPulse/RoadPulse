@@ -26,6 +26,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -105,9 +106,14 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
-GOOGLE_MAPS_API_KEY="AIzaSyBdbRFLLwPTNe7RR9zahjksLOHovFjGM-M"
-GOOGLE_MAPS_ID = "9f96fc85ced76649d1bf190d"
-STATIC_URL = "static/"
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "AIzaSyBdbRFLLwPTNe7RR9zahjksLOHovFjGM-M")
+GOOGLE_MAPS_ID = os.getenv("GOOGLE_MAPS_ID", "9f96fc85ced76649d1bf190d")
+
+# Static files for deployment (Render + WhiteNoise)
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -119,4 +125,16 @@ ENABLE_HIGH_ACCURACY = True
 TIMEOUT = 8000
 MAXIMUM_AGE = 15000
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+CORS_ALLOWED_ORIGINS = [
+    "https://roadpulsefrontend.onrender.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:5174",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://roadpulsefrontend.onrender.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:5174",
+]
