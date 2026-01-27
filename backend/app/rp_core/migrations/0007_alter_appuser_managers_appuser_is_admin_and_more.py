@@ -33,9 +33,22 @@ class Migration(migrations.Migration):
                 ),
             ],
         ),
-        migrations.AddField(
-            model_name='exchangeitem',
-            name='image',
-            field=models.ImageField(blank=True, help_text='Reward image', null=True, upload_to='rewards/'),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddField(
+                    model_name='exchangeitem',
+                    name='image',
+                    field=models.ImageField(blank=True, help_text='Reward image', null=True, upload_to='rewards/'),
+                ),
+            ],
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE rp_core_exchangeitem "
+                        "ADD COLUMN IF NOT EXISTS image varchar(100);"
+                    ),
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+            ],
         ),
     ]
