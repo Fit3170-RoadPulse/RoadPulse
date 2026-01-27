@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 COPY app /app
 
 EXPOSE 8000
-CMD ["sh","-c","python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+CMD ["sh","-c","python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"]
