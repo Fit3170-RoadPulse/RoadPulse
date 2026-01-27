@@ -3,7 +3,7 @@
  * Automatically includes the access token from localStorage in request headers.
  */
 
-const API_BASE_URL = `${import.meta.env.VITE_API_URL || ""}/api`;
+const API_BASE_URL = `${import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com"}/api`;
 
 /**
  * Get the access token from localStorage

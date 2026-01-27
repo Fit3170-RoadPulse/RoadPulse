@@ -883,7 +883,7 @@ export default class MapController extends Component {
 
     fetchRoute = async (origin, destination, selectedOffset, map) => {
         this.setState({ isLoadingRoute: true });
-        const base = import.meta.env.VITE_API_URL || "";
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
         const departureDate = new Date(Date.now() + selectedOffset * 60000);
         const departureTime = departureDate.toISOString();
         const cacheKey = this.buildRouteCacheKey(origin, destination, departureTime);
