@@ -81,18 +81,19 @@ export default function NavigationDirectionsList({ steps, currentStepIndex = 0 }
                 // optional: jump to step on map
               }}
             >
-              <div className="nav-step-icon">
-                {getIcon(maneuver)}
+              <div className="nav-step-leading">
+                <div className="nav-step-icon">
+                  {getIcon(maneuver)}
+                </div>
+                <div className="nav-distance nav-distance-leading">
+                  {formatDistance(distance)}
+                </div>
               </div>
               
               <div className="nav-step-content">
                 <span className="nav-instruction">{instruction}</span>
-                <span className="nav-distance">{formatDistance(distance)}</span>
               </div>
 
-              <div className="nav-step-number">
-                #{index + 1}
-              </div>
             </li>
           );
         })}
