@@ -43,7 +43,7 @@ export default function Report() {
     }
 
     const fetchReports = useCallback(() => {
-        const base = import.meta.env.VITE_API_URL || "";
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
         return axios
             .get(`${base}/api/incident-reports/`, getAuthConfig())
             .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
@@ -58,8 +58,8 @@ export default function Report() {
 
     useEffect(() => {
         let mounted = true;
-        const base = import.meta.env.VITE_API_URL || "";
-        const isNativeApp = /Mobi|Android/i.test(navigator.userAgent);
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
+        // const isNativeApp = /Mobi|Android/i.test(navigator.userAgent);
 
         const startLocation = async () => {
             try {
@@ -70,9 +70,7 @@ export default function Report() {
             }
 
             if (!mounted) return;
-            const provider = isNativeApp
-                ? new NativeGeolocationProvider()
-                : new WebGeolocationProvider();
+            const provider = new WebGeolocationProvider();
             geolocationProviderRef.current = provider;
             provider.start(prevLocationRef, locationPollingDataRef, (loc) => {
                 if (!mounted) return;
