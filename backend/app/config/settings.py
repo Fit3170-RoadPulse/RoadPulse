@@ -119,4 +119,10 @@ ENABLE_HIGH_ACCURACY = True
 TIMEOUT = 8000
 MAXIMUM_AGE = 15000
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+# Allow configuring CORS origins via env for deployments (e.g., Render)
+_default_cors_origins = "http://localhost:5173,https://roadpulsefrontend.onrender.com"
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", _default_cors_origins).split(",")
+    if origin.strip()
+]
