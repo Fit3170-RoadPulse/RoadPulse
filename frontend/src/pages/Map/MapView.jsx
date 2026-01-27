@@ -330,6 +330,7 @@ export default class MapView extends Component {
             showLogoutConfirm,
             handleLogout,
             onPlaceSelected,
+            onRecenterRequest,
         } = this.props;
         const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
 
@@ -344,13 +345,13 @@ export default class MapView extends Component {
                         toggleSelectionType={isAToBRef}
                         currentLocation={prevLocationRef}
                         onUserLocation={setUserLocation}
+                        onRecenterRequest={onRecenterRequest}
                     />
                 </div>
 
                 {showNavigationScreen && (
                     <>
                         <div className="map-nav-overlay">
-                            <h2>Directions</h2>
                             <div className="map-nav-container">
                             <NavigationDirectionsList 
                                 steps={routeInfo?.steps} 

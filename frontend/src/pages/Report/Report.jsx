@@ -429,6 +429,21 @@ export default function Report() {
         });
     }, []);
 
+    const handleRecenterRequest = useCallback(({ map, location }) => {
+        const mapInstance = map || mapInstanceRef.current;
+        const source = userLocation || location;
+        const lat = Number(source?.latitude ?? source?.lat);
+        const lng = Number(source?.longitude ?? source?.lng);
+        if (!mapInstance || !Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+        mapInstance.panTo({ lat, lng });
+        const zoom = mapInstance.getZoom?.();
+        if (!Number.isFinite(zoom) || zoom < 14) {
+            mapInstance.setZoom(14);
+        }
+        return true;
+    }, [userLocation]);
+
     return (
         <div className="report-container">
             {toast ? (
@@ -450,6 +465,7 @@ export default function Report() {
                     onUserLocation={null}
                     useExternalUserLocation
                     externalUserLocation={userLocation}
+                    onRecenterRequest={handleRecenterRequest}
                 />
             </div>
             <div className={`report-sidebar-container ${(isClicked || selectedReport) ? "report-sidebar-container-active" : "report-sidebar-container-inactive"}`}>

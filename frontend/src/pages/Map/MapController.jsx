@@ -782,6 +782,99 @@ export default class MapController extends Component {
         return { lat, lng };
     };
 
+    extractLatLng = (value) => {
+        if (!value) return null;
+        const lat = Number(value.latitude ?? value.lat);
+        const lng = Number(value.longitude ?? value.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { lat, lng };
+    };
+
+    extractStepTarget = (step) => {
+        if (!step) return null;
+        return (
+            this.extractLatLng(step?.endLocation?.latLng) ||
+            this.extractLatLng(step?.startLocation?.latLng) ||
+            this.extractLatLng(step?.endLocation) ||
+            this.extractLatLng(step?.startLocation) ||
+            this.extractLatLng(step?.latLng) ||
+            this.extractLatLng(step)
+        );
+    };
+
+    getNavigationTarget = () => {
+        const steps = this.state.routeInfo?.steps;
+        const idx = this.state.navigationIndex;
+        if (Array.isArray(steps) && steps.length > 0) {
+            const currentTarget = this.extractStepTarget(steps[idx]);
+            if (currentTarget) return currentTarget;
+            const nextTarget = this.extractStepTarget(steps[idx + 1]);
+            if (nextTarget) return nextTarget;
+        }
+
+        const destMarker = this.state.mapMarkers?.destination;
+        if (destMarker?.position) {
+            const dest = this.normalizeLatLng(destMarker.position);
+            if (Number.isFinite(dest.lat) && Number.isFinite(dest.lng)) return dest;
+        }
+
+        return null;
+    };
+
+    getCurrentUserLatLng = (fallbackLocation) => {
+        const cur = this.prevLocationRef.current;
+        const lat = Number(cur?.latitude ?? cur?.lat ?? fallbackLocation?.lat ?? fallbackLocation?.latitude);
+        const lng = Number(cur?.longitude ?? cur?.lng ?? fallbackLocation?.lng ?? fallbackLocation?.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { lat, lng };
+    };
+
+    handleRecenterRequest = ({ map, location }) => {
+        const mapInstance = map || this.state.mapRef || this.mapInstanceRef;
+        if (!mapInstance) return false;
+
+        const curLocation = this.getCurrentUserLatLng(location);
+        if (!curLocation) return false;
+
+        const isNavigating = this.state.isNavigationBegun || this.state.showNavigationScreen;
+
+        // In navigation mode, avoid recomputing heading on recenter.
+        // Recomputing heading can cause the camera to "turn around"
+        // if the inferred next target is behind the user.
+        if (isNavigating) {
+            const g = globalThis.google?.maps;
+            const center = g?.LatLng ? new g.LatLng(curLocation.lat, curLocation.lng) : curLocation;
+            const zoom = mapInstance.getZoom?.();
+            const heading = mapInstance.getHeading?.();
+            const tilt = mapInstance.getTilt?.();
+            const nextZoom = Number.isFinite(zoom) ? Math.max(zoom, 18) : 18;
+            const nextHeading = Number.isFinite(heading) ? heading : 0;
+            const nextTilt = Number.isFinite(tilt) ? tilt : 40;
+
+            if (typeof mapInstance.moveCamera === "function") {
+                mapInstance.moveCamera({
+                    center,
+                    zoom: nextZoom,
+                    heading: nextHeading,
+                    tilt: nextTilt,
+                });
+            } else {
+                mapInstance.panTo(center);
+                if (!Number.isFinite(zoom) || zoom < nextZoom) mapInstance.setZoom(nextZoom);
+                if (typeof mapInstance.setHeading === "function") mapInstance.setHeading(nextHeading);
+                if (typeof mapInstance.setTilt === "function") mapInstance.setTilt(nextTilt);
+            }
+            return true;
+        }
+
+        mapInstance.panTo(curLocation);
+        const zoom = mapInstance.getZoom?.();
+        if (!Number.isFinite(zoom) || zoom < 14) {
+            mapInstance.setZoom(14);
+        }
+        return true;
+    };
+
     buildRouteCacheKey = (origin, destination, departureTime) => {
         const originPos = this.normalizeLatLng(origin);
         const destPos = this.normalizeLatLng(destination);
@@ -1283,6 +1376,7 @@ export default class MapController extends Component {
                 setShowLogoutConfirm={this.setShowLogoutConfirm}
                 showLogoutConfirm={this.state.showLogoutConfirm}
                 handleLogout={this.handleLogout}
+                onRecenterRequest={this.handleRecenterRequest}
             />
         );
     };

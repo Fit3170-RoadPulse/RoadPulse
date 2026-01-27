@@ -1049,6 +1049,15 @@ body.rp-incident-dragging .map-incident-scroll {
     font-weight: 500;
 }
 
+@media (min-width: 769px) {
+    .map-nav-end-screen {
+        top: 50%;
+        left: 50%;
+        right: auto;
+        transform: translate(-50%, -50%);
+    }
+}
+
 .map-nav-end-screen-button {
     margin-top: 20px;
     padding: 10px 24px;
@@ -1134,7 +1143,7 @@ body.rp-incident-dragging .map-incident-scroll {
         --map-top-right-reserve: 56px;
         --map-top-row-offset: calc(12px + var(--safe-top));
         --map-top-row-nudge: -4px;
-        --speed-card-width: min(160px, 44vw);
+        --speed-card-width: min(132px, 36vw);
         --top-row-card-height: 112px;
     }
 

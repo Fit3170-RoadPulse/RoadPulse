@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { LocateFixed } from "lucide-react";
 import "./MapComponent.css";
 import { ensureMapsLoaderOptions, loadMapsLibrary } from "../../lib/googleMapsLoader";
 
@@ -17,6 +18,9 @@ export default function MapComponent({
     onUserLocation,
     externalUserLocation = null,
     useExternalUserLocation = false,
+    showRecenterButton = true,
+    onRecenterRequest = null,
+    recenterMinZoom = 14,
 }) {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
@@ -26,6 +30,25 @@ export default function MapComponent({
     const hasCenteredRef = useRef(false);
     const updateUserLocationRef = useRef(null);
     const pendingExternalLocationRef = useRef(null);
+    const lastUserLocationRef = useRef(null);
+    const [hasLocation, setHasLocation] = useState(false);
+
+    const handleRecenterClick = () => {
+        const map = mapInstance.current;
+        const location = lastUserLocationRef.current;
+        if (!map || !location) return;
+
+        if (typeof onRecenterRequest === "function") {
+            const handled = onRecenterRequest({ map, location });
+            if (handled) return;
+        }
+
+        map.panTo({ lat: location.lat, lng: location.lng });
+        const currentZoom = map.getZoom?.();
+        if (!Number.isFinite(currentZoom) || currentZoom < recenterMinZoom) {
+            map.setZoom(recenterMinZoom);
+        }
+    };
 
     const applyExternalLocation = (location) => {
         if (!location) return;
@@ -80,6 +103,8 @@ export default function MapComponent({
 
             const updateUserLocation = (lat, lng, accuracyMeters) => {
                 const pos = { lat, lng };
+                lastUserLocationRef.current = { lat, lng, accuracyMeters, timestamp: Date.now() };
+                setHasLocation(true);
 
                 if (!userMarkerRef.current) {
                     userMarkerRef.current = new g.maps.Marker({
@@ -178,6 +203,7 @@ export default function MapComponent({
                 userAccuracyCircleRef.current = null;
             }
             hasCenteredRef.current = false;
+            setHasLocation(false);
         };
     }, [API_KEY, MAP_ID, map_function, showUserLocation, onUserLocation, toggleSelectionType, useExternalUserLocation]);
 
@@ -192,6 +218,25 @@ export default function MapComponent({
                 ref={mapRef}
                 className="map-div"
             />
+            {showRecenterButton && (
+                <div className="map-recenter-container">
+                    <button
+                        type="button"
+                        className={`map-recenter-button ${hasLocation ? "" : "is-disabled"}`}
+                        onClick={handleRecenterClick}
+                        aria-label="Recenter map on your location"
+                        title="Recenter"
+                        disabled={!hasLocation}
+                    >
+                        <LocateFixed
+                            className="map-recenter-icon"
+                            size={32}
+                            strokeWidth={2.75}
+                            absoluteStrokeWidth
+                        />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
