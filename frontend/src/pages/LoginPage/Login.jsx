@@ -92,6 +92,7 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
           .replace(/^\"+|\"+$/g, "");
         localStorage.setItem("access", access);
         localStorage.setItem("refresh", refresh);
+        localStorage.setItem("is_staff", !!data.is_staff);
         window.dispatchEvent(new Event("rp:auth-changed"));
 
         if (typeof onLogin === "function") onLogin({ email, password });
@@ -128,8 +129,8 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
     }
 
     try {
-      const base = import.meta.env.VITE_API_URL;
-      const res = fetch(`${base}/api/forgot-password/`, {
+      const base = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${base}/api/forgot-password/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })

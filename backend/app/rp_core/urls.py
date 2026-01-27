@@ -7,9 +7,11 @@ urlpatterns = [
     # path("samples/", views.samples, name="samples"),
     # path("map/", views.map_config, name="map-config"),
     path("rewards/account/", views.reward_account, name="reward-account"),
+    path("profile/update/", views.update_profile, name="update-profile"),
     path("rewards/items/", views.list_exchange_items, name="exchange-items"),
+    path("rewards/redemptions/", views.list_user_redemptions, name="user-redemptions"),
+    path("rewards/redemptions/<int:redemption_id>/redeem/", views.mark_voucher_redeemed, name="mark-voucher-redeemed"),
     path("rewards/redeem/", views.redeem_reward, name="redeem-reward"),
-    path("rewards/my-redemptions/", views.user_redemptions, name="user-redemptions"),
     path("incident-reports/", views.incident_reports, name="incident-reports"),
     path("incident-reports/<int:report_id>/vote/", views.incident_report_vote, name="incident-report-vote"),
     

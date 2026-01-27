@@ -52,7 +52,7 @@ class IncidentReportVoteAdmin(admin.ModelAdmin):
 
 @admin.register(ExchangeItem)
 class ExchangeItemAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'points_cost', 'stock', 'is_active', 'valid_from', 'valid_until', 'updated_at')
+    list_display = ('id', 'name', 'points_cost', 'stock', 'is_active', 'updated_at')
     list_filter = ('is_active',)
     search_fields = ('name',)
     list_editable = ('is_active',)

@@ -31,7 +31,9 @@ export class NativeGeolocationProvider {
                 accuracy: pos?.coords?.accuracy,
                 timestamp: pos?.timestamp,
             };
-            cb.bind(null, newLocation, now);
+            if (typeof cb === "function") {
+                cb(newLocation, now);
+            }
         }
         );
     }
@@ -63,7 +65,9 @@ export class WebGeolocationProvider {
             console.log("Location updated:", newLocation);
             prevLocationRef.current = newLocation;
 
-            cb.bind(null, newLocation, now);
+            if (typeof cb === "function") {
+                cb(newLocation, now);
+            }
         };
 
         // Error handler: updates the error state

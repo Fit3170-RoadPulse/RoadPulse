@@ -5,6 +5,8 @@ import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import ReportComponent from "@/components/ReportComponent/ReportComponent";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
+import { fetchMapConfig } from "../../lib/mapConfig";
+import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles";
 
 export default function Report() {
     let [isClicked, setIsClicked] = useState(null);
@@ -17,9 +19,18 @@ export default function Report() {
     const [mapReady, setMapReady] = useState(false);
     const mapInstanceRef = useRef(null);
     const [userLocation, setUserLocation] = useState(null);
+    const prevLocationRef = useRef(null);
+    const locationPollingDataRef = useRef({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    const geolocationProviderRef = useRef(null);
     const reportMarkersRef = useRef(new Map()); // id -> AdvancedMarkerElement
     const reportsByIdRef = useRef(new Map()); // id -> report
     const draftMarkerRef = useRef(null);
+    const [reportSheetHeightVh, setReportSheetHeightVh] = useState(42);
+    const reportSheetHeightRef = useRef(42);
+    const reportDragActiveRef = useRef(false);
+    const reportDragStartYRef = useRef(0);
+    const reportDragStartHeightRef = useRef(42);
+    const reportDragRafRef = useRef(null);
 
     function getAccessToken() {
         const raw = (localStorage.getItem("access") || "").trim();
@@ -32,7 +43,7 @@ export default function Report() {
     }
 
     const fetchReports = useCallback(() => {
-        const base = import.meta.env.VITE_API_URL || "";
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
         return axios
             .get(`${base}/api/incident-reports/`, getAuthConfig())
             .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
@@ -40,11 +51,41 @@ export default function Report() {
     }, []);
 
     useEffect(() => {
-        const base = import.meta.env.VITE_API_URL || "";
-        axios.get(`${base}/api/map/`).then((r) => {
-            setMapData(r.data)
-        });
+        fetchMapConfig()
+            .then((data) => setMapData(data))
+            .catch(() => setMapData(null));
     }, []);
+
+    useEffect(() => {
+        let mounted = true;
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
+        // const isNativeApp = /Mobi|Android/i.test(navigator.userAgent);
+
+        const startLocation = async () => {
+            try {
+                const r = await axios.get(`${base}/api/map/location/`);
+                locationPollingDataRef.current = r.data;
+            } catch (_) {
+                // fall back to defaults
+            }
+
+            if (!mounted) return;
+            const provider = new WebGeolocationProvider();
+            geolocationProviderRef.current = provider;
+            provider.start(prevLocationRef, locationPollingDataRef, (loc) => {
+                if (!mounted) return;
+                setUserLocation(loc);
+            });
+        };
+
+        startLocation();
+
+        return () => {
+            mounted = false;
+            geolocationProviderRef.current?.stop();
+        };
+    }, []);
+
     useEffect(() => {
         fetchReports();
     }, []);
@@ -79,6 +120,116 @@ export default function Report() {
     useEffect(() => {
         selectedReportRef.current = selectedReport;
     }, [selectedReport]);
+
+    useEffect(() => {
+        reportSheetHeightRef.current = reportSheetHeightVh;
+    }, [reportSheetHeightVh]);
+
+
+    const setReportSheetHeight = useCallback((nextHeight) => {
+        if (reportDragRafRef.current) cancelAnimationFrame(reportDragRafRef.current);
+        reportDragRafRef.current = requestAnimationFrame(() => {
+            setReportSheetHeightVh(nextHeight);
+        });
+    }, []);
+
+    const startReportDrag = useCallback((clientY) => {
+        reportDragActiveRef.current = true;
+        reportDragStartYRef.current = clientY;
+        reportDragStartHeightRef.current = reportSheetHeightRef.current;
+        document.body.classList.add("rp-report-dragging");
+    }, []);
+
+    const handleReportPointerMove = useCallback((event) => {
+        if (!reportDragActiveRef.current) return;
+        if (event.cancelable) event.preventDefault();
+        event.stopPropagation();
+        const deltaY = reportDragStartYRef.current - event.clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, reportDragStartHeightRef.current + deltaVh));
+        setReportSheetHeight(nextHeight);
+    }, [setReportSheetHeight]);
+
+    const handleReportPointerUp = useCallback(() => {
+        if (!reportDragActiveRef.current) return;
+        reportDragActiveRef.current = false;
+        window.removeEventListener("pointermove", handleReportPointerMove);
+        window.removeEventListener("pointerup", handleReportPointerUp);
+        window.removeEventListener("pointercancel", handleReportPointerUp);
+        document.body.classList.remove("rp-report-dragging");
+        const minVh = 32;
+        const maxVh = 78;
+        const midpoint = (minVh + maxVh) / 2;
+        const current = reportSheetHeightRef.current;
+        const target = current >= midpoint ? maxVh : minVh;
+        setReportSheetHeight(target);
+    }, [handleReportPointerMove, setReportSheetHeight]);
+
+    const handleReportPointerDown = useCallback((event) => {
+        if (window.innerWidth > 768) return;
+        event.preventDefault();
+        event.stopPropagation();
+        startReportDrag(event.clientY);
+        window.addEventListener("pointermove", handleReportPointerMove, { passive: false });
+        window.addEventListener("pointerup", handleReportPointerUp);
+        window.addEventListener("pointercancel", handleReportPointerUp);
+    }, [handleReportPointerMove, handleReportPointerUp, startReportDrag]);
+
+    const handleReportTouchMove = useCallback((event) => {
+        if (!reportDragActiveRef.current) return;
+        event.preventDefault();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const deltaY = reportDragStartYRef.current - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, reportDragStartHeightRef.current + deltaVh));
+        setReportSheetHeight(nextHeight);
+    }, [setReportSheetHeight]);
+
+    const handleReportTouchEnd = useCallback(() => {
+        handleReportPointerUp();
+        window.removeEventListener("touchmove", handleReportTouchMove);
+        window.removeEventListener("touchend", handleReportTouchEnd);
+        window.removeEventListener("touchcancel", handleReportTouchEnd);
+    }, [handleReportPointerUp, handleReportTouchMove]);
+
+    const handleReportSheetPointerDown = useCallback((event) => {
+        if (window.innerWidth > 768) return;
+        if (!event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const offsetY = event.clientY - rect.top;
+        if (offsetY > 44) return;
+        handleReportPointerDown(event);
+    }, [handleReportPointerDown]);
+
+    const handleReportSheetTouchStart = useCallback((event) => {
+        if (window.innerWidth > 768) return;
+        if (!event.currentTarget) return;
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (clientY - rect.top > 44) return;
+        startReportDrag(clientY);
+        window.addEventListener("touchmove", handleReportTouchMove, { passive: false });
+        window.addEventListener("touchend", handleReportTouchEnd);
+        window.addEventListener("touchcancel", handleReportTouchEnd);
+    }, [handleReportTouchEnd, handleReportTouchMove, startReportDrag]);
+
+    useEffect(() => {
+        return () => {
+            document.body.classList.remove("rp-report-dragging");
+            window.removeEventListener("pointermove", handleReportPointerMove);
+            window.removeEventListener("pointerup", handleReportPointerUp);
+            window.removeEventListener("pointercancel", handleReportPointerUp);
+            window.removeEventListener("touchmove", handleReportTouchMove);
+            window.removeEventListener("touchend", handleReportTouchEnd);
+            window.removeEventListener("touchcancel", handleReportTouchEnd);
+        };
+    }, [handleReportPointerMove, handleReportPointerUp, handleReportTouchMove, handleReportTouchEnd]);
 
     useEffect(() => {
         const map = mapInstanceRef.current;
@@ -276,6 +427,21 @@ export default function Report() {
         });
     }, []);
 
+    const handleRecenterRequest = useCallback(({ map, location }) => {
+        const mapInstance = map || mapInstanceRef.current;
+        const source = userLocation || location;
+        const lat = Number(source?.latitude ?? source?.lat);
+        const lng = Number(source?.longitude ?? source?.lng);
+        if (!mapInstance || !Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+        mapInstance.panTo({ lat, lng });
+        const zoom = mapInstance.getZoom?.();
+        if (!Number.isFinite(zoom) || zoom < 14) {
+            mapInstance.setZoom(14);
+        }
+        return true;
+    }, [userLocation]);
+
     return (
         <div className="report-container">
             {toast ? (
@@ -293,49 +459,68 @@ export default function Report() {
                     API_KEY={mapData?.GMAPS_KEY}
                     MAP_ID={mapData?.GMAPS_ID}
                     map_function={ReportLocation}
-                    showUserLocation
-                    onUserLocation={setUserLocation}
+                    showUserLocation={false}
+                    onUserLocation={null}
+                    useExternalUserLocation
+                    externalUserLocation={userLocation}
+                    onRecenterRequest={handleRecenterRequest}
                 />
             </div>
             <div className={`report-sidebar-container ${(isClicked || selectedReport) ? "report-sidebar-container-active" : "report-sidebar-container-inactive"}`}>
                 <div className="report-sidebar-content">
-                    {selectedReport ? (
-                        <IncidentDetailsCard
-                            report={selectedReport}
-                            onClose={() => setSelectedReport(null)}
-                            userLocation={userLocation}
-                            onReportUpdated={(updated) => {
-                                if (!updated?.id) return;
-                                setSelectedReport(updated);
-                                setReports((prev) => {
-                                    const next = prev.map((r) => (r.id === updated.id ? updated : r));
-                                    return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
-                                });
-                            }}
-                        />
-                    ) : isClicked ? (
-                        <ReportComponent
-                            location={selectedLocation}
-                            onClose={() => setIsClicked(false)}
-                            onSubmitted={(newReport) => {
-                                if (newReport?.id) {
-                                    setReports((prev) => [newReport, ...prev.filter((r) => r.id !== newReport.id)]);
-                                }
-                                if (draftMarkerRef.current) {
-                                    draftMarkerRef.current.map = null;
-                                    draftMarkerRef.current = null;
-                                }
-                                setToast({ type: "success", message: "Report submitted." });
-                                setIsClicked(false);
-                                if (newReport?.id) setSelectedReport(newReport);
-                            }}
-                        />
+                    {(selectedReport || isClicked) ? (
+                        <div
+                            className="report-sheet"
+                            style={{ "--report-sheet-height": `${reportSheetHeightVh}vh` }}
+                            onPointerDown={handleReportSheetPointerDown}
+                            onTouchStart={handleReportSheetTouchStart}
+                        >
+                            <button
+                                type="button"
+                                className="report-sheet-handle"
+                                aria-label="Drag to resize report sheet"
+                            />
+                            <div className="report-sheet-scroll">
+                                {selectedReport ? (
+                                    <IncidentDetailsCard
+                                        report={selectedReport}
+                                        onClose={() => setSelectedReport(null)}
+                                        userLocation={userLocation}
+                                        onReportUpdated={(updated) => {
+                                            if (!updated?.id) return;
+                                            setSelectedReport(updated);
+                                            setReports((prev) => {
+                                                const next = prev.map((r) => (r.id === updated.id ? updated : r));
+                                                return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
+                                            });
+                                        }}
+                                    />
+                                ) : (
+                                    <ReportComponent
+                                        location={selectedLocation}
+                                        onClose={() => setIsClicked(false)}
+                                        onSubmitted={(newReport) => {
+                                            if (newReport?.id) {
+                                                setReports((prev) => [newReport, ...prev.filter((r) => r.id !== newReport.id)]);
+                                            }
+                                            if (draftMarkerRef.current) {
+                                                draftMarkerRef.current.map = null;
+                                                draftMarkerRef.current = null;
+                                            }
+                                            setToast({ type: "success", message: "Report submitted." });
+                                            setIsClicked(false);
+                                            if (newReport?.id) setSelectedReport(newReport);
+                                        }}
+                                    />
+                                )}
+                            </div>
+                        </div>
                     ) : null}
                 </div>
             </div>
 
             <div className="overlay-ui report-overlay-ui">  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
-                <MapPage onSearch={() => console.log("Search triggered!")} />
+                <MapPage onSearch={() => console.log("Search triggered!")} showSearch={false} />
             </div>
         </div>
     );

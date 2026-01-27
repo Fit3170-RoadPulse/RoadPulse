@@ -5,12 +5,17 @@
   background: #ffffff;
   border: 1px solid #e5e7eb;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  text-align: left;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .speed-card-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
 }
 
@@ -19,10 +24,11 @@
   font-weight: 600;
   color: #111827;
   margin: 0;
+  white-space: nowrap;
 }
 
 .speed-value {
-  margin-top: 12px;
+  margin-top: 0;
   font-size: 36px;
   font-weight: 700;
   line-height: 1.1;
@@ -56,4 +62,22 @@
   font-size: 12px;
   font-weight: 600;
   color: #dc2626;
+}
+
+@media (max-width: 768px) {
+  .speed-card {
+    width: var(--speed-card-width, 148px);
+    max-width: var(--speed-card-width, 40vw);
+    padding: 10px;
+  }
+
+  .speed-card-title {
+    font-size: clamp(13px, 3.6vw, 15px);
+    white-space: nowrap;
+    line-height: 1.1;
+  }
+
+  .speed-value {
+    font-size: 26px;
+  }
 }

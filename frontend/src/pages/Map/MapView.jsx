@@ -6,8 +6,286 @@ import "./Map.css";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
 import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
 import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent.jsx";
+import NavigationDirectionsList from "../../components/NavigationOverlay/NavigationDirectionsList";
 
 export default class MapView extends Component {
+    state = {
+        routeSheetHeightVh: 38,
+        incidentSheetHeightVh: 42,
+    };
+
+    componentDidMount = () => {
+        this.syncTimeSelectorClass();
+    };
+
+    componentDidUpdate = (prevProps) => {
+        if (prevProps.showRouteOptions && !this.props.showRouteOptions && this.state.routeSheetHeightVh !== 38) {
+            this.setState({ routeSheetHeightVh: 38 });
+        }
+        if (prevProps.selectedReport && !this.props.selectedReport && this.state.incidentSheetHeightVh !== 42) {
+            this.setState({ incidentSheetHeightVh: 42 });
+        }
+        if (prevProps.showTimeSelector !== this.props.showTimeSelector) {
+            this.syncTimeSelectorClass();
+        }
+    };
+
+    componentWillUnmount = () => {
+        document.body.classList.remove("rp-time-selector-open");
+        document.body.classList.remove("rp-route-dragging");
+        document.body.classList.remove("rp-incident-dragging");
+        window.removeEventListener("pointermove", this.handleIncidentPointerMove);
+        window.removeEventListener("pointerup", this.handleIncidentPointerUp);
+        window.removeEventListener("pointercancel", this.handleIncidentPointerUp);
+        window.removeEventListener("touchmove", this.handleIncidentTouchMove);
+        window.removeEventListener("touchend", this.handleIncidentTouchEnd);
+        window.removeEventListener("touchcancel", this.handleIncidentTouchEnd);
+    };
+
+    syncTimeSelectorClass = () => {
+        if (this.props.showTimeSelector) {
+            document.body.classList.add("rp-time-selector-open");
+        } else {
+            document.body.classList.remove("rp-time-selector-open");
+        }
+    };
+
+    routeDragActive = false;
+    routeDragStartY = 0;
+    routeDragStartHeight = 38;
+    routeDragRaf = null;
+    routeDragPointerType = null;
+    incidentDragActive = false;
+    incidentDragStartY = 0;
+    incidentDragStartHeight = 42;
+    incidentDragRaf = null;
+
+    setRouteSheetHeight = (nextHeight) => {
+        if (this.routeDragRaf) cancelAnimationFrame(this.routeDragRaf);
+        this.routeDragRaf = requestAnimationFrame(() => {
+            this.setState({ routeSheetHeightVh: nextHeight });
+        });
+    };
+
+    setIncidentSheetHeight = (nextHeight) => {
+        if (this.incidentDragRaf) cancelAnimationFrame(this.incidentDragRaf);
+        this.incidentDragRaf = requestAnimationFrame(() => {
+            this.setState({ incidentSheetHeightVh: nextHeight });
+        });
+    };
+
+    startRouteDrag = (clientY, pointerType = "pointer") => {
+        this.routeDragActive = true;
+        this.routeDragStartY = clientY;
+        this.routeDragStartHeight = this.state.routeSheetHeightVh;
+        this.routeDragPointerType = pointerType;
+        document.body.classList.add("rp-route-dragging");
+    };
+
+    startIncidentDrag = (clientY) => {
+        this.incidentDragActive = true;
+        this.incidentDragStartY = clientY;
+        this.incidentDragStartHeight = this.state.incidentSheetHeightVh;
+        document.body.classList.add("rp-incident-dragging");
+    };
+
+    handleRoutePointerDown = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.pointerId != null && event.currentTarget?.setPointerCapture) {
+            event.currentTarget.setPointerCapture(event.pointerId);
+        }
+        const clientY = event.clientY;
+        this.startRouteDrag(clientY, event.pointerType || "pointer");
+        window.addEventListener("pointermove", this.handleRoutePointerMove, { passive: false });
+        window.addEventListener("pointerup", this.handleRoutePointerUp);
+        window.addEventListener("pointercancel", this.handleRoutePointerUp);
+    };
+
+    handleIncidentPointerDown = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.pointerId != null && event.currentTarget?.setPointerCapture) {
+            event.currentTarget.setPointerCapture(event.pointerId);
+        }
+        const clientY = event.clientY;
+        this.startIncidentDrag(clientY);
+        window.addEventListener("pointermove", this.handleIncidentPointerMove, { passive: false });
+        window.addEventListener("pointerup", this.handleIncidentPointerUp);
+        window.addEventListener("pointercancel", this.handleIncidentPointerUp);
+    };
+
+    handleRouteSheetPointerDown = (event) => {
+        if (window.innerWidth > 768) return;
+        if (!event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const offsetY = event.clientY - rect.top;
+        if (offsetY > 44) return;
+        this.handleRoutePointerDown(event);
+    };
+
+    handleIncidentSheetPointerDown = (event) => {
+        if (window.innerWidth > 768) return;
+        if (event.target?.closest?.(".incident-close-btn")) return;
+        if (!event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const offsetY = event.clientY - rect.top;
+        if (offsetY > 120) return;
+        this.handleIncidentPointerDown(event);
+    };
+
+    handleRoutePointerMove = (event) => {
+        if (!this.routeDragActive) return;
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+        event.stopPropagation();
+        const clientY = event.clientY;
+        const deltaY = this.routeDragStartY - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, this.routeDragStartHeight + deltaVh));
+        this.setRouteSheetHeight(nextHeight);
+    };
+
+    handleIncidentPointerMove = (event) => {
+        if (!this.incidentDragActive) return;
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+        event.stopPropagation();
+        const clientY = event.clientY;
+        const deltaY = this.incidentDragStartY - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, this.incidentDragStartHeight + deltaVh));
+        this.setIncidentSheetHeight(nextHeight);
+    };
+
+    handleRoutePointerUp = () => {
+        if (!this.routeDragActive) return;
+        this.routeDragActive = false;
+        window.removeEventListener("pointermove", this.handleRoutePointerMove);
+        window.removeEventListener("pointerup", this.handleRoutePointerUp);
+        window.removeEventListener("pointercancel", this.handleRoutePointerUp);
+        document.body.classList.remove("rp-route-dragging");
+        const minVh = 32;
+        const maxVh = 78;
+        const midpoint = (minVh + maxVh) / 2;
+        const target = this.state.routeSheetHeightVh >= midpoint ? maxVh : minVh;
+        this.setRouteSheetHeight(target);
+        this.routeDragPointerType = null;
+    };
+
+    handleIncidentPointerUp = () => {
+        if (!this.incidentDragActive) return;
+        this.incidentDragActive = false;
+        window.removeEventListener("pointermove", this.handleIncidentPointerMove);
+        window.removeEventListener("pointerup", this.handleIncidentPointerUp);
+        window.removeEventListener("pointercancel", this.handleIncidentPointerUp);
+        document.body.classList.remove("rp-incident-dragging");
+        const minVh = 32;
+        const maxVh = 78;
+        const midpoint = (minVh + maxVh) / 2;
+        const target = this.state.incidentSheetHeightVh >= midpoint ? maxVh : minVh;
+        this.setIncidentSheetHeight(target);
+    };
+
+    handleRouteTouchStart = (event) => {
+        if (this.routeDragActive) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        this.startRouteDrag(clientY, "touch");
+        window.addEventListener("touchmove", this.handleRouteTouchMove, { passive: false });
+        window.addEventListener("touchend", this.handleRouteTouchEnd);
+        window.addEventListener("touchcancel", this.handleRouteTouchEnd);
+    };
+
+    handleIncidentTouchStart = (event) => {
+        if (this.incidentDragActive) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        this.startIncidentDrag(clientY);
+        window.addEventListener("touchmove", this.handleIncidentTouchMove, { passive: false });
+        window.addEventListener("touchend", this.handleIncidentTouchEnd);
+        window.addEventListener("touchcancel", this.handleIncidentTouchEnd);
+    };
+
+    handleRouteSheetTouchStart = (event) => {
+        if (window.innerWidth > 768) return;
+        if (!event.currentTarget) return;
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (clientY - rect.top > 44) return;
+        this.handleRouteTouchStart(event);
+    };
+
+    handleIncidentSheetTouchStart = (event) => {
+        if (window.innerWidth > 768) return;
+        if (event.target?.closest?.(".incident-close-btn")) return;
+        if (!event.currentTarget) return;
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (clientY - rect.top > 120) return;
+        this.handleIncidentTouchStart(event);
+    };
+
+    handleTimeSlotSelect = (index) => {
+        const { handleTimeChange, showTimeSelectorFunction } = this.props;
+        handleTimeChange(index);
+        if (window.innerWidth <= 768) {
+            showTimeSelectorFunction();
+        }
+    };
+
+    handleRouteTouchMove = (event) => {
+        if (!this.routeDragActive) return;
+        event.preventDefault();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const deltaY = this.routeDragStartY - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, this.routeDragStartHeight + deltaVh));
+        this.setRouteSheetHeight(nextHeight);
+    };
+
+    handleIncidentTouchMove = (event) => {
+        if (!this.incidentDragActive) return;
+        event.preventDefault();
+        const clientY = event.touches?.[0]?.clientY;
+        if (typeof clientY !== "number") return;
+        const deltaY = this.incidentDragStartY - clientY;
+        const deltaVh = (deltaY / window.innerHeight) * 100;
+        const minVh = 32;
+        const maxVh = 78;
+        const nextHeight = Math.min(maxVh, Math.max(minVh, this.incidentDragStartHeight + deltaVh));
+        this.setIncidentSheetHeight(nextHeight);
+    };
+
+    handleRouteTouchEnd = () => {
+        this.handleRoutePointerUp();
+        window.removeEventListener("touchmove", this.handleRouteTouchMove);
+        window.removeEventListener("touchend", this.handleRouteTouchEnd);
+        window.removeEventListener("touchcancel", this.handleRouteTouchEnd);
+    };
+
+    handleIncidentTouchEnd = () => {
+        this.handleIncidentPointerUp();
+        window.removeEventListener("touchmove", this.handleIncidentTouchMove);
+        window.removeEventListener("touchend", this.handleIncidentTouchEnd);
+        window.removeEventListener("touchcancel", this.handleIncidentTouchEnd);
+    };
+
     render() {
         const {
             mapData,
@@ -51,7 +329,10 @@ export default class MapView extends Component {
             setShowLogoutConfirm,
             showLogoutConfirm,
             handleLogout,
+            onPlaceSelected,
+            onRecenterRequest,
         } = this.props;
+        const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
 
         return (
             <div className="map-page-container">
@@ -64,28 +345,21 @@ export default class MapView extends Component {
                         toggleSelectionType={isAToBRef}
                         currentLocation={prevLocationRef}
                         onUserLocation={setUserLocation}
+                        onRecenterRequest={onRecenterRequest}
                     />
                 </div>
 
                 {showNavigationScreen && (
                     <>
                         <div className="map-nav-overlay">
-                            <h2>Directions</h2>
                             <div className="map-nav-container">
-                                <ol>
-                                    {routeInfo?.steps?.map((step, index) => (
-                                        <li key={index}
-                                            className={index === navigationIndex ? "active" : ""}
-                                        >
-                                            <div>{step?.navigationInstruction.instructions}</div>
-                                            <div>{step?.distanceMeters}m</div>
-                                            {/* <div>{step?.startLocation.latLng.latitude}</div>
-                                            <div>{step?.startLocation.latLng.longitude}</div>
-                                            <div>{step?.endLocation.latLng.latitude}</div>
-                                            <div>{step?.endLocation.latLng.longitude}</div> */}
-                                        </li>
-                                    ))}
-                                </ol>
+                            <NavigationDirectionsList 
+                                steps={routeInfo?.steps} 
+                                currentStepIndex={navigationIndex} 
+                                speed={speedKmh}
+                                eta={routeInfo?.arrival_time}
+                                onEndNavigation={showNavEndScreen}
+                            />
                             </div>
 
                             {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
@@ -106,30 +380,44 @@ export default class MapView extends Component {
                                 </button>
                             </div> */}
 
-                            <div className="map-nav-end-button">
-                                <button
-                                    onClick={() => {
-                                        showNavEndScreen();
-                                    }}
-                                    className="map-nav-end-button-inner"
-                                >
-                                    End Navigation
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="eta-tracker">
-                            <div className="eta-card">
-                                <div className="eta-title">ETA</div>
-                                <div className="eta-arrival">{routeInfo?.arrival_time ?? "--"}</div>
-                                <div className="eta-duration">
-                                    {routeInfo?.eta ? `(${routeInfo?.eta} remaining)` : ""}
+                            <div className="desktop-only-nav-elements">
+                                <div className="map-nav-end-button">
+                                    <button
+                                        onClick={() => {
+                                            showNavEndScreen();
+                                        }}
+                                        className="map-nav-end-button-inner"
+                                    >
+                                        End Navigation
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="speed-tracker">
-                            <SpeedTracker speedKmh={speedKmh} />
+                        <div className="desktop-only-nav-elements">
+                            <div className="eta-tracker">
+                                <div className="eta-card">
+                                    <div className="eta-info">
+                                        <div className="eta-title">ETA</div>
+                                        <div className="eta-arrival">{routeInfo?.arrival_time ?? "--"}</div>
+                                        <div className="eta-duration">
+                                            {routeInfo?.eta ? `(${routeInfo?.eta} remaining)` : ""}
+                                        </div>
+                                    </div>
+                                    <button
+                                        className="eta-end-button"
+                                        onClick={() => {
+                                            showNavEndScreen();
+                                        }}
+                                    >
+                                        End Navigation
+                                    </button>
+                                </div>
+                            </div>
+    
+                            <div className="speed-tracker">
+                                <SpeedTracker speedKmh={speedKmh} />
+                            </div>
                         </div>
                     </>
                 )}
@@ -149,173 +437,16 @@ export default class MapView extends Component {
                 )}
 
                 {/* Overlay UI */}
-                <div className="overlay-ui"
-                    style={{
-                        pointerEvents: "none"
-                    }}>  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
-                    <MapPage onSearch={() => console.log("Search triggered!")} />
+                <div className="map-overlay-ui">
+                    <MapPage
+                        onSearch={() => console.log("Search triggered!")}
+                        onPlaceSelected={onPlaceSelected}
+                        showRouteUI={showRouteOptions}
+                        userLocation={userLocation}
+                        mapData={mapData}
+                    />
                 </div>
 
-
-                {/* Profile Icon with Dropdown */}
-                <div style={{
-                    position: 'absolute',
-                    top: '60px',
-                    right: '20px',
-                    zIndex: 1000,
-                    pointerEvents: 'auto'
-                }}>
-                    <button
-                        onClick={() => setShowDropdown(!showDropdown)}
-                        style={{
-                            width: '60px',
-                            height: '60px',
-                            borderRadius: '50%',
-                            backgroundColor: 'white',
-                            border: 'none',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            outline: 'none'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                    >
-                        <User size={24} color="#374151" />
-                    </button>
-
-                    {showDropdown && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '60px',
-                            right: '0',
-                            width: '240px',
-                            backgroundColor: 'white',
-                            borderRadius: '12px',
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                            border: '1px solid #e5e7eb',
-                            overflow: 'hidden',
-                            zIndex: 1001
-                        }}>
-                            {/* User Info Section */}
-                            <div style={{
-                                padding: '16px',
-                                borderBottom: '1px solid #e5e7eb'
-                            }}>
-                                <p style={{
-                                    fontSize: '14px',
-                                    fontWeight: '600',
-                                    color: '#1f2937',
-                                    margin: '0 0 4px 0'
-                                }}>{username || "Guest"}</p>
-                                <p style={{
-                                    fontSize: '12px',
-                                    color: '#6b7280',
-                                    margin: 0
-                                }}>{points} Points</p>
-                            </div>
-
-                            {/* Menu Items */}
-                            <div>
-                                <button
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#374151',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <User size={20} color="#374151" />
-                                    <span style={{ fontSize: '14px' }}>Profile</span>
-                                </button>
-
-                                <button
-                                    onClick={handleRewardsClick}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#374151',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fefaefff'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <Award size={20} color="#FFB20F" />
-                                    <span style={{ fontWeight: '500', fontSize: '14px' }}>Rewards</span>
-                                </button>
-
-                                <button
-                                    onClick={handleSettingsClick}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#374151',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <Settings size={20} color="#374151" />
-                                    <span style={{ fontSize: '14px' }}>Settings</span>
-                                </button>
-                            </div>
-
-                            {/* Logout Section */}
-                            <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px' }}>
-                                <button
-                                    onClick={() => {
-                                        setShowDropdown(false);
-                                        setShowLogoutConfirm(true);
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        transition: 'background-color 0.2s',
-                                        color: '#dc2626',
-                                        outline: 'none'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <LogOut size={20} color="#dc2626" />
-                                    <span style={{ fontSize: '14px' }}>Logout</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
 
                 {/* Testing button to check if distance and points gets updated correctly */}
                 {/* <button
@@ -342,19 +473,35 @@ export default class MapView extends Component {
                     <div className={`map-incident-panel ${selectedReport ? "map-incident-panel-active" : "map-incident-panel-inactive"}`}>
                         <div className="map-incident-panel-content">
                             {selectedReport ? (
-                                <IncidentDetailsCard
-                                    report={selectedReport}
-                                    onClose={() => setSelectedReport(null)}
-                                    userLocation={userLocation}
-                                    onReportUpdated={(updated) => {
-                                        if (!updated?.id) return;
-                                        setSelectedReport(updated);
-                                        setReports((prev) => {
-                                            const next = prev.map((r) => (r.id === updated.id ? updated : r));
-                                            return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
-                                        });
-                                    }}
-                                />
+                                <div
+                                    className="map-incident-sheet"
+                                    style={{ "--incident-sheet-height": `${incidentSheetHeightVh}vh` }}
+                                    onPointerDown={this.handleIncidentSheetPointerDown}
+                                    onTouchStart={this.handleIncidentSheetTouchStart}
+                                >
+                                    <button
+                                        type="button"
+                                        className="map-incident-handle"
+                                        onPointerDown={this.handleIncidentPointerDown}
+                                        onTouchStart={this.handleIncidentTouchStart}
+                                        aria-label="Drag to resize incident details"
+                                    />
+                                    <div className="map-incident-scroll">
+                                        <IncidentDetailsCard
+                                            report={selectedReport}
+                                            onClose={() => setSelectedReport(null)}
+                                            userLocation={userLocation}
+                                            onReportUpdated={(updated) => {
+                                                if (!updated?.id) return;
+                                                setSelectedReport(updated);
+                                                setReports((prev) => {
+                                                    const next = prev.map((r) => (r.id === updated.id ? updated : r));
+                                                    return (updated?.is_active === false) ? next.filter((r) => r.id !== updated.id) : next;
+                                                });
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             ) : null}
                         </div>
                     </div>
@@ -408,7 +555,7 @@ export default class MapView extends Component {
                                     {availableTimes.map((timeSlot, index) => (
                                         <button
                                             key={index}
-                                            onClick={() => handleTimeChange(index)}
+                                            onClick={() => this.handleTimeSlotSelect(index)}
                                             disabled={isLoadingRoute}
                                             className={`time-slot-button ${selectedOffsetMinutes === timeSlot.offsetMinutes ? 'selected' : ''}`}
                                         >
@@ -431,99 +578,199 @@ export default class MapView extends Component {
                             </div>
                         </div>
                     )}
+
+                    {/* Mobile Time Picker Sheet */}
+                    {showTimeSelector && (
+                        <div
+                            className="time-picker-sheet-container"
+                            style={{ "--route-sheet-height": `${routeSheetHeightVh}vh` }}
+                        >
+                            <div
+                                className="route-info-sheet time-picker-sheet"
+                                onPointerDown={this.handleRouteSheetPointerDown}
+                                onTouchStart={this.handleRouteSheetTouchStart}
+                            >
+                                <button
+                                    type="button"
+                                    className="time-picker-back"
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                    onTouchStart={(event) => event.stopPropagation()}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        showTimeSelectorFunction();
+                                    }}
+                                    aria-label="Back to route details"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    type="button"
+                                    className="route-info-handle"
+                                    aria-label="Drag to resize time picker"
+                                />
+                                <div className="route-info-scroll">
+                                    <div className="route-info-card time-picker-card">
+                                        <div className="time-picker-header">
+                                            <h3 className="time-picker-title">
+                                                Select Departure Time
+                                            </h3>
+                                            <p className="time-picker-subtitle">
+                                                Choose when you want to start your trip
+                                            </p>
+                                        </div>
+
+                                        <div className="time-picker-list custom-scrollbar">
+                                            {availableTimes.map((timeSlot, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => this.handleTimeSlotSelect(index)}
+                                                    disabled={isLoadingRoute}
+                                                    className={`time-slot-button ${selectedOffsetMinutes === timeSlot.offsetMinutes ? 'selected' : ''}`}
+                                                >
+                                                    <div className="time-slot-info">
+                                                        <div className="time-slot-display-time">
+                                                            {timeSlot.displayTime}
+                                                        </div>
+                                                        <div className="time-slot-label">
+                                                            {timeSlot.label}
+                                                        </div>
+                                                    </div>
+                                                    {selectedOffsetMinutes === timeSlot.offsetMinutes && (
+                                                        <div className="time-slot-checkmark">
+                                                            <span style={{ fontSize: '14px' }}>✓</span>
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     
                     {/* Modern Route Info Card */}
                     {showRouteOptions && (
-                        <div className="route-info-container">
-                            {/* Route Options */}
-                            <div class="route-info-card">
-                                <div className="route-info-gradient-bar" />
-                                <RouteOptionsComponent 
-                                    isTollRoadsOn={isTollRoadsOn} 
-                                    toggleTollRoads={toggleTollRoads}>
-                                </RouteOptionsComponent>
-                            </div>
+                        <div
+                            className="route-info-container"
+                            style={{ "--route-sheet-height": `${routeSheetHeightVh}vh` }}
+                        >
+                            <div
+                                className="route-info-sheet"
+                                onPointerDown={this.handleRouteSheetPointerDown}
+                                onTouchStart={this.handleRouteSheetTouchStart}
+                            >
+                                <button
+                                    type="button"
+                                    className="route-info-close"
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                    onTouchStart={(event) => event.stopPropagation()}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        clearMap();
+                                    }}
+                                    aria-label="Close route details"
+                                >
+                                    ×
+                                </button>
+                                <button
+                                    type="button"
+                                    className="route-info-handle"
+                                    aria-label="Drag to resize route details"
+                                />
 
-                            {/* Route Info */}
-                            <div className="route-info-card">
-                                <div className="route-info-gradient-bar" />
-
-                                {isLoadingRoute && (
-                                    <div className="route-info-loading">
-                                        <div className="route-info-spinner" />
+                                <div className="route-info-scroll">
+                                    {/* Route Options */}
+                                    <div className="route-info-card">
+                                        <div className="route-info-gradient-bar" />
+                                        <RouteOptionsComponent
+                                            isTollRoadsOn={isTollRoadsOn}
+                                            toggleTollRoads={toggleTollRoads}
+                                        />
                                     </div>
-                                )}
 
-                                <h3 className="route-info-title">
-                                    Route Information
-                                </h3>
+                                    {/* Route Info */}
+                                    <div className="route-info-card">
+                                        <div className="route-info-gradient-bar" />
 
-                                <div className="route-info-items">
-                                    {/* Distance */}
-                                    <div className="route-info-item">
-                                        <div className="route-info-icon distance">
-                                            <span>📍</span>
-                                        </div>
-                                        <div>
-                                            <div className="route-info-label">Distance</div>
-                                            <div className="route-info-value">
-                                                {routeInfo?.distanceKm ?? "N/A"} <span className="route-info-unit">km</span>
+                                        {isLoadingRoute && (
+                                            <div className="route-info-loading">
+                                                <div className="route-info-spinner" />
+                                            </div>
+                                        )}
+
+                                        <h3 className="route-info-title">
+                                            Route Information
+                                        </h3>
+
+                                        <div className="route-info-items">
+                                            {/* Directions - MOVED TOP FOR MOBILE */}
+                                            <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
+                                                <div className="route-info-icon">
+                                                    <span>🗺️</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-value">Directions {"->"}</div>
+                                                </div>
+                                            </button>
+
+                                            {/* Directions */}
+                                            <button className="route-time-select-item" onClick={showTimeSelectorFunction}>
+                                                <div className="route-info-icon">
+                                                    <span>⌚</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-value">Choose a time</div>
+                                                </div>
+                                            </button>
+
+                                            {/* Distance */}
+                                            <div className="route-info-item">
+                                                <div className="route-info-icon distance">
+                                                    <span>📍</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-label">Distance</div>
+                                                    <div className="route-info-value">
+                                                        {routeInfo?.distanceKm ?? "N/A"} <span className="route-info-unit">km</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Departure Time */}
+                                            <div className="route-info-item">
+                                                <div className="route-info-icon departure">
+                                                    <span>🚗</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-label">Departure</div>
+                                                    <div className="route-info-value">{routeInfo?.starting_time ?? "N/A"}</div>
+                                                </div>
+                                            </div>
+
+                                            {/* ETA */}
+                                            <div className="route-info-item">
+                                                <div className="route-info-icon duration">
+                                                    <span>🕒</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-label">ETA</div>
+                                                    <div className="route-info-value">{routeInfo?.arrival_time ?? "N/A"}</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Duration */}
+                                            <div className="route-info-item">
+                                                <div className="route-info-icon duration">
+                                                    <span>⏱️</span>
+                                                </div>
+                                                <div>
+                                                    <div className="route-info-label">Travel Time</div>
+                                                    <div className="route-info-value">{routeInfo?.eta ?? "N/A"}</div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Departure Time */}
-                                    <div className="route-info-item">
-                                        <div className="route-info-icon departure">
-                                            <span>🚗</span>
-                                        </div>
-                                        <div>
-                                            <div className="route-info-label">Departure</div>
-                                            <div className="route-info-value">{routeInfo?.starting_time ?? "N/A"}</div>
-                                        </div>
-                                    </div>
-
-                                    {/* ETA */}
-                                    <div className="route-info-item">
-                                        <div className="route-info-icon duration">
-                                            <span>🕒</span>
-                                        </div>
-                                        <div>
-                                            <div className="route-info-label">ETA</div>
-                                            <div className="route-info-value">{routeInfo?.arrival_time ?? "N/A"}</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Duration */}
-                                    <div className="route-info-item">
-                                        <div className="route-info-icon duration">
-                                            <span>⏱️</span>
-                                        </div>
-                                        <div>
-                                            <div className="route-info-label">Travel Time</div>
-                                            <div className="route-info-value">{routeInfo?.eta ?? "N/A"}</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Directions */}
-                                    <button className="route-time-select-item" onClick={showTimeSelectorFunction}>
-                                        <div className="route-info-icon">
-                                            <span>⌚</span>
-                                        </div>
-                                        <div>
-                                            <div className="route-info-value">Choose a time</div>
-                                        </div>
-                                    </button>
-
-                                    {/* Directions */}
-                                    <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
-                                        <div className="route-info-icon">
-                                            <span>🗺️</span>
-                                        </div>
-                                        <div>
-                                            <div className="route-info-value">Directions {"->"}</div>
-                                        </div>
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -536,7 +783,7 @@ export default class MapView extends Component {
                             className="clear-button"
                             title="Clear all pins and routes"
                         >
-                            <X size={24} color="#dc2626" />
+                            <span className="clear-button-x" aria-hidden="true">×</span>
                         </button>
                     </div>
 

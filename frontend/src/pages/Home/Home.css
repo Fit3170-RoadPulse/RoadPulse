@@ -2,3 +2,8 @@
 .home-container {
     padding: 24px;
 }
+
+.home-container pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
