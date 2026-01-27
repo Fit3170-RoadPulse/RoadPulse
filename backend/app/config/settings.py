@@ -143,3 +143,5 @@ CSRF_TRUSTED_ORIGINS = [
     for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", _default_csrf_trusted_origins).split(",")
     if origin.strip()
 ]
+
+CORS_ALLOW_CREDENTIALS = True
