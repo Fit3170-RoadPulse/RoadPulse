@@ -356,6 +356,9 @@ export default class MapView extends Component {
                             <NavigationDirectionsList 
                                 steps={routeInfo?.steps} 
                                 currentStepIndex={navigationIndex} 
+                                speed={speedKmh}
+                                eta={routeInfo?.arrival_time}
+                                onEndNavigation={showNavEndScreen}
                             />
                             </div>
 
@@ -377,40 +380,44 @@ export default class MapView extends Component {
                                 </button>
                             </div> */}
 
-                            <div className="map-nav-end-button">
-                                <button
-                                    onClick={() => {
-                                        showNavEndScreen();
-                                    }}
-                                    className="map-nav-end-button-inner"
-                                >
-                                    End Navigation
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="eta-tracker">
-                            <div className="eta-card">
-                                <div className="eta-info">
-                                    <div className="eta-title">ETA</div>
-                                    <div className="eta-arrival">{routeInfo?.arrival_time ?? "--"}</div>
-                                    <div className="eta-duration">
-                                        {routeInfo?.eta ? `(${routeInfo?.eta} remaining)` : ""}
-                                    </div>
+                            <div className="desktop-only-nav-elements">
+                                <div className="map-nav-end-button">
+                                    <button
+                                        onClick={() => {
+                                            showNavEndScreen();
+                                        }}
+                                        className="map-nav-end-button-inner"
+                                    >
+                                        End Navigation
+                                    </button>
                                 </div>
-                                <button
-                                    className="eta-end-button"
-                                    onClick={() => {
-                                        showNavEndScreen();
-                                    }}
-                                >
-                                    End Navigation
-                                </button>
                             </div>
                         </div>
 
-                        <div className="speed-tracker">
-                            <SpeedTracker speedKmh={speedKmh} />
+                        <div className="desktop-only-nav-elements">
+                            <div className="eta-tracker">
+                                <div className="eta-card">
+                                    <div className="eta-info">
+                                        <div className="eta-title">ETA</div>
+                                        <div className="eta-arrival">{routeInfo?.arrival_time ?? "--"}</div>
+                                        <div className="eta-duration">
+                                            {routeInfo?.eta ? `(${routeInfo?.eta} remaining)` : ""}
+                                        </div>
+                                    </div>
+                                    <button
+                                        className="eta-end-button"
+                                        onClick={() => {
+                                            showNavEndScreen();
+                                        }}
+                                    >
+                                        End Navigation
+                                    </button>
+                                </div>
+                            </div>
+    
+                            <div className="speed-tracker">
+                                <SpeedTracker speedKmh={speedKmh} />
+                            </div>
                         </div>
                     </>
                 )}
