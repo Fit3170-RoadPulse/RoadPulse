@@ -590,10 +590,8 @@ export default class MapController extends Component {
         let originMarker = this.state.mapMarkers.origin;
         let destinationMarker = this.state.mapMarkers.destination;
 
-        const current = this.prevLocationRef.current;
-        const hasCurrent = Number.isFinite(current?.latitude) && Number.isFinite(current?.longitude);
-        const currentPos = hasCurrent ? { lat: current.latitude, lng: current.longitude } : null;
-
+        const currentPos = this.getCurrentUserLatLng(this.prevLocationRef.current);
+        
         if (!originMarker) {
             if (currentPos) {
                 originMarker = new AdvancedMarkerElement({
@@ -677,13 +675,16 @@ export default class MapController extends Component {
             let originMarker = this.state.mapMarkers.origin;
             let destinationMarker = this.state.mapMarkers.destination;
 
-            if (!this.isAToBRef.current && this.prevLocationRef.current && !originMarker) {
-                console.log("Setting origin to user location:", this.prevLocationRef.current);
-                originMarker = new AdvancedMarkerElement({
-                    map: map,
-                    position: { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude },
-                    title: "A",
-                });
+            if (!this.isAToBRef.current && !originMarker) {
+                const curPos = this.getCurrentUserLatLng(this.prevLocationRef.current);
+                if (curPos) {
+                    console.log("Setting origin to user location:", curPos);
+                    originMarker = new AdvancedMarkerElement({
+                        map: map,
+                        position: curPos,
+                        title: "A",
+                    });
+                }
             }
 
             if (!originMarker) {
@@ -725,11 +726,12 @@ export default class MapController extends Component {
                     selectedOffsetMinutes: 1,
                 });
 
-                if (!this.isAToBRef.current && this.prevLocationRef.current) {
-                    console.log("Setting origin to user location:", this.prevLocationRef.current);
+                const curPos = this.getCurrentUserLatLng(this.prevLocationRef.current);
+                if (!this.isAToBRef.current && curPos) {
+                    console.log("Setting origin to user location:", curPos);
                     originMarker = new AdvancedMarkerElement({
                         map: map,
-                        position: { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude },
+                        position: curPos,
                         title: "A",
                     });
                 } else {
