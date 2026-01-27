@@ -111,7 +111,13 @@ GOOGLE_MAPS_API_KEY="AIzaSyBdbRFLLwPTNe7RR9zahjksLOHovFjGM-M"
 GOOGLE_MAPS_ID = "9f96fc85ced76649d1bf190d"
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+_use_static_manifest = os.getenv("DJANGO_STATIC_MANIFEST", "0") == "1"
+if _use_static_manifest:
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+else:
+    # Fallback that works even if collectstatic is not run on the host.
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+    WHITENOISE_USE_FINDERS = True
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
