@@ -96,7 +96,8 @@ export default function ProfilePage() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/change-password/", {
+      const base = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${base}/api/change-password/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

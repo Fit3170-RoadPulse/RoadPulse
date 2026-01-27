@@ -129,7 +129,8 @@ export default function LoginPage({ onLogin, onForgotPassword }) {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/forgot-password/", {
+      const base = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${base}/api/forgot-password/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
