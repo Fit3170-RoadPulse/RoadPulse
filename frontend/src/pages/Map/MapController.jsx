@@ -883,10 +883,11 @@ export default class MapController extends Component {
 
     fetchRoute = async (origin, destination, selectedOffset, map) => {
         this.setState({ isLoadingRoute: true });
-        const base = import.meta.env.VITE_API_URL;
+        const base = import.meta.env.VITE_API_URL || "";
         const departureDate = new Date(Date.now() + selectedOffset * 60000);
         const departureTime = departureDate.toISOString();
         const cacheKey = this.buildRouteCacheKey(origin, destination, departureTime);
+
         if (this.lastRouteSelectionRef === cacheKey && this.state.routeInfo) {
             this.setState({ isLoadingRoute: false });
             return;
@@ -910,6 +911,7 @@ export default class MapController extends Component {
                     avoidTolls: this.state.isTollRoadsOn,
                 }, {
                     signal: controller.signal,
+                    timeout: 20000, 
                 });
 
                 console.log("Route response:", response.data);
@@ -948,14 +950,18 @@ export default class MapController extends Component {
                 this.lastRouteSelectionRef = cacheKey;
             }
         } catch (error) {
-            if (error?.name !== "CanceledError" && error?.code !== "ERR_CANCELED") {
-                console.error("Error fetching route:", error);
-                if (error.response && error.response.data) {
-                    console.error("Backend Error Details:", error.response.data);
-                }
+            if (error?.name && (error.name === "CanceledError" || error.code === "ERR_CANCELED")) {
+                return;
             }
+            console.error("Error fetching route:", error);
+            if (error.response && error.response.data) {
+                console.error("Backend Error Details:", error.response.data);
+            }
+            
             this.setState({ routeInfo: null });
-            if (error.response && error.response.status === 502) {
+            
+            // Show error if 502 Bad Gateway or Timeout
+            if ((error.response && error.response.status === 502) || error.code === 'ECONNABORTED') {
                 this.setState({ showErrorPopup: true });
             }
         } finally {
