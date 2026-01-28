@@ -18,14 +18,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy Django project
 COPY app/ .
 
-# Entrypoint (migrations + optional seed)
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 # Collect static files (safe with WhiteNoise)
 RUN python manage.py collectstatic --noinput
 
 # Render injects $PORT automatically
 EXPOSE 8000
 
-ENTRYPOINT ["/entrypoint.sh"]
+# start gunicorn
+CMD gunicorn config.wsgi:application \
+    --bind 0.0.0.0:$PORT \
+    --workers 2 \
+    --threads 4 \
+    --timeout 120

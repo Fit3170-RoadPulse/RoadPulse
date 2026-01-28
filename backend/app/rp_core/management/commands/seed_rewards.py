@@ -1,11 +1,4 @@
-import os
-from urllib.parse import urlparse
-
-import requests
-from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
-from django.utils.text import slugify
-
 from rp_core.models import ExchangeItem
 
 
@@ -13,7 +6,11 @@ class Command(BaseCommand):
     help = 'Seeds the database with 3 dummy rewards (Exchange Items)'
 
     def handle(self, *args, **kwargs):
-        # Create or update 3 dummy rewards
+        # Clear existing rewards (optional)
+        ExchangeItem.objects.all().delete()
+        self.stdout.write(self.style.WARNING('Cleared existing rewards'))
+        
+        # Create 3 dummy rewards
         rewards_data = [
             {
                 'name': '$10 Fuel Voucher',
@@ -40,36 +37,11 @@ class Command(BaseCommand):
                 'is_active': True,
             },
         ]
-
-        created_count = 0
-        updated_count = 0
-
+        
+        created_rewards = []
         for reward_data in rewards_data:
-            image_url = reward_data.pop("image_url", None)
-            name = reward_data["name"]
-            reward, created = ExchangeItem.objects.update_or_create(
-                name=name,
-                defaults=reward_data,
-            )
-            created_count += 1 if created else 0
-            updated_count += 0 if created else 1
-
-            if image_url and not reward.image:
-                try:
-                    response = requests.get(image_url, timeout=10)
-                    response.raise_for_status()
-                    url_path = urlparse(image_url).path
-                    base_name = os.path.basename(url_path) or f"{slugify(name)}.jpg"
-                    reward.image.save(base_name, ContentFile(response.content), save=True)
-                except Exception as exc:
-                    self.stdout.write(self.style.WARNING(
-                        f"Could not fetch image for {name}: {exc}"
-                    ))
-
-            self.stdout.write(self.style.SUCCESS(
-                f"Reward ready: {reward.name} ({'created' if created else 'updated'})"
-            ))
-
-        self.stdout.write(self.style.SUCCESS(
-            f"Seed complete. Created: {created_count}, Updated: {updated_count}"
-        ))
+            reward = ExchangeItem.objects.create(**reward_data)
+            created_rewards.append(reward)
+            self.stdout.write(self.style.SUCCESS(f'✅ Created reward: {reward.name}'))
+        
+        self.stdout.write(self.style.SUCCESS(f'\n🎉 Successfully seeded {len(created_rewards)} rewards!'))
