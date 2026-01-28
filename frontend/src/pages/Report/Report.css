@@ -111,6 +111,10 @@ body.rp-report-dragging .report-sheet-scroll {
         --sidebar-width: 0px;
         --map-top-button-size: 40px;
         --map-top-row-offset: calc(12px + var(--safe-top));
+        --mobile-browser-ui-top: 12px;
+        --mobile-browser-ui-bottom: 16px;
+        --safe-top: calc(env(safe-area-inset-top, 0px) + var(--mobile-browser-ui-top));
+        --mobile-nav-height: calc(72px + var(--safe-bottom) + var(--mobile-browser-ui-bottom, 0px));
     }
 
     .report-toast {
@@ -192,7 +196,7 @@ body.rp-report-dragging .report-sheet-scroll {
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
         touch-action: pan-y;
-        padding-bottom: calc(72px + var(--safe-bottom) + 16px);
+        padding-bottom: calc(var(--mobile-nav-height) + 16px);
         min-height: 0;
     }
 
