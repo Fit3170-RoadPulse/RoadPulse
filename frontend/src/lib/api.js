@@ -117,6 +117,31 @@ export async function apiPost(endpoint, data) {
 }
 
 /**
+ * Make an authenticated DELETE request
+ * @param {string} endpoint - The API endpoint
+ * @returns {Promise<any>} The parsed JSON response (if any)
+ */
+export async function apiDelete(endpoint) {
+  const response = await authenticatedFetch(endpoint, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Request failed" }));
+    throw new Error(error.detail || "Request failed");
+  }
+
+  // Some DELETE endpoints return no content (204)
+  if (response.status === 204) {
+    return null;
+  }
+
+  return response.json();
+}
+
+/**
  * Fetch the current user's reward account information
  * @returns {Promise<{id: number, username: string, reward_points: number}>}
  */

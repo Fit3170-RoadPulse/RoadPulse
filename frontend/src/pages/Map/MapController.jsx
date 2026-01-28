@@ -1,6 +1,6 @@
 import { Component } from "react";
 import axios from "axios";
-import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet } from "../../lib/api";
+import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet, apiDelete, getAccessToken} from "../../lib/api";
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
@@ -1348,6 +1348,28 @@ export default class MapController extends Component {
         await this.fetchRoute(originMarker.position, destinationMarker.position, selectedOffsetMinutes, map);
     };
 
+    deleteSavedDestination = async (destinationId) => {
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this saved destination?"
+        );
+
+        if (!confirmed) return;
+
+
+        try {
+            await apiDelete(`/user/saved-destinations/${destinationId}/`);
+
+            this.setState((prev) => ({
+                savedDestinations: prev.savedDestinations.filter(
+                    (d) => d.id !== destinationId
+                ),
+            }));
+        } catch (err) {
+            console.error("Failed to delete destination", err);
+            alert("Failed to delete destination");
+        }
+    };
+
     render() {
         return (
             <MapView
@@ -1405,6 +1427,7 @@ export default class MapController extends Component {
                 showSavedDestinations={this.state.showSavedDestinations}
                 isLoadingSavedDestinations={this.state.isLoadingSavedDestinations}
                 selectSavedDestination={this.selectSavedDestination}
+                deleteSavedDestination={this.deleteSavedDestination}
             />
         );
     };

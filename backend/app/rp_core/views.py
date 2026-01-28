@@ -12,10 +12,12 @@ from django.utils import timezone
 from math import asin, cos, radians, sin, sqrt
 
 from rest_framework import status, views, serializers
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.generics import DestroyAPIView
 
 from rp_core.services.points import deduct_points
 from rp_core.services.incident_reporting import (
@@ -711,9 +713,10 @@ def admin_profile(request):
     serializer = AdminProfileSerializer(request.user)
     return Response(serializer.data)
 
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST", "DELETE"])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
-def saved_destinations(request):
+def saved_destinations(request, pk=None):
     """
     GET: list current user's saved destinations
     POST: create a new saved destination for current user
@@ -723,10 +726,19 @@ def saved_destinations(request):
         serializer = SavedDestinationSerializer(qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # POST
-    serializer = SavedDestinationSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save(user=request.user)  # attach user here (don't trust client)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == "POST":
+        serializer = SavedDestinationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)  # attach user here (don't trust client)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == "DELETE":
+        if pk is None:
+            return Response({"error": "ID is required for deletion"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            destination = SavedDestination.objects.get(pk=pk, user=request.user)
+            destination.delete()
+            return Response({"message": "Deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        except SavedDestination.DoesNotExist:
+            return Response({"error": "Destination not found"}, status=status.HTTP_404_NOT_FOUND)

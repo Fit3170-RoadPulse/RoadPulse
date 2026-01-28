@@ -614,6 +614,24 @@ body.rp-route-ui-open .origin-toggle {
   padding: 12px 0;
 }
 
+.saved-destinations-item-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.saved-destinations-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #d32f2f;
+  font-size: 16px;
+}
+
+.saved-destinations-delete:hover {
+  transform: scale(1.1);
+}
+
 .clear-button-container {
     position: absolute;
     top: calc(60px + var(--safe-top));

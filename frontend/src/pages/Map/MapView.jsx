@@ -342,6 +342,7 @@ export default class MapView extends Component {
             savedDestinations,
             closeSavedDestinations,
             selectSavedDestination,
+            deleteSavedDestination,
         } = this.props;
         const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
 
@@ -1135,20 +1136,40 @@ export default class MapView extends Component {
                                 <div className="saved-destinations-loading">Loading...</div>
                             ) : (
                                 <div className="saved-destinations-list">
-                                {savedDestinations?.length ? savedDestinations.map((d) => (
-                                    <button
-                                    key={d.id}
-                                    className="saved-destinations-item"
-                                    onClick={() => selectSavedDestination(d)}
+                                {savedDestinations?.length ? ( savedDestinations.map((d) => (
+                                    <div
+                                        key={d.id}
+                                        className="saved-destinations-item-wrapper"
                                     >
-                                    <div className="saved-destinations-title">{d.label}</div>
-                                    <div className="saved-destinations-sub">
-                                        {d.address?.trim()
+                                        {/* Select destination */}
+                                        <button
+                                            className="saved-destinations-item"
+                                            onClick={() => selectSavedDestination(d)}
+                                        >
+                                        <div className="saved-destinations-title">
+                                            {d.label}
+                                        </div>
+                                        <div className="saved-destinations-sub">
+                                            {d.address?.trim()
                                             ? d.address
                                             : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
+                                        </div>
+                                        </button>
+
+                                        {/* 🗑️ Delete button */}
+                                        <button
+                                            className="saved-destinations-delete"
+                                            title="Delete destination"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // IMPORTANT
+                                                deleteSavedDestination(d.id);
+                                            }}
+                                        >
+                                            ❌
+                                        </button>
                                     </div>
-                                    </button>
-                                )) : (
+                                    ))
+                                ) : (
                                     <div className="saved-destinations-empty">No saved destinations yet.</div>
                                 )}
                                 </div>
