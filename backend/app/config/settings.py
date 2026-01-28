@@ -118,6 +118,12 @@ GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 GOOGLE_MAPS_ID = os.getenv("GOOGLE_MAPS_ID")
 AUTH_PASSWORD_VALIDATORS = []
 AUTH_USER_MODEL = 'rp_core.AppUser'
+
+AUTHENTICATION_BACKENDS = [
+    'rp_core.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
