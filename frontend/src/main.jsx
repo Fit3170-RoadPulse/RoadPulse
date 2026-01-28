@@ -65,7 +65,7 @@ createRoot(document.getElementById('root')).render(
               <Report />
             </ProtectedRoute>
           } />
-          <Route path="/Emergency" element={
+          <Route path="/emergency" element={
             <ProtectedRoute>
               <Emergency />
             </ProtectedRoute>
