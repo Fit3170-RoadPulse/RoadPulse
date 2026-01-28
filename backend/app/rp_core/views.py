@@ -8,6 +8,8 @@ from django.core.cache import cache
 from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 from math import asin, cos, radians, sin, sqrt
 
@@ -426,6 +428,7 @@ def locationData(_req):
                          "maximumAge": settings.MAXIMUM_AGE,
                          })
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(views.APIView):
     def post(self, request):
         serializer = RegisterSerializerIncidentReport(data=request.data)
@@ -435,6 +438,7 @@ class RegisterView(views.APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(views.APIView):
     def post(self, request):
         email = request.data.get("email")
@@ -459,6 +463,7 @@ class LoginView(views.APIView):
             "is_superuser": user.is_superuser,
         })
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ForgotPasswordView(views.APIView):
     def post(self, request):
         email = request.data.get("email")
