@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
 from .models import (
     AppUser,
     Contact,
@@ -12,9 +13,33 @@ from .models import (
 
 
 @admin.register(AppUser)
-class AppUserAdmin(admin.ModelAdmin):
+class AppUserAdmin(UserAdmin):
     list_display = ('id', 'username', 'email', 'reward_points', 'is_staff', 'is_active')
     search_fields = ('username', 'email')
+    
+    # Fields to display when editing an existing user
+    fieldsets = (
+        (None, {'fields': ('username', 'email', 'password')}),
+        ('Personal Info', {'fields': ('reward_points', 'cumulative_distance')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
+    )
+    
+    # Fields to display when creating a new user
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2'),
+        }),
+        ('Personal Info', {
+            'fields': ('reward_points', 'cumulative_distance'),
+        }),
+        ('Permissions', {
+            'fields': ('is_active', 'is_staff', 'is_superuser'),
+        }),
+    )
+    
+    ordering = ('email',)
 
 
 @admin.register(Contact)
