@@ -32,6 +32,17 @@
     width: 100%;
 }
 
+.search-bar-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: calc(16px + var(--safe-top, 0px)) auto 20px;
+    width: min(640px, calc(100% - 48px));
+    max-width: calc(100% - 48px);
+    pointer-events: auto;
+}
+
 /* MapSideBarComponent.jsx inline styles */
 .sidebar-emoji {
     font-size: 40px;
@@ -70,12 +81,13 @@
 .search-bar {
     display: flex;
     align-items: center;
-    margin: calc(16px + var(--safe-top, 0px)) auto 20px;
+    margin: 0;
     border: 1px solid white;
     border-radius: 6px;
     padding: 5px 10px;
-    width: min(520px, calc(100% - 48px));
-    max-width: calc(100% - 48px);
+    width: 100%;
+    max-width: none;
+    flex: 1;
     background: #fff;
     pointer-events: auto;
     position: relative;
@@ -148,6 +160,38 @@
     margin-left: 8px;
 }
 
+.saved-destinations-quick {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: #111827;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.2);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    white-space: nowrap;
+}
+
+.saved-destinations-quick:hover,
+.saved-destinations-quick:focus {
+    background: #0f172a;
+    transform: translateY(-1px);
+    box-shadow: 0 14px 26px rgba(15, 23, 42, 0.24);
+    outline: none;
+}
+
+.saved-destinations-quick-icon {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
+    vector-effect: non-scaling-stroke;
+}
+
 @media (max-width: 768px) {
     .map-page {
         flex-direction: column;
@@ -191,11 +235,18 @@
         justify-content: center;
     }
 
-    .search-bar {
+    .search-bar-row {
         margin: calc(64px + var(--safe-top, 0px)) auto 0;
         width: min(420px, calc(100% - 24px));
         max-width: 420px;
+    }
+
+    .search-bar {
         z-index: 900;
+    }
+
+    .saved-destinations-quick {
+        display: none;
     }
 
     body.rp-map-type-menu-open .search-bar,

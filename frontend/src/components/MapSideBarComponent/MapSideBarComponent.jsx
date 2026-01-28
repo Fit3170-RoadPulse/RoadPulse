@@ -5,6 +5,7 @@ import PhoneCallIcon from "../../assets/phone-call.png";
 import RouteIcon from "../../assets/route.png";
 import ReportIcon from "../../assets/report.png";
 import SearchIcon from "../../assets/search.png";
+import { Star } from "lucide-react";
 import GoIcon from "../../assets/go.png";
 import ProfileIcon from "../../assets/profile.png";
 import { loadMapsLibrary } from "../../lib/googleMapsLoader";
@@ -17,6 +18,7 @@ export default function MapPage({
   userLocation = null,
   mapData = null,
   showSearch = true,
+  onSavedDestinationsClick = null,
 }) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -378,63 +380,76 @@ export default function MapPage({
 
         {showSearch && (
           <div className="content">
-            <div className="search-bar" ref={searchRef}>
-              <div className="search-icon">
-                <img src={SearchIcon} alt="Search" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search..."
-                className="search-input"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onFocus={() => {
-                  if (suggestions.length > 0) setShowSuggestions(true);
-                }}
-                ref={inputRef}
-              />
-              <img
-                src={GoIcon}
-                alt="Go"
-                className="go-icon"
-                onClick={async () => {
-                  if (!query || query.trim().length < 2) return;
-                  if (useNativeAutocomplete) {
-                    inputRef.current?.focus();
-                    onSearch?.();
-                    return;
-                  }
-                  const results = await requestSuggestions(query.trim());
-                  if (!results.length) {
-                    setSuggestions([]);
-                    setShowSuggestions(false);
-                    return;
-                  }
-                  setSuggestions(results);
-                  setShowSuggestions(true);
-                  onSearch?.();
-                }}
-              />
-              {showSuggestions && suggestions.length > 0 && (
-                <div className="search-suggestions">
-                  {suggestions.map((suggestion) => (
-                    <button
-                      key={suggestion.place_id}
-                      type="button"
-                      className="search-suggestion"
-                      onClick={() => handleSelectSuggestion(suggestion)}
-                    >
-                      <span className="search-suggestion-main">
-                        {suggestion.structured_formatting?.main_text || suggestion.description}
-                      </span>
-                      {suggestion.structured_formatting?.secondary_text && (
-                        <span className="search-suggestion-secondary">
-                          {suggestion.structured_formatting.secondary_text}
-                        </span>
-                      )}
-                    </button>
-                  ))}
+            <div className="search-bar-row">
+              <div className="search-bar" ref={searchRef}>
+                <div className="search-icon">
+                  <img src={SearchIcon} alt="Search" />
                 </div>
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="search-input"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => {
+                    if (suggestions.length > 0) setShowSuggestions(true);
+                  }}
+                  ref={inputRef}
+                />
+                <img
+                  src={GoIcon}
+                  alt="Go"
+                  className="go-icon"
+                  onClick={async () => {
+                    if (!query || query.trim().length < 2) return;
+                    if (useNativeAutocomplete) {
+                      inputRef.current?.focus();
+                      onSearch?.();
+                      return;
+                    }
+                    const results = await requestSuggestions(query.trim());
+                    if (!results.length) {
+                      setSuggestions([]);
+                      setShowSuggestions(false);
+                      return;
+                    }
+                    setSuggestions(results);
+                    setShowSuggestions(true);
+                    onSearch?.();
+                  }}
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="search-suggestions">
+                    {suggestions.map((suggestion) => (
+                      <button
+                        key={suggestion.place_id}
+                        type="button"
+                        className="search-suggestion"
+                        onClick={() => handleSelectSuggestion(suggestion)}
+                      >
+                        <span className="search-suggestion-main">
+                          {suggestion.structured_formatting?.main_text || suggestion.description}
+                        </span>
+                        {suggestion.structured_formatting?.secondary_text && (
+                          <span className="search-suggestion-secondary">
+                            {suggestion.structured_formatting.secondary_text}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {onSavedDestinationsClick && (
+                <button
+                  type="button"
+                  className="saved-destinations-quick"
+                  onClick={onSavedDestinationsClick}
+                  aria-label="Open saved destinations"
+                >
+                  <Star className="saved-destinations-quick-icon" size={18} strokeWidth={2.5} />
+                  <span>Saved</span>
+                </button>
               )}
             </div>
           </div>

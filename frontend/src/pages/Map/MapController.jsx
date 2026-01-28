@@ -1598,7 +1598,11 @@ handleSaveDestinationClick = async () => {
 };
 
 openSavedDestinations = async () => {
-    this.setState({ showSavedDestinations: true });
+    const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
+    this.setState((prevState) => ({
+        showSavedDestinations: true,
+        showRouteOptions: isMobile ? true : prevState.showRouteOptions,
+    }));
 
     await this.fetchSavedDestinations();
 };

@@ -360,6 +360,7 @@ export default class MapView extends Component {
         const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
         const isMobileView = typeof window !== "undefined" && window.innerWidth <= 768;
         const showSavedDestinationsSheet = showSavedDestinations && isMobileView;
+        const showRouteSheet = showRouteOptions || showSavedDestinationsSheet;
 
         return (
             <div className="map-page-container">
@@ -373,6 +374,7 @@ export default class MapView extends Component {
                         currentLocation={prevLocationRef}
                         onUserLocation={setUserLocation}
                         onRecenterRequest={onRecenterRequest}
+                        onSavedDestinationsClick={openSavedDestinations}
                     />
                 </div>
 
@@ -468,9 +470,10 @@ export default class MapView extends Component {
                     <MapPage
                         onSearch={() => console.log("Search triggered!")}
                         onPlaceSelected={onPlaceSelected}
-                        showRouteUI={showRouteOptions}
+                        showRouteUI={showRouteOptions || showSavedDestinations}
                         userLocation={userLocation}
                         mapData={mapData}
+                        onSavedDestinationsClick={openSavedDestinations}
                     />
                 </div>
 
@@ -677,7 +680,7 @@ export default class MapView extends Component {
                     )}
 
                     {/* Modern Route Info Card */}
-                    {showRouteOptions && (
+                    {showRouteSheet && (
                         <div
                             className="route-info-container"
                             style={{ "--route-sheet-height": `${routeSheetHeightVh}vh` }}
@@ -778,15 +781,6 @@ export default class MapView extends Component {
                                                     toggleTollRoads={toggleTollRoads}>
                                                 </RouteOptionsComponent>
 
-                                                <div
-                                                    className="tollRoadToggle savedDestinationsOption"
-                                                    onClick={openSavedDestinations}
-                                                    role="button"
-                                                    tabIndex={0}
-                                                >
-                                                    <div>Saved destinations</div>
-                                                    <div className="route-option-arrow">›</div>
-                                                </div>
                                             </div>
 
                                             {/* Route Info */}

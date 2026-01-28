@@ -20,6 +20,15 @@
     pointer-events: auto;
 }
 
+.map-saved-destinations-container {
+    position: absolute;
+    top: calc(60px + var(--safe-top, 0px));
+    right: calc(24px + var(--safe-right, 0px));
+    bottom: auto;
+    z-index: 1000;
+    pointer-events: auto;
+}
+
 .map-recenter-button {
     width: 56px;
     height: 56px;
@@ -69,6 +78,39 @@
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
 
+.map-saved-destinations-button {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    border: none;
+    padding: 0;
+    background: #ffffff;
+    color: #f59e0b;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    outline: none;
+}
+
+.map-saved-destinations-icon {
+    width: 26px;
+    height: 26px;
+    stroke-width: 2.5;
+    vector-effect: non-scaling-stroke;
+}
+
+.map-saved-destinations-button:hover,
+.map-saved-destinations-button:focus {
+    background-color: #fffbeb;
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(245, 158, 11, 0.22);
+    outline: none;
+}
+
 @media (min-width: 769px) {
     .map-recenter-container {
         /* Keep it bottom-right, but offset left so it doesn't overlap
@@ -81,6 +123,10 @@
         );
         bottom: calc(24px + var(--safe-bottom, 0px));
     }
+
+    .map-saved-destinations-container {
+        display: none;
+    }
 }
 
 @media (max-width: 768px) {
@@ -89,6 +135,12 @@
         right: calc(
             12px + var(--safe-right, 0px) + var(--map-top-button-size, 40px) + var(--map-top-row-gap, 10px)
         );
+        bottom: auto;
+    }
+
+    .map-saved-destinations-container {
+        top: var(--map-top-row-offset, calc(12px + var(--safe-top, 0px)));
+        right: calc(12px + var(--safe-right, 0px));
         bottom: auto;
     }
 
@@ -102,6 +154,18 @@
         width: 26px;
         height: 26px;
         stroke-width: 2.75;
+    }
+
+    .map-saved-destinations-button {
+        width: var(--map-top-button-size, 40px);
+        height: var(--map-top-button-size, 40px);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    }
+
+    .map-saved-destinations-icon {
+        width: 22px;
+        height: 22px;
+        stroke-width: 2.5;
     }
 }
 

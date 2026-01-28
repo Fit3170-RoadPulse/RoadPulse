@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LocateFixed } from "lucide-react";
+import { LocateFixed, Star } from "lucide-react";
 import "./MapComponent.css";
 import { ensureMapsLoaderOptions, loadMapsLibrary } from "../../lib/googleMapsLoader";
 
@@ -21,6 +21,7 @@ export default function MapComponent({
     showRecenterButton = true,
     onRecenterRequest = null,
     recenterMinZoom = 14,
+    onSavedDestinationsClick = null,
 }) {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
@@ -232,6 +233,24 @@ export default function MapComponent({
                             className="map-recenter-icon"
                             size={32}
                             strokeWidth={2.75}
+                            absoluteStrokeWidth
+                        />
+                    </button>
+                </div>
+            )}
+            {typeof onSavedDestinationsClick === "function" && (
+                <div className="map-saved-destinations-container">
+                    <button
+                        type="button"
+                        className="map-saved-destinations-button"
+                        onClick={onSavedDestinationsClick}
+                        aria-label="Open saved destinations"
+                        title="Saved destinations"
+                    >
+                        <Star
+                            className="map-saved-destinations-icon"
+                            size={26}
+                            strokeWidth={2.5}
                             absoluteStrokeWidth
                         />
                     </button>
