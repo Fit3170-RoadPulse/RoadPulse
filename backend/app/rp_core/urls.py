@@ -8,6 +8,9 @@ urlpatterns = [
     # path("map/", views.map_config, name="map-config"),
     path("rewards/account/", views.reward_account, name="reward-account"),
     path("profile/update/", views.update_profile, name="update-profile"),
+    path("profile/emergency-contact/", views.get_emergency_contact, name="get-emergency-contact"),
+    path("profile/emergency-contact/update/", views.update_emergency_contact, name="update-emergency-contact"),
+
     path("rewards/items/", views.list_exchange_items, name="exchange-items"),
     path("rewards/redemptions/", views.list_user_redemptions, name="user-redemptions"),
     path("rewards/redemptions/<int:redemption_id>/redeem/", views.mark_voucher_redeemed, name="mark-voucher-redeemed"),

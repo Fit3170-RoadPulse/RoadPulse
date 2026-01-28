@@ -1,12 +1,29 @@
 import { useEffect, useState } from "react"
-import { X } from "lucide-react"
+import { X, AlertCircle } from "lucide-react"
 import "./Emergency.css"
+import { fetchEmergencyContact } from "../../lib/api"
 
 function Emergency() {
   const [showContactsPage, setShowContactsPage] = useState(false)
+  const [emergencyNumber, setEmergencyNumber] = useState("")
+  const [emergencyName, setEmergencyName] = useState("") // contact name or ""
 
-  // Replace with your actual emergency number or fetch it from backend
-  const emergencyNumber = "0498158685"
+  useEffect(() => {
+    async function loadContact() {
+        try {
+            const contact = await fetchEmergencyContact();
+            if (contact && contact.phone_number) {
+                setEmergencyNumber(contact.phone_number);
+                if (contact.name) {
+                    setEmergencyName(contact.name);
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load emergency contact", err);
+        }
+    }
+    loadContact();
+  }, []);
 
   // Emergency contacts data
   const emergencyContacts = [
@@ -52,7 +69,19 @@ function Emergency() {
     "Always call 000 for life-threatening emergencies"
   ]
 
+  /* Error Modal State */
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+
   const handleEmergencyCall = () => {
+    // Check if we have a valid emergency contact loaded.
+    // If no number is set, we assume no contact is configured.
+    if (!emergencyNumber) {
+        setErrorMessage("You haven't set an emergency contact yet.\nPlease go to your Settings to set one up.");
+        setShowErrorModal(true);
+        return;
+    }
+
     // Opens dialer immediately
     window.location.href = `tel:${emergencyNumber}`
   }
@@ -148,7 +177,7 @@ function Emergency() {
           </div>
           <div className="emergency-bottom-card-text">
             <div className="emergency-bottom-card-label">
-              Emergency Contacts
+              {emergencyName}
             </div>
             <div className="emergency-bottom-card-number">
               {emergencyNumber}
@@ -162,6 +191,44 @@ function Emergency() {
           </button>
         </div>
       </div>
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div 
+            className="error-modal-overlay"
+            role="dialog" 
+            aria-modal="true"
+        >
+            <div 
+                className="error-modal-backdrop"
+                onClick={() => setShowErrorModal(false)} 
+            />
+            <div className="error-modal-card">
+                <div className="error-modal-header">
+                    <div className="error-icon-circle">
+                        <AlertCircle size={32} color="#ef4444" strokeWidth={2.5} />
+                    </div>
+                    <h3 className="error-card-title">
+                        Action Required
+                    </h3>
+                </div>
+                
+                <div className="error-card-body">
+                    <p className="error-message-text">
+                        {errorMessage}
+                    </p>
+                </div>
+                
+                <div className="error-card-footer">
+                    <button
+                        onClick={() => setShowErrorModal(false)}
+                        className="error-dismiss-btn"
+                    >
+                        Okay, I'll set it
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   )
 }
