@@ -24,9 +24,9 @@ RUN python manage.py collectstatic --noinput
 # Render injects $PORT automatically
 EXPOSE 8000
 
-# Run migrations then start gunicorn
-CMD sh -c "python manage.py migrate && gunicorn config.wsgi:application \
+# start gunicorn
+CMD gunicorn config.wsgi:application \
     --bind 0.0.0.0:$PORT \
     --workers 2 \
     --threads 4 \
-    --timeout 120"
+    --timeout 120
