@@ -344,7 +344,7 @@ body.rp-search-open .origin-toggle {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #fde2e2 0%, #feecec 50%, #fde2e2 100%);
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
 }
 
 .route-info-loading {
@@ -1502,19 +1502,6 @@ body.rp-incident-dragging .map-incident-scroll {
     .route-info-container {
         height: 80vh;
         max-height: 80vh;
-    }
-
-    .route-info-sheet {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-    }
-
-    .route-info-scroll {
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-        height: 100%;
     }
 
     .route-info-container .route-info-card {
