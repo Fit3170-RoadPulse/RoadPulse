@@ -2,10 +2,19 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from rp_core.views import health, samples, map, map_config, locationData, compute_route, RegisterView, LoginView, ForgotPasswordView, ChangePasswordView, update_cumulative_distance
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+from rp_core.views import root, health, samples, map, map_config, locationData, compute_route, RegisterView, LoginView, ForgotPasswordView, ChangePasswordView, update_cumulative_distance
 from rest_framework_simplejwt.views import TokenRefreshView
 
+
+def favicon(_req):
+    """Return empty response for favicon.ico to prevent 400 errors"""
+    return HttpResponse(status=204)
+
 urlpatterns = [
+    path("", root, name="root"),
+    path("favicon.ico", favicon, name="favicon"),
     path("admin/", admin.site.urls),
     path("api/map/", map),
     path("api/map/location/", locationData),

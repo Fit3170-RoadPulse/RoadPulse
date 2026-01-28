@@ -5,6 +5,8 @@ import MapComponent from "../../components/MapComponent/MapComponent";
 import MapPage from "../../components/MapSideBarComponent/MapSideBarComponent";
 import ReportComponent from "@/components/ReportComponent/ReportComponent";
 import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDetailsCard.jsx";
+import { fetchMapConfig } from "../../lib/mapConfig";
+import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles";
 
 export default function Report() {
     let [isClicked, setIsClicked] = useState(null);
@@ -17,6 +19,9 @@ export default function Report() {
     const [mapReady, setMapReady] = useState(false);
     const mapInstanceRef = useRef(null);
     const [userLocation, setUserLocation] = useState(null);
+    const prevLocationRef = useRef(null);
+    const locationPollingDataRef = useRef({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    const geolocationProviderRef = useRef(null);
     const reportMarkersRef = useRef(new Map()); // id -> AdvancedMarkerElement
     const reportsByIdRef = useRef(new Map()); // id -> report
     const draftMarkerRef = useRef(null);
@@ -38,7 +43,7 @@ export default function Report() {
     }
 
     const fetchReports = useCallback(() => {
-        const base = import.meta.env.VITE_API_URL || "";
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
         return axios
             .get(`${base}/api/incident-reports/`, getAuthConfig())
             .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
@@ -46,11 +51,41 @@ export default function Report() {
     }, []);
 
     useEffect(() => {
-        const base = import.meta.env.VITE_API_URL || "";
-        axios.get(`${base}/api/map/`).then((r) => {
-            setMapData(r.data)
-        });
+        fetchMapConfig()
+            .then((data) => setMapData(data))
+            .catch(() => setMapData(null));
     }, []);
+
+    useEffect(() => {
+        let mounted = true;
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
+        // const isNativeApp = /Mobi|Android/i.test(navigator.userAgent);
+
+        const startLocation = async () => {
+            try {
+                const r = await axios.get(`${base}/api/map/location/`);
+                locationPollingDataRef.current = r.data;
+            } catch (_) {
+                // fall back to defaults
+            }
+
+            if (!mounted) return;
+            const provider = new WebGeolocationProvider();
+            geolocationProviderRef.current = provider;
+            provider.start(prevLocationRef, locationPollingDataRef, (loc) => {
+                if (!mounted) return;
+                setUserLocation(loc);
+            });
+        };
+
+        startLocation();
+
+        return () => {
+            mounted = false;
+            geolocationProviderRef.current?.stop();
+        };
+    }, []);
+
     useEffect(() => {
         fetchReports();
     }, []);
@@ -392,6 +427,21 @@ export default function Report() {
         });
     }, []);
 
+    const handleRecenterRequest = useCallback(({ map, location }) => {
+        const mapInstance = map || mapInstanceRef.current;
+        const source = userLocation || location;
+        const lat = Number(source?.latitude ?? source?.lat);
+        const lng = Number(source?.longitude ?? source?.lng);
+        if (!mapInstance || !Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+        mapInstance.panTo({ lat, lng });
+        const zoom = mapInstance.getZoom?.();
+        if (!Number.isFinite(zoom) || zoom < 14) {
+            mapInstance.setZoom(14);
+        }
+        return true;
+    }, [userLocation]);
+
     return (
         <div className="report-container">
             {toast ? (
@@ -409,8 +459,11 @@ export default function Report() {
                     API_KEY={mapData?.GMAPS_KEY}
                     MAP_ID={mapData?.GMAPS_ID}
                     map_function={ReportLocation}
-                    showUserLocation
-                    onUserLocation={setUserLocation}
+                    showUserLocation={false}
+                    onUserLocation={null}
+                    useExternalUserLocation
+                    externalUserLocation={userLocation}
+                    onRecenterRequest={handleRecenterRequest}
                 />
             </div>
             <div className={`report-sidebar-container ${(isClicked || selectedReport) ? "report-sidebar-container-active" : "report-sidebar-container-inactive"}`}>
@@ -467,7 +520,7 @@ export default function Report() {
             </div>
 
             <div className="overlay-ui report-overlay-ui">  {/* Set pointerEvents to Auto so Google maps doesn't eat all the clicks above the UI region*/}
-                <MapPage onSearch={() => console.log("Search triggered!")} />
+                <MapPage onSearch={() => console.log("Search triggered!")} showSearch={false} />
             </div>
         </div>
     );

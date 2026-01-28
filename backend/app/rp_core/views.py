@@ -8,6 +8,8 @@ from django.core.cache import cache
 from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 from math import asin, cos, radians, sin, sqrt
 
@@ -24,7 +26,7 @@ from rp_core.services.incident_reporting import (
     grant_vote_provisional_point,
 )
 
-from .incidentReport import (
+from .incident_report import (
     IncidentReportCreateSerializer,
     IncidentReportSerializer,
     IncidentReportVoteCreateSerializer,
@@ -69,10 +71,76 @@ def add_hazard_delay_to_duration(base_duration):
     
     return base_duration + total_delay_seconds
 
+def root(_req):
+    """Root endpoint - returns API information and all available endpoints"""
+    return JsonResponse({
+        "service": "RoadPulse API",
+        "version": "1.0",
+        "status": "running",
+        "documentation": "List of all available API endpoints",
+        "endpoints": {
+            "admin": {
+                "admin_panel": "/admin/",
+                "admin_rewards_list": "/api/admin/rewards/",
+                "admin_reward_detail": "/api/admin/rewards/{id}/",
+                "admin_profile": "/api/admin/profile/",
+            },
+            "authentication": {
+                "register": "/api/register/",
+                "login": "/api/login/",
+                "token_refresh": "/api/token/refresh/",
+                "forgot_password": "/api/forgot-password/",
+                "change_password": "/api/change-password/",
+            },
+            "map": {
+                "map_config": "/api/map/",
+                "location_data": "/api/map/location/",
+                "compute_route": "/api/map/compute-route/",
+            },
+            "user": {
+                "reward_account": "/api/rewards/account/",
+                "update_profile": "/api/profile/update/",
+                "update_distance": "/api/user/distance/",
+            },
+            "incidents": {
+                "list_and_create": "/api/incident-reports/",
+                "vote": "/api/incident-reports/{id}/vote/",
+            },
+            "rewards": {
+                "list_items": "/api/rewards/items/",
+                "redeem_reward": "/api/rewards/redeem/",
+                "user_redemptions": "/api/rewards/redemptions/",
+                "mark_redeemed": "/api/rewards/redemptions/{id}/redeem/",
+            },
+            "system": {
+                "health": "/api/health/",
+                "samples": "/api/samples/",
+            }
+        },
+        "note": "Some endpoints require authentication. Use /api/login/ to obtain access token."
+    })
+
 def health(_req):
+    from django.db import connection
+    
+    db_status = "ok"
+    db_error = None
+    
+    # Test database connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        db_status = "connected"
+    except Exception as e:
+        db_status = "error"
+        db_error = str(e)
+    
     return JsonResponse({
         "status": "ok",
-        "service": "RoadPulse API"
+        "service": "RoadPulse API",
+        "database": db_status,
+        "database_error": db_error
     })
 
 
@@ -207,10 +275,40 @@ def reward_account(request):
     user = request.user
     return Response({
         "id": user.id,
-        "username": user.get_username(),
+        "username": user.username,
+        "email": user.email,
         "reward_points": user.reward_points,
         "cumulative_distance": user.cumulative_distance,
         "provisional_points": getattr(user, "provisional_points", 0),
+        "date_joined": user.date_joined.isoformat() if user.date_joined else None,
+    })
+
+
+# Update authenticated user's profile
+@api_view(["PUT", "PATCH"])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    data = request.data
+    
+    # Update username if provided
+    if "username" in data:
+        new_username = data["username"].strip()
+        if not new_username:
+            return Response({"detail": "Username cannot be empty."}, status=400)
+        # Check if username is already taken by another user
+        from .models import AppUser
+        if AppUser.objects.filter(username=new_username).exclude(id=user.id).exists():
+            return Response({"detail": "Username is already taken."}, status=400)
+        user.username = new_username
+    
+    user.save()
+    
+    return Response({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "detail": "Profile updated successfully."
     })
 
 
@@ -227,15 +325,6 @@ def map(_req):
 def incident_reports(request):
     if request.method == "GET":
         # Close & settle any expired open reports (time limit reached)
-        now = timezone.now()
-        expired_open = IncidentReport.objects.filter(
-            status=IncidentReport.Status.OPEN,
-            expires_at__isnull=False,
-            expires_at__lte=now,
-        ).values_list("id", flat=True)[:200]
-        for rid in expired_open:
-            close_and_settle_report(rid)
-
         reports = IncidentReport.objects.active()[:500]
         return Response(IncidentReportSerializer(reports, many=True).data)
 
@@ -356,6 +445,7 @@ def locationData(_req):
                          "maximumAge": settings.MAXIMUM_AGE,
                          })
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(views.APIView):
     def post(self, request):
         serializer = RegisterSerializerIncidentReport(data=request.data)
@@ -365,30 +455,45 @@ class RegisterView(views.APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(views.APIView):
     def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+        
         email = request.data.get("email")
         password = request.data.get("password")
 
         if not email or not password:
             return Response({"detail": "Email and password are required."}, status=400)
         
-        # Use email for authentication (custom backend handles this)
-        user = authenticate(request, email=email, password=password)
+        try:
+            logger.info(f"Login attempt for email: {email}")
+            
+            # Use email for authentication (custom backend handles this)
+            user = authenticate(request, email=email, password=password)
+            
+            logger.info(f"Authentication result: {'success' if user else 'failed'}")
 
-        if user is None:
-            return Response({"detail": "Invalid email or password. Please try again."}, status=401)
+            if user is None:
+                return Response({"detail": "Invalid email or password. Please try again."}, status=401)
 
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            "username": user.username,
-            "email": user.email,
-            "is_staff": user.is_staff,
-            "is_superuser": user.is_superuser,
-        })
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "username": user.username,
+                "email": user.email,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+            })
+        except Exception as e:
+            logger.error(f"Login error: {type(e).__name__}: {str(e)}")
+            return Response({
+                "detail": f"Authentication error: {str(e)}"
+            }, status=500)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ForgotPasswordView(views.APIView):
     def post(self, request):
         email = request.data.get("email")
@@ -480,8 +585,48 @@ def list_exchange_items(_req):
         "description": item.description,
         "points_cost": item.points_cost,
         "stock": item.stock,
+        "image": _req.build_absolute_uri(item.image.url) if item.image else None,
     } for item in items]
     return Response(data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_user_redemptions(request):
+    redemptions = (
+        RewardRedemption.objects
+        .filter(user=request.user)
+        .select_related("item")
+        .order_by("-created_at")
+    )
+    data = []
+    for redemption in redemptions:
+        data.append({
+            "id": redemption.id,
+            "item": {
+                "id": redemption.item.id,
+                "name": redemption.item.name,
+                "description": redemption.item.description,
+            },
+            "quantity": redemption.quantity,
+            "points_spent": redemption.points_spent,
+            "created_at": redemption.created_at.isoformat(),
+            "redeemed_at": redemption.redeemed_at.isoformat() if redemption.redeemed_at else None,
+            "code": f"RWD-{redemption.id:06d}",
+        })
+    return Response(data)
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def redeem_user_redemption(request, redemption_id):
+    try:
+        redemption = RewardRedemption.objects.get(pk=redemption_id, user=request.user)
+    except RewardRedemption.DoesNotExist:
+        return Response({"detail": "Redemption not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # No "used" field in model yet, so consume by deleting the record
+    redemption.delete()
+    return Response({"detail": "Voucher redeemed."})
 
 
 POINTS_PER_10KM = Decimal("0.1")
@@ -539,6 +684,13 @@ def update_cumulative_distance(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def redeem_reward(request):
+    # Prevent staff/admin users from redeeming rewards
+    if request.user.is_staff:
+        return Response(
+            {"detail": "Staff and admin users cannot redeem rewards."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    
     item_id = request.data.get("item_id")
     quantity = request.data.get("quantity", 1)
 
@@ -608,14 +760,21 @@ def redeem_reward(request):
             )
 
         # Deduct points and stock, create redemption record
-        try:
-            deduct_points(user, total_cost, reason="redeem_reward", ref=f"Redeem: Item {item.id} with quantity of {quantity}")
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        # Only deduct points if total_cost > 0 (skip for 0-point rewards)
+        if total_cost > 0:
+            try:
+                deduct_points(user, total_cost, reason="redeem_reward")
+                # CRITICAL: Refresh user to get the updated points after deduction
+                user.refresh_from_db(fields=["reward_points"])
+            except ValueError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Deduct stock if not unlimited
         if item.stock is not None:
             item.stock -= quantity
+            # Automatically deactivate reward if stock reaches 0
+            if item.stock == 0:
+                item.is_active = False
         item.save()
 
         # Create redemption record
@@ -625,6 +784,9 @@ def redeem_reward(request):
             quantity=quantity,
             points_spent=total_cost,
         )
+        
+        # Refresh user to get updated points after deduction
+        user.refresh_from_db(fields=["reward_points"])
 
     return Response({
         "redemption_id": redemption.id,
@@ -637,79 +799,6 @@ def redeem_reward(request):
         "remaining_points": user.reward_points,
         "created_at": redemption.created_at.isoformat(),
     })
-
-# ========== ADMIN REWARD MANAGEMENT ENDPOINTS ==========s
-
-class IsStaffUser(IsAuthenticated):
-    """Custom permission class to allow only admin/staff users"""
-    def has_permission(self, request, view):
-        return super().has_permission(request, view) and request.user.is_staff
-
-
-@api_view(["GET", "POST"])
-@permission_classes([IsStaffUser])
-def admin_rewards(request):
-    """
-    List all rewards (GET) or create new reward (POST)
-    Admin-only endpoint
-    """
-    if request.method == "GET":
-        rewards = ExchangeItem.objects.all()
-        serializer = RewardSerializer(rewards, many=True)
-        return Response(serializer.data)
-    
-    # POST - Create new reward
-    serializer = RewardCreateUpdateSerializer(data=request.data)
-    if serializer.is_valid():
-        reward = serializer.save()
-        return Response(
-            RewardSerializer(reward).data,
-            status=status.HTTP_201_CREATED
-        )
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(["GET", "PUT", "DELETE"])
-@permission_classes([IsStaffUser])
-def admin_reward_detail(request, reward_id):
-    """
-    Get, update, or delete a specific reward
-    Admin-only endpoint
-    """
-    try:
-        reward = ExchangeItem.objects.get(pk=reward_id)
-    except ExchangeItem.DoesNotExist:
-        return Response(
-            {"detail": "Reward not found."},
-            status=status.HTTP_404_NOT_FOUND
-        )
-    
-    if request.method == "GET":
-        serializer = RewardSerializer(reward)
-        return Response(serializer.data)
-    
-    elif request.method == "PUT":
-        serializer = RewardCreateUpdateSerializer(reward, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(RewardSerializer(reward).data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    elif request.method == "DELETE":
-        reward.delete()
-        return Response(
-            {"detail": "Reward deleted successfully."},
-            status=status.HTTP_204_NO_CONTENT
-        )
-
-
-@api_view(["GET"])
-@permission_classes([IsStaffUser])
-def admin_profile(request):
-    """Get admin profile information"""
-    serializer = AdminProfileSerializer(request.user)
-    return Response(serializer.data)
-
 
 
 # ========== ADMIN REWARD MANAGEMENT ENDPOINTS ==========
@@ -728,7 +817,8 @@ def admin_rewards(request):
     Admin-only endpoint
     """
     if request.method == "GET":
-        rewards = ExchangeItem.objects.all()
+        # Only show active rewards in admin interface (deleted rewards have is_active=False)
+        rewards = ExchangeItem.objects.filter(is_active=True)
         serializer = RewardSerializer(rewards, many=True)
         return Response(serializer.data)
     
@@ -763,14 +853,25 @@ def admin_reward_detail(request, reward_id):
         return Response(serializer.data)
     
     elif request.method == "PUT":
+        # Store original stock value to detect restocking
+        original_stock = reward.stock
+        was_inactive = not reward.is_active
+        
         serializer = RewardCreateUpdateSerializer(reward, data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(RewardSerializer(reward).data)
+            updated_reward = serializer.save()
+            
+            # Automatically reactivate reward if it was inactive and now has stock
+            if was_inactive and updated_reward.stock is not None and updated_reward.stock > 0:
+                updated_reward.is_active = True
+                updated_reward.save(update_fields=["is_active"])
+            
+            return Response(RewardSerializer(updated_reward).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == "DELETE":
-        reward.delete()
+        reward.is_active = False
+        reward.save(update_fields=["is_active"])
         return Response(
             {"detail": "Reward deleted successfully."},
             status=status.HTTP_204_NO_CONTENT
@@ -783,7 +884,6 @@ def admin_profile(request):
     """Get admin profile information"""
     serializer = AdminProfileSerializer(request.user)
     return Response(serializer.data)
-
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def saved_destinations(request):

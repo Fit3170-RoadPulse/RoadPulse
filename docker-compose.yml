@@ -21,16 +21,3 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
-
-  frontend-admin:
-    build:
-      context: ./frontend-admin
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL}
-    container_name: roadpulse_admin
-    depends_on:
-      - backend
-    ports:
-      - "5174:5174"
-    restart: unless-stopped

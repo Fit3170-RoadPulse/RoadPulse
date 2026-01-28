@@ -209,23 +209,28 @@
 .close-btn {
   position: fixed;
   top: 16px;
-  right: 20px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: none;
-  background: transparent;
-  font-size: 24px;
+  background-color: transparent;
   cursor: pointer;
   z-index: 1000;
   color: #333;
-  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  outline: none;
 }
 
 .close-btn:hover {
-  color: #000;
+  background-color: #f3f4f6;
 }
 
 .close-btn:focus {
-  color: #000;
-  border: none;
   outline: none;
 }
 
@@ -233,6 +238,7 @@
   .settings-page {
     flex-direction: column;
     min-height: 100svh;
+    position: relative;
   }
 
   .settings-left-nav {
@@ -263,7 +269,10 @@
   }
 
   .close-btn {
-    top: 12px;
-    right: 12px;
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 }

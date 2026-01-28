@@ -125,11 +125,12 @@ body.rp-report-dragging .report-sheet-scroll {
         left: 0;
         right: 0;
         top: auto;
-        bottom: calc(72px + var(--safe-bottom));
+        bottom: 0;
         width: 100%;
         height: auto;
         align-items: flex-end;
         padding: 0;
+        z-index: 2000; /* Above sidebar (950) */
     }
 
     .report-sidebar-content {
@@ -234,5 +235,21 @@ body.rp-report-dragging .report-sheet-scroll {
         border: 1px solid #e5e7eb !important;
         color: #374151 !important;
         box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    .report-container .gm-bundled-control.gm-bundled-control-on-bottom,
+    .report-container .gm-style .gm-svpc,
+    .report-container .gm-style .gm-compass {
+        display: none !important;
+    }
+
+    .report-container .gm-style .gm-panning-control,
+    .report-container .gm-style [aria-label*="Move"],
+    .report-container .gm-style [title*="Move"],
+    .report-container .gm-style [aria-label*="Pan"],
+    .report-container .gm-style [title*="Pan"],
+    .report-container .gm-style [aria-label*="Drag"],
+    .report-container .gm-style [title*="Drag"] {
+        display: none !important;
     }
 }

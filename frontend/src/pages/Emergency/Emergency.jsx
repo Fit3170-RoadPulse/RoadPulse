@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import axios from "axios"
+import { X } from "lucide-react"
 import "./Emergency.css"
 
 function Emergency() {
@@ -64,12 +64,13 @@ function Emergency() {
   if (showContactsPage) {
     return (
       <div className="emergency-contacts-page">
-        {/* Back button */}
+        {/* Close button */}
         <button
           onClick={() => setShowContactsPage(false)}
-          className="emergency-back-button"
+          className="emergency-close-btn"
+          aria-label="Close"
         >
-          ← Back
+          <X size={24} />
         </button>
 
         {/* Emergency contacts grid */}
@@ -115,24 +116,13 @@ function Emergency() {
 
   return (
     <div className="emergency-main-page">
-      {/* Copied Back button */}
+      {/* Close button */}
       <button
         onClick={() => (window.location.href = "/map")}
-        style={{
-          position: "absolute",        // makes it float on the screen
-          top: "20px",                 // distance from top
-          left: "20px",               // distance from right
-          backgroundColor: "beige",    // beige background
-          border: "2px solid grey",    // grey border
-          color: "black",              // text color
-          padding: "8px 16px",
-          borderRadius: "20px",
-          cursor: "pointer",
-          fontWeight: "bold",
-          zIndex: 1000                 // ensure it stays above the map
-        }}
+        className="emergency-close-btn"
+        aria-label="Close"
       >
-        ← Back
+        <X size={24} />
       </button>
 
       {/* Emergency Call Button */}

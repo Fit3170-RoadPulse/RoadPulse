@@ -25,7 +25,7 @@ class RewardCreateUpdateSerializer(serializers.ModelSerializer):
         ]
 
     def validate_points_cost(self, value):
-        """Ensure points cost is positive"""
+        """Ensure points cost is non-negative (0 or positive)"""
         if value < 0:
             raise serializers.ValidationError("Points cost cannot be negative.")
         return value
