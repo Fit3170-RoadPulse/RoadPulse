@@ -4,6 +4,7 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet } from 
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
+import { fetchMapConfig } from "../../lib/mapConfig";
 
 
 export default class MapController extends Component {
