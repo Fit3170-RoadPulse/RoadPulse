@@ -122,21 +122,20 @@ def root(_req):
     })
 
 def health(_req):
-    # TEMPORARY: Skip DB check to debug deployment timeout
-    # from django.db import connection
+    from django.db import connection
     
-    db_status = "ok (check skipped)"
+    db_status = "ok"
     db_error = None
     
     # Test database connection
-    # try:
-    #     with connection.cursor() as cursor:
-    #         cursor.execute("SELECT 1")
-    #         cursor.fetchone()
-    #     db_status = "connected"
-    # except Exception as e:
-    #     db_status = "error"
-    #     db_error = str(e)
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        db_status = "connected"
+    except Exception as e:
+        db_status = "error"
+        db_error = str(e)
     
     return JsonResponse({
         "status": "ok",
