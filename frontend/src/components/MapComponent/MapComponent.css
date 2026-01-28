@@ -82,11 +82,11 @@
     width: 56px;
     height: 56px;
     border-radius: 999px;
-    border: none;
+    border: 1px solid #b9eac4;
     padding: 0;
-    background: #ffffff;
-    color: #f59e0b;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+    background: #e8f9ea;
+    color: #111827;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -105,9 +105,9 @@
 
 .map-saved-destinations-button:hover,
 .map-saved-destinations-button:focus {
-    background-color: #fffbeb;
+    background-color: #d7f2dc;
     transform: translateY(-1px);
-    box-shadow: 0 14px 28px rgba(245, 158, 11, 0.22);
+    box-shadow: 0 14px 26px rgba(15, 23, 42, 0.18);
     outline: none;
 }
 
