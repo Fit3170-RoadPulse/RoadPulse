@@ -175,14 +175,20 @@ function Emergency() {
           <div className="emergency-bottom-card-icon">
             📞
           </div>
-          <div className="emergency-bottom-card-text">
-            <div className="emergency-bottom-card-label">
-              {emergencyName}
+            <div className="emergency-bottom-card-text">
+              <div className="emergency-bottom-card-label">
+                Emergency Contact
+              </div>
+              <div className="emergency-bottom-card-number">
+                {emergencyNumber ? (
+                  <>
+                    {emergencyNumber} <span style={{fontWeight: 'normal', fontSize: '14px', color: '#666'}}>({emergencyName})</span>
+                  </>
+                ) : (
+                  <span style={{color: '#999', fontStyle: 'italic', fontWeight: 'normal'}}>Not Set</span>
+                )}
+              </div>
             </div>
-            <div className="emergency-bottom-card-number">
-              {emergencyNumber}
-            </div>
-          </div>
           <button
             onClick={() => setShowContactsPage(true)}
             className="emergency-view-all-button"
