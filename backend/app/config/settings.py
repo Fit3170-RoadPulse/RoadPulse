@@ -80,7 +80,6 @@ DATABASES = {
         "OPTIONS": {
             "sslmode": os.getenv("POSTGRES_SSLMODE", "require"),
             "connect_timeout": 5,  # 5 second timeout to prevent hanging
-            "options": "-c search_path=public",  # Explicitly set schema search path
         },
     }
 }
