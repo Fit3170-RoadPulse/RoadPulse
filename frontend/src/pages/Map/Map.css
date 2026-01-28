@@ -1589,6 +1589,16 @@ body.rp-incident-dragging .map-incident-scroll {
 }
 
 @media (max-width: 768px) {
+    body.rp-map-page {
+        overflow: hidden;
+        overscroll-behavior: none;
+        height: 100%;
+    }
+
+    body.rp-map-page #root {
+        height: 100%;
+    }
+
     .map-page-container {
         --sidebar-width: 0px;
         --ui-edge-gap: 12px;
@@ -1600,10 +1610,8 @@ body.rp-incident-dragging .map-incident-scroll {
         --map-top-row-nudge: -4px;
         --speed-card-width: min(132px, 36vw);
         --top-row-card-height: 112px;
-        --mobile-browser-ui-top: 12px;
-        --mobile-browser-ui-bottom: 16px;
-        --safe-top: calc(env(safe-area-inset-top, 0px) + var(--mobile-browser-ui-top));
-        --mobile-nav-height: calc(72px + var(--safe-bottom) + var(--mobile-browser-ui-bottom, 0px));
+        --safe-top: calc(env(safe-area-inset-top, 0px) + var(--mobile-browser-ui-top, 12px));
+        --mobile-nav-height: calc(72px + var(--safe-bottom) + var(--mobile-browser-ui-bottom, 16px));
     }
 
     .map-wrapper {

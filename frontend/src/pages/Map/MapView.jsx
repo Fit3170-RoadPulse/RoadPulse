@@ -17,6 +17,11 @@ export default class MapView extends Component {
 
     componentDidMount = () => {
         this.syncTimeSelectorClass();
+        if (typeof document !== "undefined") {
+            document.body.classList.add("rp-map-page");
+        }
+        this.updateMobileViewportVars();
+        this.bindViewportListeners();
     };
 
     componentDidUpdate = (prevProps) => {
@@ -35,6 +40,9 @@ export default class MapView extends Component {
         document.body.classList.remove("rp-time-selector-open");
         document.body.classList.remove("rp-route-dragging");
         document.body.classList.remove("rp-incident-dragging");
+        document.body.classList.remove("rp-map-page");
+        this.unbindViewportListeners();
+        this.resetMobileViewportVars();
         window.removeEventListener("pointermove", this.handleIncidentPointerMove);
         window.removeEventListener("pointerup", this.handleIncidentPointerUp);
         window.removeEventListener("pointercancel", this.handleIncidentPointerUp);
@@ -49,6 +57,57 @@ export default class MapView extends Component {
         } else {
             document.body.classList.remove("rp-time-selector-open");
         }
+    };
+
+    updateMobileViewportVars = () => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
+        const body = document.body;
+        const isMobile = window.innerWidth <= 768;
+        const vv = window.visualViewport;
+
+        if (!isMobile || !vv) {
+            body.style.removeProperty("--mobile-browser-ui-top");
+            body.style.setProperty("--mobile-browser-ui-bottom", "0px");
+            return;
+        }
+
+        const offsetTop = Math.max(0, vv.offsetTop || 0);
+        const bottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
+
+        if (offsetTop > 0) {
+            body.style.setProperty("--mobile-browser-ui-top", `${offsetTop}px`);
+        } else {
+            body.style.removeProperty("--mobile-browser-ui-top");
+        }
+        body.style.setProperty("--mobile-browser-ui-bottom", `${bottomInset}px`);
+    };
+
+    resetMobileViewportVars = () => {
+        if (typeof document === "undefined") return;
+        document.body.style.removeProperty("--mobile-browser-ui-top");
+        document.body.style.removeProperty("--mobile-browser-ui-bottom");
+    };
+
+    bindViewportListeners = () => {
+        if (typeof window === "undefined") return;
+        const vv = window.visualViewport;
+        if (vv) {
+            vv.addEventListener("resize", this.updateMobileViewportVars);
+            vv.addEventListener("scroll", this.updateMobileViewportVars);
+        }
+        window.addEventListener("resize", this.updateMobileViewportVars);
+        window.addEventListener("orientationchange", this.updateMobileViewportVars);
+    };
+
+    unbindViewportListeners = () => {
+        if (typeof window === "undefined") return;
+        const vv = window.visualViewport;
+        if (vv) {
+            vv.removeEventListener("resize", this.updateMobileViewportVars);
+            vv.removeEventListener("scroll", this.updateMobileViewportVars);
+        }
+        window.removeEventListener("resize", this.updateMobileViewportVars);
+        window.removeEventListener("orientationchange", this.updateMobileViewportVars);
     };
 
     routeDragActive = false;
