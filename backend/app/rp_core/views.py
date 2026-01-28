@@ -30,8 +30,8 @@ from .incidentReport import (
     IncidentReportVoteCreateSerializer,
     RegisterSerializerIncidentReport,
 )
-from .event_serializers import RewardSerializer, RewardCreateUpdateSerializer, AdminProfileSerializer
-from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption
+from .event_serializers import RewardSerializer, RewardCreateUpdateSerializer, AdminProfileSerializer, SavedDestinationSerializer
+from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption, SavedDestination
 
 
 import hashlib
@@ -41,6 +41,33 @@ import requests
 
 
 User = get_user_model()
+
+# Simple function to add delay based on hazard types
+def add_hazard_delay_to_duration(base_duration):
+    """
+    Adds delay based on active hazard types.
+    Different hazard types have different hardcoded delays.
+    """
+    # Get all active hazards
+    active_hazards = IncidentReport.objects.active()
+    
+    # Hardcoded delay values per hazard type (in minutes)
+    HAZARD_DELAYS = {
+        IncidentReport.ReportType.ACCIDENT: 10,   # 10 minutes
+        IncidentReport.ReportType.HAZARD: 5,      # 5 minutes
+        IncidentReport.ReportType.WEATHER: 3,     # 3 minutes
+        IncidentReport.ReportType.CRIME: 7,       # 7 minutes
+        IncidentReport.ReportType.OTHER: 2,       # 2 minutes
+    }
+    
+    total_delay_seconds = 0
+    
+    # Add delay for each hazard based on its type
+    for hazard in active_hazards:
+        delay_minutes = HAZARD_DELAYS.get(hazard.report_type, 0)
+        total_delay_seconds += delay_minutes * 60  # Convert to seconds
+    
+    return base_duration + total_delay_seconds
 
 def health(_req):
     return JsonResponse({
@@ -62,6 +89,7 @@ def compute_route(request):
     origin = request.data.get("origin")
     destination = request.data.get("destination")
     startTimes = request.data.get("startTimes")
+    avoidTolls = bool(request.data.get("avoidTolls", False)) #Frontend needs to send this param, currently unused, default False
     url = "https://routes.googleapis.com/directions/v2:computeRoutes"
     responseMatrix = []
 
@@ -73,7 +101,7 @@ def compute_route(request):
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': settings.GOOGLE_MAPS_API_KEY,
-        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps'
+        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps,routes.travelAdvisory.tollInfo'
     }
 
     def build_cache_key(origin_data, destination_data, departure_time):
@@ -119,6 +147,12 @@ def compute_route(request):
             "departureTime": time,
             "languageCode": "en-US",
         }
+
+        if avoidTolls: #If true, add route modifier to avoid tolls
+            request_body["routeModifiers"] = {
+                "avoidTolls": avoidTolls
+            }
+
         try:
             google_response = requests.post(
                 url,
@@ -135,12 +169,19 @@ def compute_route(request):
         
         data = google_response.json()
         route = data["routes"][0]
+        toll_info = route.get("travelAdvisory", {}).get("tollInfo")
+        base_duration = int((route["duration"]).replace("s",""))
+        
+        # Add hazard delay if any hazards exist
+        adjusted_duration = add_hazard_delay_to_duration(base_duration)
+        
         result = {
             "starting_time":time,
             "distance_meters":route["distanceMeters"],
-            "duration":int((route["duration"]).replace("s","")),
+            "duration":adjusted_duration,
             "polyline":route["polyline"]["encodedPolyline"],
             "legs":route["legs"],
+            "toll": {"has_tolls": bool(toll_info),"details": toll_info}, #Return toll info
         }
         cache.set(cache_key, result, timeout=getattr(settings, "GOOGLE_ROUTES_CACHE_TTL", 300))
         responseMatrix.append(result)
@@ -597,6 +638,79 @@ def redeem_reward(request):
         "created_at": redemption.created_at.isoformat(),
     })
 
+# ========== ADMIN REWARD MANAGEMENT ENDPOINTS ==========s
+
+class IsStaffUser(IsAuthenticated):
+    """Custom permission class to allow only admin/staff users"""
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and request.user.is_staff
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsStaffUser])
+def admin_rewards(request):
+    """
+    List all rewards (GET) or create new reward (POST)
+    Admin-only endpoint
+    """
+    if request.method == "GET":
+        rewards = ExchangeItem.objects.all()
+        serializer = RewardSerializer(rewards, many=True)
+        return Response(serializer.data)
+    
+    # POST - Create new reward
+    serializer = RewardCreateUpdateSerializer(data=request.data)
+    if serializer.is_valid():
+        reward = serializer.save()
+        return Response(
+            RewardSerializer(reward).data,
+            status=status.HTTP_201_CREATED
+        )
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET", "PUT", "DELETE"])
+@permission_classes([IsStaffUser])
+def admin_reward_detail(request, reward_id):
+    """
+    Get, update, or delete a specific reward
+    Admin-only endpoint
+    """
+    try:
+        reward = ExchangeItem.objects.get(pk=reward_id)
+    except ExchangeItem.DoesNotExist:
+        return Response(
+            {"detail": "Reward not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if request.method == "GET":
+        serializer = RewardSerializer(reward)
+        return Response(serializer.data)
+    
+    elif request.method == "PUT":
+        serializer = RewardCreateUpdateSerializer(reward, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(RewardSerializer(reward).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == "DELETE":
+        reward.delete()
+        return Response(
+            {"detail": "Reward deleted successfully."},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsStaffUser])
+def admin_profile(request):
+    """Get admin profile information"""
+    serializer = AdminProfileSerializer(request.user)
+    return Response(serializer.data)
+
+
 
 # ========== ADMIN REWARD MANAGEMENT ENDPOINTS ==========
 
@@ -670,3 +784,22 @@ def admin_profile(request):
     serializer = AdminProfileSerializer(request.user)
     return Response(serializer.data)
 
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def saved_destinations(request):
+    """
+    GET: list current user's saved destinations
+    POST: create a new saved destination for current user
+    """
+    if request.method == "GET":
+        qs = SavedDestination.objects.filter(user=request.user).order_by("-created_at")
+        serializer = SavedDestinationSerializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # POST
+    serializer = SavedDestinationSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=request.user)  # attach user here (don't trust client)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

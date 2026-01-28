@@ -72,6 +72,28 @@
   min-height: 100vh;
 }
 
+.settings-left-column .settings-page {
+  display: block;
+  min-height: 0;
+  background: transparent;
+  width: 100%;
+}
+
+.settings-left-column .settings-left-nav {
+  position: static;
+  width: 100%;
+  height: auto;
+  border-right: none;
+}
+
+.settings-left-column .settings-content {
+  display: none;
+}
+
+.settings-left-column .close-btn {
+  display: none;
+}
+
 .settings-welcome {
   max-width: 800px;
 }
@@ -109,6 +131,7 @@
   padding: 32px 24px;
   border-radius: 12px;
   width: 320px;
+  max-width: 90vw;
   text-align: center;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
@@ -204,4 +227,43 @@
   color: #000;
   border: none;
   outline: none;
+}
+
+@media (max-width: 768px) {
+  .settings-page {
+    flex-direction: column;
+    min-height: 100svh;
+  }
+
+  .settings-left-nav {
+    position: relative;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 16px 0;
+  }
+
+  .settings-title {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+
+  .settings-content {
+    margin-left: 0;
+    padding: 24px 16px 80px;
+  }
+
+  .settings-welcome h1 {
+    font-size: 24px;
+  }
+
+  .settings-welcome p {
+    font-size: 14px;
+  }
+
+  .close-btn {
+    top: 12px;
+    right: 12px;
+  }
 }

@@ -197,7 +197,14 @@ function RewardsPage() {
                             </div>
 
                             <div className="flex justify-center">
-                                <svg width="820" height="320" viewBox="0 0 820 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="enlarged-barcode">
+                                <svg
+                                    viewBox="0 0 820 320"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    role="img"
+                                    aria-label="enlarged-barcode"
+                                    className="rewards-barcode-svg"
+                                    preserveAspectRatio="xMidYMid meet"
+                                >
                                     <rect x="20" y="32" width="36" height="256" fill="#111" />
                                     <rect x="76" y="32" width="24" height="256" fill="#111" />
                                     <rect x="120" y="32" width="36" height="256" fill="#111" />

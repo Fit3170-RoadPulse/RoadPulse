@@ -2,6 +2,8 @@
 .rewards-page {
     width: 100vw;
     height: 100vh;
+    min-height: 100svh;
+    height: 100dvh;
     background-color: white;
     display: flex;
     flex-direction: column;
@@ -78,7 +80,8 @@
 }
 
 .points-card {
-    width: 500px;
+    width: 100%;
+    max-width: 500px;
     margin: 0 auto;
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
     border-radius: 16px;
@@ -86,6 +89,7 @@
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .card-background-circle {
@@ -283,6 +287,8 @@
 
     .tabs-container {
         padding: 0 16px;
+        flex-wrap: wrap;
+        gap: 6px;
     }
 
     .tab {
@@ -324,7 +330,10 @@
 }
 
 .rewards-modal-content {
+    width: 100%;
     max-width: 820px;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 .rewards-modal-close-button {
@@ -332,4 +341,10 @@
     border: none;
     cursor: pointer;
     font-size: 20px;
+}
+
+.rewards-barcode-svg {
+    width: 100%;
+    height: auto;
+    display: block;
 }
