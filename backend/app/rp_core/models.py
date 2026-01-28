@@ -359,3 +359,41 @@ class PointTransaction(models.Model):
     def __str__(self):
         sign = "-" if self.kind == self.Kind.SPEND else "+"
         return f"{self.user} {sign}{self.amount} ({self.reason})"
+
+
+# Restored models for legacy data access
+class Event(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    location = models.CharField(max_length=255)
+    event_date = models.DateTimeField()
+    max_participants = models.IntegerField()
+    points_reward = models.IntegerField()
+    is_active = models.BooleanField()
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    created_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        db_table = 'rp_core_event'
+        managed = True  # We want to manage it now
+        
+    def __str__(self):
+        return self.title
+
+
+class SavedDestination(models.Model):
+    label = models.CharField(max_length=80)
+    latitude = models.DecimalField(max_digits=14, decimal_places=6)
+    longitude = models.DecimalField(max_digits=14, decimal_places=6)
+    created_at = models.DateTimeField()
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE)
+    address = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'rp_core_saveddestination'
+        managed = True
+        unique_together = ('user', 'label')
+
+    def __str__(self):
+        return self.label

@@ -8,8 +8,25 @@ from .models import (
     IncidentReportVote,
     OfficialEmergencyNumber,
     RewardRedemption,
-    PointTransaction
+    PointTransaction,
+    Event,
+    SavedDestination
 )
+
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title', 'event_date', 'created_by', 'is_active')
+    search_fields = ('title', 'location')
+    list_filter = ('is_active', 'event_date')
+
+
+@admin.register(SavedDestination)
+class SavedDestinationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'label', 'address', 'user')
+    search_fields = ('label', 'address', 'user__username')
+    list_filter = ('created_at',)
+
 
 
 @admin.register(AppUser)
