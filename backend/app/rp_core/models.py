@@ -163,7 +163,7 @@ class RewardRedemption(models.Model):
     )
     item = models.ForeignKey(
         ExchangeItem,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="redemptions",
     )
     quantity = models.PositiveIntegerField(default=1)

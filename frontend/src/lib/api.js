@@ -125,7 +125,21 @@ export async function apiPost(endpoint, data) {
     const error = await response
       .json()
       .catch(() => ({ detail: "Request failed" }));
-    throw new Error(error.detail || "Request failed");
+
+    let errorMessage = error.detail || "Request failed";
+
+    // Handle DRF field validation errors (e.g. { "stock": ["Cannot be negative"] })
+    if (!error.detail && typeof error === 'object') {
+      const fieldErrors = Object.entries(error).map(([key, val]) => {
+        const msgs = Array.isArray(val) ? val.join(' ') : val;
+        return `${key}: ${msgs}`;
+      });
+      if (fieldErrors.length > 0) {
+        errorMessage = fieldErrors.join('\n');
+      }
+    }
+
+    throw new Error(errorMessage);
   }
 
   return response.json();
@@ -147,7 +161,21 @@ export async function apiPut(endpoint, data) {
     const error = await response
       .json()
       .catch(() => ({ detail: "Request failed" }));
-    throw new Error(error.detail || "Request failed");
+
+    let errorMessage = error.detail || "Request failed";
+
+    // Handle DRF field validation errors
+    if (!error.detail && typeof error === 'object') {
+      const fieldErrors = Object.entries(error).map(([key, val]) => {
+        const msgs = Array.isArray(val) ? val.join(' ') : val;
+        return `${key}: ${msgs}`;
+      });
+      if (fieldErrors.length > 0) {
+        errorMessage = fieldErrors.join('\n');
+      }
+    }
+
+    throw new Error(errorMessage);
   }
 
   return response.json();
@@ -250,6 +278,23 @@ export async function apiPatch(endpoint, data) {
  */
 export async function updateProfile(data) {
   return apiPut("/profile/update/", data);
+}
+
+/**
+ * Fetch the user's emergency contact
+ * @returns {Promise<object>}
+ */
+export async function fetchEmergencyContact() {
+  return apiGet("/profile/emergency-contact/");
+}
+
+/**
+ * Update the user's emergency contact
+ * @param {object} data - Contact data { name, phone_number, relationship }
+ * @returns {Promise<object>}
+ */
+export async function updateEmergencyContact(data) {
+  return apiPost("/profile/emergency-contact/update/", data);
 }
 
 // --- Admin Rewards Management ---

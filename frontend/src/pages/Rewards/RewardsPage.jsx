@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { X, Award, Plus, Trash2, Edit2, Upload, Save } from "lucide-react";
+import { ChevronLeft, Filter, Plus, Edit2, Trash2, X, AlertCircle, Upload, Save, Award } from 'lucide-react';
 import { useState, useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import Barcode from "react-barcode";
@@ -56,7 +56,11 @@ function RewardsPage() {
     // Delete confirmation state
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteRewardId, setDeleteRewardId] = useState(null);
-
+    
+    // Error Modal State
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    
     // Purchase confirmation state
     const [showPurchaseConfirm, setShowPurchaseConfirm] = useState(false);
 
@@ -346,9 +350,13 @@ function RewardsPage() {
 
             setIsEditing(false);
             await loadAdminRewards();
-            await loadExchangeItemsRefresh();
         } catch (err) {
-            alert(`Failed to save reward: ${err.message}`);
+            let msg = err.message;
+            if (msg.includes("stock") && msg.includes("0")) {
+                msg = "You cannot active it because the stock is 0. Please add stock first.";
+            }
+            setErrorMessage(msg);
+            setShowErrorModal(true);
         }
     };
 
@@ -362,6 +370,12 @@ function RewardsPage() {
             await deleteReward(deleteRewardId);
             await loadAdminRewards();
             await loadExchangeItemsRefresh();
+            
+            // CRITICAL: Refresh user points because they might have received a refund
+            // Re-use the data loading logic or call fetchRewardAccount directly
+            const accountData = await fetchRewardAccount();
+            setPoints(accountData.reward_points ?? 0);
+            
             setSuccessMessage("Reward deleted successfully!");
             setShowSuccessNotification(true);
             setTimeout(() => setShowSuccessNotification(false), 3000);
@@ -991,6 +1005,45 @@ function RewardsPage() {
                                 className="delete-confirm-btn-delete"
                             >
                                 Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Error Modal */}
+            {showErrorModal && (
+                <div 
+                    className="error-modal-overlay"
+                    role="dialog" 
+                    aria-modal="true"
+                >
+                    <div 
+                        className="error-modal-backdrop"
+                        onClick={() => setShowErrorModal(false)} 
+                    />
+                    <div className="error-modal-card">
+                        <div className="error-modal-header">
+                            <div className="error-icon-circle">
+                                <AlertCircle size={32} color="#ef4444" strokeWidth={2.5} />
+                            </div>
+                            <h3 className="error-card-title">
+                                Action Failed
+                            </h3>
+                        </div>
+                        
+                        <div className="error-card-body">
+                            <p className="error-message-text">
+                                {errorMessage}
+                            </p>
+                        </div>
+                        
+                        <div className="error-card-footer">
+                            <button
+                                onClick={() => setShowErrorModal(false)}
+                                className="error-dismiss-btn"
+                            >
+                                I understand
                             </button>
                         </div>
                     </div>

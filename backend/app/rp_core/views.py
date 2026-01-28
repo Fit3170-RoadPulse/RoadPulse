@@ -22,7 +22,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from rp_core.services.points import deduct_points
+from rp_core.services.points import deduct_points, add_points
 from rp_core.services.incident_reporting import (
     close_and_settle_report,
     grant_report_provisional_point,
@@ -305,12 +305,75 @@ def update_profile(request):
     
     user.save()
     
+    
     return Response({
         "id": user.id,
         "username": user.username,
         "email": user.email,
         "detail": "Profile updated successfully."
     })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_emergency_contact(request):
+    """
+    Get the user's emergency contact.
+    """
+    try:
+        # Assuming only one major emergency contact for now, or get the one marked is_emergency
+        contact = request.user.contacts.filter(is_emergency=True).first()
+        if not contact:
+            # Fallback: get the first contact if any
+             contact = request.user.contacts.first()
+        
+        if not contact:
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+            
+        from .serializers import ContactSerializer
+        return Response(ContactSerializer(contact).data)
+    except Exception as e:
+         return Response({"detail": str(e)}, status=500)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_emergency_contact(request):
+    """
+    Create or update the user's emergency contact.
+    Enforces a single emergency contact per user for this feature.
+    """
+    from .models import Contact
+    from .serializers import ContactSerializer
+    
+    data = request.data
+    user = request.user
+    
+    # Check if existing emergency contact
+    contact = user.contacts.filter(is_emergency=True).first()
+    
+    if not contact:
+        # Check if any contact exists to upgrade or just create new
+        # For simplicity, if no contact marked is_emergency, we treat any existing as candidate or create new
+        # But per requirements "add a emergency contact", we can just create/update the one.
+        pass
+
+    if contact:
+        serializer = ContactSerializer(contact, data=data, partial=True)
+    else:
+        # Create new
+        # Force is_emergency=True
+        data_copy = data.copy()
+        data_copy['is_emergency'] = True
+        serializer = ContactSerializer(data=data_copy)
+
+    if serializer.is_valid():
+        if not contact:
+             serializer.save(user=user)
+        else:
+             serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # List available exchange items
@@ -818,8 +881,8 @@ def admin_rewards(request):
     Admin-only endpoint
     """
     if request.method == "GET":
-        # Only show active rewards in admin interface (deleted rewards have is_active=False)
-        rewards = ExchangeItem.objects.filter(is_active=True)
+        # Show all rewards in admin interface (including inactive ones)
+        rewards = ExchangeItem.objects.all().order_by('-is_active', 'name')
         serializer = RewardSerializer(rewards, many=True)
         return Response(serializer.data)
     
@@ -871,11 +934,45 @@ def admin_reward_detail(request, reward_id):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == "DELETE":
-        reward.is_active = False
-        reward.save(update_fields=["is_active"])
+        # Refund points for unredeemed vouchers
+        unredeemed_vouchers = RewardRedemption.objects.filter(item=reward, redeemed_at__isnull=True)
+        print(f"DEBUG: Deleting reward {reward.id} ({reward.name}). Found {unredeemed_vouchers.count()} unredeemed vouchers.")
+        
+        refund_count = 0
+        total_refunded = 0
+        
+        with transaction.atomic():
+            for voucher in unredeemed_vouchers:
+                user = voucher.user
+                original_points = user.reward_points
+                print(f"DEBUG: Refunding user {user.username} (ID: {user.id}). Current Points: {original_points}. Refund Amount: {voucher.points_spent}")
+                
+                # Use add_points service to ensure transaction record is created
+                add_points(
+                    user=user, 
+                    amount=voucher.points_spent, 
+                    reason="reward_deletion_refund", 
+                    ref=f"refund_reward_{reward.id}_voucher_{voucher.id}"
+                )
+                
+                # Refresh to check new value
+                user.refresh_from_db()
+                print(f"DEBUG: User {user.username} points after refund: {user.reward_points}")
+                
+                refund_count += 1
+                total_refunded += voucher.points_spent
+            
+            # Delete the reward (cascades to delete all redemptions)
+            reward.delete()
+            print("DEBUG: Reward deleted from database.")
+
         return Response(
-            {"detail": "Reward deleted successfully."},
-            status=status.HTTP_204_NO_CONTENT
+            {
+                "detail": f"Reward deleted. Refunded {total_refunded} points to {refund_count} users.",
+                "refunded_count": refund_count,
+                "total_points_refunded": total_refunded
+            },
+            status=status.HTTP_200_OK
         )
 
 
@@ -894,19 +991,23 @@ def mark_voucher_redeemed(request, redemption_id):
         )
     
     if voucher.redeemed_at:
+         # Already redeemed, but if we are here, it might be a race condition or stale data.
+         # For "delete on redeem" logic, if it's already redeemed, it should have been deleted.
+         # We can try to delete it again or just return success.
+         voucher.delete()
          return Response({
-            "id": voucher.id,
-            "redeemed_at": voucher.redeemed_at,
-            "status": "redeemed"
+            "id": redemption_id,
+            "status": "deleted",
+            "detail": "Voucher redeemed and deleted."
         })
     
-    voucher.redeemed_at = timezone.now()
-    voucher.save(update_fields=["redeemed_at"])
+    # Perform the "redemption" action which is now a deletion
+    voucher.delete()
     
     return Response({
-        "id": voucher.id,
-        "redeemed_at": voucher.redeemed_at,
-        "status": "redeemed"
+        "id": redemption_id,
+        "status": "deleted",
+        "detail": "Voucher redeemed and deleted."
     })
 
 
