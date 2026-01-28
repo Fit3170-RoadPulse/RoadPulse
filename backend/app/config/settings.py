@@ -5,13 +5,24 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent       
 ROOT_DIR = BASE_DIR.parent.parent                       
-load_dotenv(ROOT_DIR / ".env") # This will only work locally in development stage
+load_dotenv(ROOT_DIR / ".env")  # This will only work locally in development stage
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret")
 DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
 
-ALLOWED_HOSTS = ["*"]
-# ALLOWED_HOSTS = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if h]
+def _split_env_list(name: str, default: str = ""):
+    return [value.strip() for value in os.getenv(name, default).split(",") if value.strip()]
+
+
+_render_hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+ALLOWED_HOSTS = _split_env_list("DJANGO_ALLOWED_HOSTS")
+if _render_hostname:
+    ALLOWED_HOSTS.append(_render_hostname)
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     "rp_core",
@@ -133,17 +144,16 @@ MAXIMUM_AGE = 15000
 
 # Allow configuring CORS origins via env for deployments (e.g., Render)
 _default_cors_origins = "http://localhost:5173,https://roadpulsefrontend.onrender.com"
-CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", _default_cors_origins).split(",")
-    if origin.strip()
-]
+CORS_ALLOWED_ORIGINS = _split_env_list("DJANGO_CORS_ALLOWED_ORIGINS", _default_cors_origins)
 
 _default_csrf_trusted_origins = "http://localhost:5173,https://roadpulsefrontend.onrender.com"
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", _default_csrf_trusted_origins).split(",")
-    if origin.strip()
-]
+CSRF_TRUSTED_ORIGINS = _split_env_list("DJANGO_CSRF_TRUSTED_ORIGINS", _default_csrf_trusted_origins)
+
+if _render_hostname:
+    _render_origin = f"https://{_render_hostname}"
+    if _render_origin not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(_render_origin)
+    if _render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_render_origin)
 
 CORS_ALLOW_CREDENTIALS = True
