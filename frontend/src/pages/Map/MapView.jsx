@@ -358,6 +358,8 @@ export default class MapView extends Component {
             onRecenterRequest,
         } = this.props;
         const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
+        const isMobileView = typeof window !== "undefined" && window.innerWidth <= 768;
+        const showSavedDestinationsSheet = showSavedDestinations && isMobileView;
 
         return (
             <div className="map-page-container">
@@ -705,154 +707,219 @@ export default class MapView extends Component {
                                 />
 
                                 <div className="route-info-scroll">
-                                    {/* Route Options */}
-                                    <div class="route-info-card">
-                                        <div className="route-info-gradient-bar" />
-                                        <RouteOptionsComponent
-                                            isTollRoadsOn={isTollRoadsOn}
-                                            toggleTollRoads={toggleTollRoads}>
-                                        </RouteOptionsComponent>
+                                    {showSavedDestinationsSheet ? (
+                                        <div className="route-info-card saved-destinations-sheet">
+                                            <div className="route-info-gradient-bar" />
+                                            <div className="saved-destinations-mobile-header">
+                                                <button
+                                                    type="button"
+                                                    className="saved-destinations-back"
+                                                    onClick={closeSavedDestinations}
+                                                    aria-label="Back to route options"
+                                                >
+                                                    ←
+                                                </button>
+                                                <h3>Saved destinations</h3>
+                                            </div>
 
-                                        <div
-                                            className="tollRoadToggle savedDestinationsOption"
-                                            onClick={openSavedDestinations}
-                                            role="button"
-                                            tabIndex={0}
-                                        >
-                                            <div>Saved destinations</div>
-                                            <div className="route-option-arrow">›</div>
+                                            {isLoadingSavedDestinations ? (
+                                                <div className="saved-destinations-loading">Loading...</div>
+                                            ) : (
+                                                <div className="saved-destinations-list">
+                                                    {savedDestinations?.length ? savedDestinations.map((d) => (
+                                                        <div
+                                                            key={d.id}
+                                                            className="saved-destinations-item"
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            onClick={() => selectSavedDestination(d)}
+                                                            onKeyDown={(event) => {
+                                                                if (event.key === "Enter" || event.key === " ") {
+                                                                    event.preventDefault();
+                                                                    selectSavedDestination(d);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <div className="saved-destinations-item-header">
+                                                                <div className="saved-destinations-title">{d.label}</div>
+                                                                <button
+                                                                    type="button"
+                                                                    className="saved-destinations-remove"
+                                                                    onClick={(event) => {
+                                                                        event.preventDefault();
+                                                                        event.stopPropagation();
+                                                                        onDeleteSavedDestination(d.id);
+                                                                    }}
+                                                                    disabled={deletingDestinationId === d.id}
+                                                                    title="Remove saved destination"
+                                                                >
+                                                                    {deletingDestinationId === d.id ? "Removing..." : "Remove"}
+                                                                </button>
+                                                            </div>
+                                                            <div className="saved-destinations-sub">
+                                                                {d.address?.trim()
+                                                                    ? d.address
+                                                                    : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
+                                                            </div>
+                                                        </div>
+                                                    )) : (
+                                                        <div className="saved-destinations-empty">No saved destinations yet.</div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <>
+                                            {/* Route Options */}
+                                            <div class="route-info-card">
+                                                <div className="route-info-gradient-bar" />
+                                                <RouteOptionsComponent
+                                                    isTollRoadsOn={isTollRoadsOn}
+                                                    toggleTollRoads={toggleTollRoads}>
+                                                </RouteOptionsComponent>
 
-                                    {/* Route Info */}
-                                    <div className="route-info-card">
-                                        <div className="route-info-gradient-bar" />
-
-                                        {isLoadingRoute && (
-                                            <div className="route-info-loading">
-                                                <div className="route-info-spinner" />
+                                                <div
+                                                    className="tollRoadToggle savedDestinationsOption"
+                                                    onClick={openSavedDestinations}
+                                                    role="button"
+                                                    tabIndex={0}
+                                                >
+                                                    <div>Saved destinations</div>
+                                                    <div className="route-option-arrow">›</div>
+                                                </div>
                                             </div>
-                                        )}
 
-                                        <h3 className="route-info-title">
-                                            Route Information
-                                        </h3>
+                                            {/* Route Info */}
+                                            <div className="route-info-card">
+                                                <div className="route-info-gradient-bar" />
 
-                                        <button
-                                            className="route-info-star-btn"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                toggleSaveMenu();
-                                            }}
-                                            title="Save places"
-                                            type="button"
-                                        >
-                                            ⋮
-                                        </button>
+                                                {isLoadingRoute && (
+                                                    <div className="route-info-loading">
+                                                        <div className="route-info-spinner" />
+                                                    </div>
+                                                )}
 
-                                        {showSaveMenu && (
-                                            <div className="route-info-save-menu" onClick={(e) => e.stopPropagation()}>
+                                                <h3 className="route-info-title">
+                                                    Route Information
+                                                </h3>
+
                                                 <button
-                                                    className="route-info-save-menu-item"
+                                                    className="route-info-star-btn"
                                                     onClick={(e) => {
                                                         e.preventDefault();
                                                         e.stopPropagation();
-                                                        onSaveOriginPlace();
+                                                        toggleSaveMenu();
                                                     }}
+                                                    title="Save places"
                                                     type="button"
-                                                    // disabled={!mapMarkers?.origin}
-                                                    disabled={!hasOrigin}
-                                                    title={!mapMarkers?.origin ? "Set an origin first" : "Save origin"}
                                                 >
-                                                    Save origin <span className="route-info-star">⭐</span>
+                                                    ⋮
                                                 </button>
 
-                                                <button
-                                                    className="route-info-save-menu-item"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        onSaveDestinationPlace();
-                                                    }}
-                                                    type="button"
-                                                    // disabled={!mapMarkers?.destination}
-                                                    disabled={!hasDestination}
-                                                    title={!mapMarkers?.destination ? "Set a destination first" : "Save destination"}
-                                                >
-                                                    Save destination <span className="route-info-star">⭐</span>
-                                                </button>
-                                            </div>
-                                        )}
+                                                {showSaveMenu && (
+                                                    <div className="route-info-save-menu" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            className="route-info-save-menu-item"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                onSaveOriginPlace();
+                                                            }}
+                                                            type="button"
+                                                            // disabled={!mapMarkers?.origin}
+                                                            disabled={!hasOrigin}
+                                                            title={!mapMarkers?.origin ? "Set an origin first" : "Save origin"}
+                                                        >
+                                                            Save origin <span className="route-info-star">⭐</span>
+                                                        </button>
 
-                                        <div className="route-info-items">
-                                            {/* Directions - MOVED TOP FOR MOBILE */}
-                                            <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
-                                                <div className="route-info-icon">
-                                                    <span>🗺️</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-value">Directions {"->"}</div>
-                                                </div>
-                                            </button>
+                                                        <button
+                                                            className="route-info-save-menu-item"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                onSaveDestinationPlace();
+                                                            }}
+                                                            type="button"
+                                                            // disabled={!mapMarkers?.destination}
+                                                            disabled={!hasDestination}
+                                                            title={!mapMarkers?.destination ? "Set a destination first" : "Save destination"}
+                                                        >
+                                                            Save destination <span className="route-info-star">⭐</span>
+                                                        </button>
+                                                    </div>
+                                                )}
 
-                                            {/* Directions */}
-                                            <button className="route-time-select-item" onClick={showTimeSelectorFunction}>
-                                                <div className="route-info-icon">
-                                                    <span>⌚</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-value">Choose a time</div>
-                                                </div>
-                                            </button>
+                                                <div className="route-info-items">
+                                                    {/* Directions - MOVED TOP FOR MOBILE */}
+                                                    <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
+                                                        <div className="route-info-icon">
+                                                            <span>🗺️</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-value">Directions {"->"}</div>
+                                                        </div>
+                                                    </button>
 
-                                            {/* Distance */}
-                                            <div className="route-info-item">
-                                                <div className="route-info-icon distance">
-                                                    <span>📍</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-label">Distance</div>
-                                                    <div className="route-info-value">
-                                                        {routeInfo?.distanceKm ?? "N/A"} <span className="route-info-unit">km</span>
+                                                    {/* Directions */}
+                                                    <button className="route-time-select-item" onClick={showTimeSelectorFunction}>
+                                                        <div className="route-info-icon">
+                                                            <span>⌚</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-value">Choose a time</div>
+                                                        </div>
+                                                    </button>
+
+                                                    {/* Distance */}
+                                                    <div className="route-info-item">
+                                                        <div className="route-info-icon distance">
+                                                            <span>📍</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-label">Distance</div>
+                                                            <div className="route-info-value">
+                                                                {routeInfo?.distanceKm ?? "N/A"} <span className="route-info-unit">km</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Departure Time */}
+                                                    <div className="route-info-item">
+                                                        <div className="route-info-icon departure">
+                                                            <span>🚗</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-label">Departure</div>
+                                                            <div className="route-info-value">{routeInfo?.starting_time ?? "N/A"}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* ETA */}
+                                                    <div className="route-info-item">
+                                                        <div className="route-info-icon duration">
+                                                            <span>🕒</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-label">ETA</div>
+                                                            <div className="route-info-value">{routeInfo?.arrival_time ?? "N/A"}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Duration */}
+                                                    <div className="route-info-item">
+                                                        <div className="route-info-icon duration">
+                                                            <span>⏱️</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-label">Travel Time</div>
+                                                            <div className="route-info-value">{routeInfo?.eta ?? "N/A"}</div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Departure Time */}
-                                            <div className="route-info-item">
-                                                <div className="route-info-icon departure">
-                                                    <span>🚗</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-label">Departure</div>
-                                                    <div className="route-info-value">{routeInfo?.starting_time ?? "N/A"}</div>
-                                                </div>
-                                            </div>
-
-                                            {/* ETA */}
-                                            <div className="route-info-item">
-                                                <div className="route-info-icon duration">
-                                                    <span>🕒</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-label">ETA</div>
-                                                    <div className="route-info-value">{routeInfo?.arrival_time ?? "N/A"}</div>
-                                                </div>
-                                            </div>
-
-                                            {/* Duration */}
-                                            <div className="route-info-item">
-                                                <div className="route-info-icon duration">
-                                                    <span>⏱️</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-label">Travel Time</div>
-                                                    <div className="route-info-value">{routeInfo?.eta ?? "N/A"}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -984,7 +1051,7 @@ export default class MapView extends Component {
                     )}
                 </div>
                 )}
-                {showSavedDestinations && (
+                {showSavedDestinations && !isMobileView && (
                     <div className="saved-destinations-overlay" onClick={closeSavedDestinations}>
                         <div className="route-info-card saved-destinations-card" onClick={(e) => e.stopPropagation()}>
                             <div className="route-info-gradient-bar" />
