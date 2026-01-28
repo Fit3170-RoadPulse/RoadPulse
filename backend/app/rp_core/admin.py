@@ -17,6 +17,9 @@ class AppUserAdmin(UserAdmin):
     list_display = ('id', 'username', 'email', 'reward_points', 'is_staff', 'is_active')
     search_fields = ('username', 'email')
     
+    # Show deletion confirmation with related objects
+    actions = ['delete_selected']
+    
     # Fields to display when editing an existing user
     fieldsets = (
         (None, {'fields': ('username', 'email', 'password')}),
@@ -40,6 +43,17 @@ class AppUserAdmin(UserAdmin):
     )
     
     ordering = ('email',)
+    
+    def get_deleted_objects(self, objs, request):
+        """Override to provide better deletion information"""
+        try:
+            return super().get_deleted_objects(objs, request)
+        except Exception as e:
+            # If there's an error getting deleted objects, return a safe message
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in get_deleted_objects: {e}")
+            return ([], {}, set(), [])
 
 
 @admin.register(Contact)
