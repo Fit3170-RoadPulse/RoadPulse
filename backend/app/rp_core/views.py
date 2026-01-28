@@ -121,9 +121,26 @@ def root(_req):
     })
 
 def health(_req):
+    from django.db import connection
+    
+    db_status = "ok"
+    db_error = None
+    
+    # Test database connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        db_status = "connected"
+    except Exception as e:
+        db_status = "error"
+        db_error = str(e)
+    
     return JsonResponse({
         "status": "ok",
-        "service": "RoadPulse API"
+        "service": "RoadPulse API",
+        "database": db_status,
+        "database_error": db_error
     })
 
 
@@ -441,27 +458,40 @@ class RegisterView(views.APIView):
 @method_decorator(csrf_exempt, name='dispatch')
 class LoginView(views.APIView):
     def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+        
         email = request.data.get("email")
         password = request.data.get("password")
 
         if not email or not password:
             return Response({"detail": "Email and password are required."}, status=400)
         
-        # Use email for authentication (custom backend handles this)
-        user = authenticate(request, email=email, password=password)
+        try:
+            logger.info(f"Login attempt for email: {email}")
+            
+            # Use email for authentication (custom backend handles this)
+            user = authenticate(request, email=email, password=password)
+            
+            logger.info(f"Authentication result: {'success' if user else 'failed'}")
 
-        if user is None:
-            return Response({"detail": "Invalid email or password. Please try again."}, status=401)
+            if user is None:
+                return Response({"detail": "Invalid email or password. Please try again."}, status=401)
 
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            "username": user.username,
-            "email": user.email,
-            "is_staff": user.is_staff,
-            "is_superuser": user.is_superuser,
-        })
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "username": user.username,
+                "email": user.email,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+            })
+        except Exception as e:
+            logger.error(f"Login error: {type(e).__name__}: {str(e)}")
+            return Response({
+                "detail": f"Authentication error: {str(e)}"
+            }, status=500)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ForgotPasswordView(views.APIView):
