@@ -134,14 +134,19 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 _use_static_manifest = os.getenv("DJANGO_STATIC_MANIFEST", "0") == "1"
-if _use_static_manifest:
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-else:
-    # Fallback that works even if collectstatic is not run on the host.
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
-    WHITENOISE_USE_FINDERS = True
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# Modern Storage Configuration (Django 4.2+)
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if _use_static_manifest else "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
+
+# Legacy settings (kept commented out for reference or fallback if needed)
+# STATICFILES_STORAGE = ...
+# DEFAULT_FILE_STORAGE = ...
 
 # Cloudinary Configuration
 CLOUDINARY_STORAGE = {
@@ -149,7 +154,6 @@ CLOUDINARY_STORAGE = {
     'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
     'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
 }
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
