@@ -4,6 +4,7 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet } from 
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
+import { setCookie, getCookie } from "../../lib/utils.js";
 
 export default class MapController extends Component {
     constructor(props) {
@@ -243,6 +244,7 @@ export default class MapController extends Component {
 
         try {
             const data = await fetchRewardAccount();
+            this.state.isTollRoadsOn = getCookie("tollRoads") === "true";
             this.setState({ points: data.reward_points, username: data.username });
         } catch (err) {
             console.error("Failed to fetch user data:", err);
@@ -684,6 +686,7 @@ export default class MapController extends Component {
         });
     };
     handleTollRouteChange = async () => {
+        setCookie("tollRoads", this.state.isTollRoadsOn ? "true" : "false", 30);
         const map = this.state.mapRef || this.mapInstanceRef;
         const { mapMarkers, isLoadingRoute, selectedOffsetMinutes } = this.state;
         if (!mapMarkers.origin || !mapMarkers.destination || !map) return;
