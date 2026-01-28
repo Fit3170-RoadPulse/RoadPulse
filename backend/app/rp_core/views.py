@@ -26,7 +26,7 @@ from rp_core.services.incident_reporting import (
     grant_vote_provisional_point,
 )
 
-from .incidentReport import (
+from .incident_report import (
     IncidentReportCreateSerializer,
     IncidentReportSerializer,
     IncidentReportVoteCreateSerializer,
