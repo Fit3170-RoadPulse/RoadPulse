@@ -132,14 +132,16 @@
 @media (max-width: 768px) {
     .map-recenter-container {
         top: var(--map-top-row-offset, calc(12px + var(--safe-top, 0px)));
-        right: calc(12px + var(--safe-right, 0px));
+        right: calc(
+            12px + var(--safe-right, 0px) + var(--map-top-button-size, 40px) + var(--map-top-row-gap, 10px)
+        );
         bottom: auto;
     }
 
     .map-saved-destinations-container {
         top: var(--map-top-row-offset, calc(12px + var(--safe-top, 0px)));
         right: calc(
-            12px + var(--safe-right, 0px) + var(--map-top-button-size, 40px) + var(--map-top-row-gap, 10px)
+            12px + var(--safe-right, 0px) + (var(--map-top-button-size, 40px) + var(--map-top-row-gap, 10px)) * 2
         );
         bottom: auto;
     }
