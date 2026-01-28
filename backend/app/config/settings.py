@@ -79,7 +79,7 @@ DATABASES = {
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
         "OPTIONS": {
             "sslmode": os.getenv("POSTGRES_SSLMODE", "require"),
-            "connect_timeout": 5,  # 5 second timeout to prevent hanging
+            "connect_timeout": 30,  # 30 second timeout for bulk operations
         },
     }
 }
