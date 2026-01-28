@@ -69,6 +69,55 @@ def add_hazard_delay_to_duration(base_duration):
     
     return base_duration + total_delay_seconds
 
+def root(_req):
+    """Root endpoint - returns API information and all available endpoints"""
+    return JsonResponse({
+        "service": "RoadPulse API",
+        "version": "1.0",
+        "status": "running",
+        "documentation": "List of all available API endpoints",
+        "endpoints": {
+            "admin": {
+                "admin_panel": "/admin/",
+                "admin_rewards_list": "/api/admin/rewards/",
+                "admin_reward_detail": "/api/admin/rewards/{id}/",
+                "admin_profile": "/api/admin/profile/",
+            },
+            "authentication": {
+                "register": "/api/register/",
+                "login": "/api/login/",
+                "token_refresh": "/api/token/refresh/",
+                "forgot_password": "/api/forgot-password/",
+                "change_password": "/api/change-password/",
+            },
+            "map": {
+                "map_config": "/api/map/",
+                "location_data": "/api/map/location/",
+                "compute_route": "/api/map/compute-route/",
+            },
+            "user": {
+                "reward_account": "/api/rewards/account/",
+                "update_profile": "/api/profile/update/",
+                "update_distance": "/api/user/distance/",
+            },
+            "incidents": {
+                "list_and_create": "/api/incident-reports/",
+                "vote": "/api/incident-reports/{id}/vote/",
+            },
+            "rewards": {
+                "list_items": "/api/rewards/items/",
+                "redeem_reward": "/api/rewards/redeem/",
+                "user_redemptions": "/api/rewards/redemptions/",
+                "mark_redeemed": "/api/rewards/redemptions/{id}/redeem/",
+            },
+            "system": {
+                "health": "/api/health/",
+                "samples": "/api/samples/",
+            }
+        },
+        "note": "Some endpoints require authentication. Use /api/login/ to obtain access token."
+    })
+
 def health(_req):
     return JsonResponse({
         "status": "ok",
