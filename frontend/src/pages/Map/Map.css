@@ -573,6 +573,7 @@ body.rp-search-open .origin-toggle {
 
 .saved-destinations-card {
   height: 80%;
+  width: clamp(300px, 33vw, 520px);
   display: flex;
   flex-direction: column;
 }
@@ -1637,6 +1638,11 @@ body.rp-incident-dragging .map-incident-scroll {
         pointer-events: auto;
         touch-action: pan-y;
         overscroll-behavior: contain;
+    }
+
+    .saved-destinations-card,
+    .saved-destinations-sheet {
+        width: 100%;
     }
 
     .route-info-sheet {
