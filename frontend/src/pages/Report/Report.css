@@ -107,6 +107,16 @@ body.rp-report-dragging .report-sheet-scroll {
 }
 
 @media (max-width: 768px) {
+    body.rp-report-page {
+        overflow: hidden;
+        overscroll-behavior: none;
+        height: 100%;
+    }
+
+    body.rp-report-page #root {
+        height: 100%;
+    }
+
     .report-container {
         --sidebar-width: 0px;
         --map-top-button-size: 40px;

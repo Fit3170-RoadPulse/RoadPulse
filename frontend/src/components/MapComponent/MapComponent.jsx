@@ -34,6 +34,86 @@ export default function MapComponent({
     const lastUserLocationRef = useRef(null);
     const [hasLocation, setHasLocation] = useState(false);
 
+    useEffect(() => {
+        if (typeof document === "undefined" || typeof window === "undefined") return;
+        const mediaQuery = window.matchMedia("(max-width: 768px)");
+        const isWithinMap = (target) => {
+            if (!target || typeof target.closest !== "function") return false;
+            return Boolean(target.closest(".map-div"));
+        };
+        const shouldBlockZoom = (event) => !isWithinMap(event.target);
+
+        const handleTouchStart = (event) => {
+            if (event.touches?.length > 1 && shouldBlockZoom(event)) {
+                event.preventDefault();
+            }
+        };
+
+        const handleTouchMove = (event) => {
+            if (event.touches?.length > 1 && shouldBlockZoom(event)) {
+                event.preventDefault();
+            }
+        };
+
+        const handleGesture = (event) => {
+            if (shouldBlockZoom(event)) {
+                event.preventDefault();
+            }
+        };
+
+        const handleWheel = (event) => {
+            if (!event.ctrlKey || !shouldBlockZoom(event)) return;
+            event.preventDefault();
+        };
+
+        let listenersAttached = false;
+        const attachListeners = () => {
+            if (listenersAttached) return;
+            listenersAttached = true;
+            document.addEventListener("touchstart", handleTouchStart, { passive: false });
+            document.addEventListener("touchmove", handleTouchMove, { passive: false });
+            document.addEventListener("gesturestart", handleGesture, { passive: false });
+            document.addEventListener("gesturechange", handleGesture, { passive: false });
+            document.addEventListener("gestureend", handleGesture, { passive: false });
+            document.addEventListener("wheel", handleWheel, { passive: false });
+        };
+
+        const detachListeners = () => {
+            if (!listenersAttached) return;
+            listenersAttached = false;
+            document.removeEventListener("touchstart", handleTouchStart);
+            document.removeEventListener("touchmove", handleTouchMove);
+            document.removeEventListener("gesturestart", handleGesture);
+            document.removeEventListener("gesturechange", handleGesture);
+            document.removeEventListener("gestureend", handleGesture);
+            document.removeEventListener("wheel", handleWheel);
+        };
+
+        const handleMediaChange = () => {
+            if (mediaQuery.matches) {
+                attachListeners();
+            } else {
+                detachListeners();
+            }
+        };
+
+        handleMediaChange();
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener("change", handleMediaChange);
+        } else if (mediaQuery.addListener) {
+            mediaQuery.addListener(handleMediaChange);
+        }
+
+        return () => {
+            detachListeners();
+            if (mediaQuery.removeEventListener) {
+                mediaQuery.removeEventListener("change", handleMediaChange);
+            } else if (mediaQuery.removeListener) {
+                mediaQuery.removeListener(handleMediaChange);
+            }
+        };
+    }, []);
+
     const handleRecenterClick = () => {
         const map = mapInstance.current;
         const location = lastUserLocationRef.current;

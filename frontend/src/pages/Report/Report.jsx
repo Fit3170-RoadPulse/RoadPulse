@@ -31,6 +31,16 @@ export default function Report() {
     const reportDragStartYRef = useRef(0);
     const reportDragStartHeightRef = useRef(42);
     const reportDragRafRef = useRef(null);
+    useEffect(() => {
+        if (typeof document === "undefined") return;
+        document.body.classList.add("rp-report-page");
+        if (typeof window !== "undefined") {
+            window.scrollTo(0, 0);
+        }
+        return () => {
+            document.body.classList.remove("rp-report-page");
+        };
+    }, []);
 
     function getAccessToken() {
         const raw = (localStorage.getItem("access") || "").trim();

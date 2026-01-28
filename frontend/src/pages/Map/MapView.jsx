@@ -20,6 +20,9 @@ export default class MapView extends Component {
         if (typeof document !== "undefined") {
             document.body.classList.add("rp-map-page");
         }
+        if (typeof window !== "undefined") {
+            window.scrollTo(0, 0);
+        }
         this.updateMobileViewportVars();
         this.bindViewportListeners();
     };

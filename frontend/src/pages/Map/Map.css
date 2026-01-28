@@ -1624,6 +1624,7 @@ body.rp-incident-dragging .map-incident-scroll {
     }
 
     .origin-toggle {
+        position: fixed;
         top: calc(124px + var(--safe-top));
         left: 50%;
         right: auto;
