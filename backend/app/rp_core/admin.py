@@ -10,7 +10,8 @@ from .models import (
     RewardRedemption,
     PointTransaction,
     Event,
-    SavedDestination
+    SavedDestination,
+    IncidentProvisionalMark,
 )
 
 
@@ -141,3 +142,11 @@ class SavedDestinationAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "label", "latitude", "longitude", "address", "created_at")
     search_fields = ("user__username", "label")
     list_filter = ("created_at",)
+
+
+@admin.register(IncidentProvisionalMark)
+class IncidentProvisionalMarkAdmin(admin.ModelAdmin):
+    list_display = ("id", "report", "user", "role", "amount", "created_at", "settled_at")
+    list_filter = ("role", "created_at", "settled_at")
+    search_fields = ("report__description", "user__username")
+    autocomplete_fields = ("report", "user")
