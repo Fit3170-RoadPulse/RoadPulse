@@ -49,3 +49,4 @@ class SavedDestinationSerializer(serializers.ModelSerializer):
     class Meta:
         model = SavedDestination
         fields = ("id", "label", "latitude", "longitude", "address", "created_at")
+        read_only_fields = ("id", "created_at")

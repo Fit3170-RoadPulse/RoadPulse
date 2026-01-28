@@ -321,8 +321,16 @@ export default class MapView extends Component {
             handleTimeChange,
             liveNavigateToDestination,
             clearMap,
-            showErrorPopup,
-            setShowErrorPopup,
+            errorPopup,
+            setErrorPopup,
+            savePlaceModalOpen,
+            savePlaceType,
+            savePlaceLabel,
+            savePlaceError,
+            isSavingPlace,
+            onSavePlaceLabelChange,
+            onSavePlaceCancel,
+            onSavePlaceConfirm,
             showDropdown,
             setShowDropdown,
             username,
@@ -344,6 +352,8 @@ export default class MapView extends Component {
             savedDestinations,
             closeSavedDestinations,
             selectSavedDestination,
+            deletingDestinationId,
+            onDeleteSavedDestination,
             onPlaceSelected,
             onRecenterRequest,
         } = this.props;
@@ -860,98 +870,85 @@ export default class MapView extends Component {
                     </div>
 
 
-                    {/* Error Popup */}
-                    {showErrorPopup && (
-                        <div style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 2000,
-                            backdropFilter: 'blur(4px)'
-                        }}>
-                            <div style={{
-                                backgroundColor: 'white',
-                                borderRadius: '16px',
-                                padding: '24px',
-                                width: '90%',
-                                maxWidth: '400px',
-                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                                textAlign: 'center',
-                                position: 'relative',
-                                animation: 'fadeIn 0.2s ease-out'
-                            }}>
-                                <button
-                                    onClick={() => setShowErrorPopup(false)}
-                                    style={{
-                                        position: 'absolute',
-                                        top: '16px',
-                                        right: '16px',
-                                        border: 'none',
-                                        background: 'transparent',
-                                        cursor: 'pointer',
-                                        padding: '4px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                >
-                                    <X size={20} color="#9ca3af" />
-                                </button>
-
-                                <div style={{
-                                    width: '48px',
-                                    height: '48px',
-                                    backgroundColor: '#fef2f2',
-                                    borderRadius: '50%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    margin: '0 auto 16px auto'
-                                }}>
-                                    <AlertTriangle size={24} color="#dc2626" />
+                    {/* Save Place Modal */}
+                    {savePlaceModalOpen && (
+                        <div className="save-place-overlay" onClick={onSavePlaceCancel}>
+                            <div className="save-place-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                                <div className="save-place-header">
+                                    <h3>Save {savePlaceType || "place"}</h3>
+                                    <button
+                                        type="button"
+                                        className="save-place-close"
+                                        onClick={onSavePlaceCancel}
+                                        aria-label="Close save place dialog"
+                                    >
+                                        <X size={18} />
+                                    </button>
                                 </div>
-
-                                <h3 style={{
-                                    fontSize: '18px',
-                                    fontWeight: '600',
-                                    color: '#111827',
-                                    marginBottom: '8px',
-                                    marginTop: 0
-                                }}>
-                                    Server Error
-                                </h3>
-
-                                <p style={{
-                                    fontSize: '14px',
-                                    color: '#6b7280',
-                                    marginBottom: '24px',
-                                    lineHeight: '1.5'
-                                }}>
-                                    We encountered a 502 Bad Gateway error. The server is currently unavailable. Please try again later.
-                                </p>
-
-                                <button
-                                    onClick={() => setShowErrorPopup(false)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px',
-                                        backgroundColor: '#dc2626',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        fontWeight: '500',
-                                        fontSize: '14px',
-                                        cursor: 'pointer',
-                                        transition: 'background-color 0.2s'
+                                <label className="save-place-label" htmlFor="save-place-input">
+                                    Name this {savePlaceType ? savePlaceType.toLowerCase() : "place"}
+                                </label>
+                                <input
+                                    id="save-place-input"
+                                    className={`save-place-input ${savePlaceError ? "has-error" : ""}`}
+                                    value={savePlaceLabel}
+                                    onChange={(e) => onSavePlaceLabelChange(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            onSavePlaceConfirm();
+                                        }
                                     }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                                    placeholder="e.g. Home, Office"
+                                    maxLength={80}
+                                    autoFocus
+                                />
+                                {savePlaceError && (
+                                    <div className="save-place-error">{savePlaceError}</div>
+                                )}
+                                <div className="save-place-actions">
+                                    <button
+                                        type="button"
+                                        className="save-place-btn ghost"
+                                        onClick={onSavePlaceCancel}
+                                        disabled={isSavingPlace}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="save-place-btn primary"
+                                        onClick={onSavePlaceConfirm}
+                                        disabled={isSavingPlace || !savePlaceLabel?.trim()}
+                                    >
+                                        {isSavingPlace ? "Saving..." : "Save"}
+                                    </button>
+                                </div>
+                                <div className="save-place-hint">Up to 80 characters.</div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Error Popup */}
+                    {errorPopup && (
+                        <div className="rp-alert-overlay" onClick={() => setErrorPopup(null)}>
+                            <div className="rp-alert-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                                <button
+                                    type="button"
+                                    className="rp-alert-close"
+                                    onClick={() => setErrorPopup(null)}
+                                    aria-label="Close error dialog"
+                                >
+                                    <X size={18} />
+                                </button>
+                                <div className="rp-alert-icon">
+                                    <AlertTriangle size={22} />
+                                </div>
+                                <h3>{errorPopup.title || "Something went wrong"}</h3>
+                                <p>{errorPopup.message || "Please try again."}</p>
+                                <button
+                                    type="button"
+                                    className="rp-alert-action"
+                                    onClick={() => setErrorPopup(null)}
                                 >
                                     Close
                                 </button>
@@ -1002,18 +999,41 @@ export default class MapView extends Component {
                             ) : (
                                 <div className="saved-destinations-list">
                                     {savedDestinations?.length ? savedDestinations.map((d) => (
-                                        <button
+                                        <div
                                             key={d.id}
                                             className="saved-destinations-item"
+                                            role="button"
+                                            tabIndex={0}
                                             onClick={() => selectSavedDestination(d)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === "Enter" || event.key === " ") {
+                                                    event.preventDefault();
+                                                    selectSavedDestination(d);
+                                                }
+                                            }}
                                         >
-                                            <div className="saved-destinations-title">{d.label}</div>
+                                            <div className="saved-destinations-item-header">
+                                                <div className="saved-destinations-title">{d.label}</div>
+                                                <button
+                                                    type="button"
+                                                    className="saved-destinations-remove"
+                                                    onClick={(event) => {
+                                                        event.preventDefault();
+                                                        event.stopPropagation();
+                                                        onDeleteSavedDestination(d.id);
+                                                    }}
+                                                    disabled={deletingDestinationId === d.id}
+                                                    title="Remove saved destination"
+                                                >
+                                                    {deletingDestinationId === d.id ? "Removing..." : "Remove"}
+                                                </button>
+                                            </div>
                                             <div className="saved-destinations-sub">
                                                 {d.address?.trim()
                                                     ? d.address
                                                     : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
                                             </div>
-                                        </button>
+                                        </div>
                                     )) : (
                                         <div className="saved-destinations-empty">No saved destinations yet.</div>
                                     )}

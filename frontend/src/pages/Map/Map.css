@@ -611,6 +611,9 @@ body.rp-search-open .origin-toggle {
   background: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .saved-destinations-item:hover {
@@ -618,9 +621,42 @@ body.rp-search-open .origin-toggle {
   transform: translateY(-1px);
 }
 
+.saved-destinations-item:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.3);
+  outline-offset: 2px;
+}
+
 .saved-destinations-title {
   font-weight: 600;
   color: #111827;
+}
+
+.saved-destinations-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.saved-destinations-remove {
+  border: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fee2e2;
+  color: #b91c1c;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.saved-destinations-remove:hover {
+  background: #fecaca;
+}
+
+.saved-destinations-remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .saved-destinations-sub {
@@ -780,6 +816,203 @@ body.rp-search-open .origin-toggle {
 
 .logout-box button:last-of-type:hover {
     background: #b91c1c;
+}
+
+.save-place-overlay,
+.rp-alert-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3200;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(24px + var(--safe-top)) calc(24px + var(--safe-right)) calc(24px + var(--safe-bottom)) calc(24px + var(--safe-left));
+    backdrop-filter: blur(4px);
+}
+
+.save-place-card,
+.rp-alert-card {
+    width: min(420px, 92vw);
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px 20px 18px;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+    position: relative;
+    animation: rpModalIn 0.2s ease-out;
+}
+
+.save-place-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.save-place-header h3,
+.rp-alert-card h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.save-place-close,
+.rp-alert-close {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+}
+
+.save-place-label {
+    display: block;
+    font-size: 13px;
+    color: #4b5563;
+    margin-bottom: 8px;
+}
+
+.save-place-input {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #111827;
+    background: #ffffff;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.save-place-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.save-place-input.has-error {
+    border-color: #f87171;
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
+}
+
+.save-place-error {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #b91c1c;
+}
+
+.save-place-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.save-place-btn {
+    border-radius: 10px;
+    border: none;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.save-place-btn.ghost {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.save-place-btn.ghost:hover {
+    background: #e5e7eb;
+}
+
+.save-place-btn.primary {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.save-place-btn.primary:hover {
+    background: #1d4ed8;
+}
+
+.save-place-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.save-place-hint {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.rp-alert-card {
+    text-align: center;
+}
+
+.rp-alert-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #fef2f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc2626;
+    margin: 8px auto 12px;
+}
+
+.rp-alert-card p {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+.rp-alert-action {
+    width: 100%;
+    border: none;
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.rp-alert-action:hover {
+    background: #b91c1c;
+}
+
+@keyframes rpModalIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 640px) {
+    .save-place-overlay,
+    .rp-alert-overlay {
+        align-items: flex-end;
+        padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
+    }
+
+    .save-place-card,
+    .rp-alert-card {
+        width: 100%;
+        border-radius: 18px;
+    }
 }
 
 /* Map.jsx inline styles */

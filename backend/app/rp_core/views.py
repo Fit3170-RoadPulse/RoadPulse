@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.cache import cache
 from django.db import transaction
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -934,3 +935,11 @@ def saved_destinations(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def saved_destination_detail(request, destination_id):
+    destination = get_object_or_404(SavedDestination, id=destination_id, user=request.user)
+    destination.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)

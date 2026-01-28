@@ -1,6 +1,6 @@
 import { Component } from "react";
 import axios from "axios";
-import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet } from "../../lib/api";
+import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet, apiDelete } from "../../lib/api";
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
@@ -26,7 +26,7 @@ export default class MapController extends Component {
             showRouteOptions: false,
             isLoadingRoute: false,
             mapRef: null,
-            showErrorPopup: false,
+            errorPopup: null,
             showLogoutConfirm: false,
             cumulativeDistance: 0,
             isMobileDevice: false,
@@ -50,6 +50,13 @@ export default class MapController extends Component {
             showSavedDestinations: false,
             savedDestinations: [],
             isLoadingSavedDestinations: false,
+            deletingDestinationId: null,
+            savePlaceModalOpen: false,
+            savePlaceType: "",
+            savePlaceLabel: "",
+            savePlaceMarker: null,
+            savePlaceError: "",
+            isSavingPlace: false,
         };
 
         this.lastRouteSelectionRef = null;
@@ -995,7 +1002,12 @@ fetchRoute = async (origin, destination, selectedOffset, map) => {
 
         // Show error if 502 Bad Gateway or Timeout
         if ((error.response && error.response.status === 502) || error.code === 'ECONNABORTED') {
-            this.setState({ showErrorPopup: true });
+            this.setState({
+                errorPopup: {
+                    title: "Server unavailable",
+                    message: "We could not reach the routing service. Please try again in a moment.",
+                },
+            });
         }
     } finally {
         this.setState({ isLoadingRoute: false });
@@ -1045,16 +1057,17 @@ getMarkerCoords = (marker) => {
     };
 };
 
-saveMarkerPlace = async (marker, type) => {
+saveMarkerPlace = async (marker, type, rawLabel) => {
     if (!marker?.position) {
-        console.error("Marker has no position");
-        return;
+        return { success: false, message: "Location marker missing. Please set it again." };
     }
 
-    const label = window.prompt(`Name this ${type.toLowerCase()}`);
-    if (!label || !label.trim()) {
-        console.warn("Empty label, aborting save");
-        return;
+    const label = typeof rawLabel === "string" ? rawLabel.trim() : "";
+    if (!label) {
+        return { success: false, message: "Please enter a name before saving." };
+    }
+    if (label.length > 80) {
+        return { success: false, message: "Keep it under 80 characters." };
     }
 
     const pos = marker.position;
@@ -1065,68 +1078,167 @@ saveMarkerPlace = async (marker, type) => {
     const rawLng =
         typeof pos.lng === "function" ? pos.lng() : pos.lng;
 
-    const latitude = Number(rawLat.toFixed(6));
-    const longitude = Number(rawLng.toFixed(6));
-
-    if (
-        typeof latitude !== "number" ||
-        typeof longitude !== "number"
-    ) {
-        console.error("Invalid lat/lng", latitude, longitude);
-        return;
+    if (rawLat == null || rawLng == null) {
+        return { success: false, message: "Location is not ready yet. Try again in a moment." };
     }
 
-    // const address = await this.getAddressForLatLng(latitude, longitude);
-    const geocoder = new window.google.maps.Geocoder();
+    const latitudeValue = Number(rawLat);
+    const longitudeValue = Number(rawLng);
+    if (!Number.isFinite(latitudeValue) || !Number.isFinite(longitudeValue)) {
+        return { success: false, message: "Location is not ready yet. Try again in a moment." };
+    }
 
-    const address = await new Promise((resolve, reject) => {
-        geocoder.geocode(
-            { location: { lat: latitude, lng: longitude } },
-            (results, status) => {
-                if (status === "OK" && results?.[0]) {
-                    resolve(results[0].formatted_address);
-                } else {
-                    reject("Failed to reverse geocode");
-                }
-            }
-        );
-    });
+    const latitude = Number(latitudeValue.toFixed(6));
+    const longitude = Number(longitudeValue.toFixed(6));
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return { success: false, message: "Location is not ready yet. Try again in a moment." };
+    }
+
+    let address = "";
+    try {
+        if (window.google?.maps?.Geocoder) {
+            const geocoder = new window.google.maps.Geocoder();
+            address = await new Promise((resolve, reject) => {
+                geocoder.geocode(
+                    { location: { lat: latitude, lng: longitude } },
+                    (results, status) => {
+                        if (status === "OK" && results?.[0]) {
+                            resolve(results[0].formatted_address);
+                        } else {
+                            reject(new Error("Reverse geocode failed"));
+                        }
+                    }
+                );
+            });
+        }
+    } catch (error) {
+        console.warn("Reverse geocoding failed, saving without address.", error);
+        address = "";
+    }
 
     const payload = {
-        label: label.trim(),
+        label,
         latitude,
         longitude,
         address,
     };
 
     try {
-
         await apiPost("/user/saved-destinations/", payload);
-
         console.log("Saved place:", label, address);
-    } catch (e) {
-        console.error("Failed to save place:", e);
-
-        const status = e?.response?.status;
-        if (status === 401) alert("Not logged in / token expired.");
-        else if (status === 400) alert("Bad request (backend field mismatch).");
-        else if (status === 404) alert("Endpoint not found (/user/frequent-routes/).");
-        alert("Failed to save place.");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to save place:", error);
+        const message = typeof error?.message === "string" && error.message.trim()
+            ? error.message
+            : "Failed to save place. Please try again.";
+        const normalized = message.toLowerCase();
+        if (normalized.includes("login") || normalized.includes("token")) {
+            return { success: false, message: "Please log in again to save places." };
+        }
+        if (normalized.includes("timeout")) {
+            return { success: false, message: "Request timed out. Please try again." };
+        }
+        if (normalized.includes("unique") || normalized.includes("already")) {
+            return { success: false, message: "That name already exists. Choose a different label." };
+        }
+        return { success: false, message };
     }
+};
+
+openSavePlaceDialog = (type, marker) => {
+    if (!marker) {
+        this.setState({
+            errorPopup: {
+                title: `No ${type.toLowerCase()} set`,
+                message: `Set a ${type.toLowerCase()} on the map before saving it.`,
+            },
+        });
+        return;
+    }
+    this.setState({
+        savePlaceModalOpen: true,
+        savePlaceType: type,
+        savePlaceLabel: "",
+        savePlaceMarker: marker,
+        savePlaceError: "",
+    });
+};
+
+closeSavePlaceDialog = () => {
+    this.setState({
+        savePlaceModalOpen: false,
+        savePlaceType: "",
+        savePlaceLabel: "",
+        savePlaceMarker: null,
+        savePlaceError: "",
+        isSavingPlace: false,
+    });
+};
+
+updateSavePlaceLabel = (value) => {
+    this.setState({ savePlaceLabel: value, savePlaceError: "" });
+};
+
+confirmSavePlace = async () => {
+    const { savePlaceLabel, savePlaceMarker, savePlaceType, isSavingPlace } = this.state;
+    if (isSavingPlace) return;
+    const trimmed = typeof savePlaceLabel === "string" ? savePlaceLabel.trim() : "";
+    if (!trimmed) {
+        this.setState({ savePlaceError: "Please enter a name." });
+        return;
+    }
+    if (trimmed.length > 80) {
+        this.setState({ savePlaceError: "Keep it under 80 characters." });
+        return;
+    }
+
+    this.setState({ isSavingPlace: true, savePlaceError: "" });
+    const result = await this.saveMarkerPlace(savePlaceMarker, savePlaceType, trimmed);
+    if (result?.success) {
+        this.setState({
+            savePlaceModalOpen: false,
+            savePlaceType: "",
+            savePlaceLabel: "",
+            savePlaceMarker: null,
+            savePlaceError: "",
+            isSavingPlace: false,
+        });
+        return;
+    }
+    this.setState({
+        savePlaceError: result?.message || "Failed to save place. Please try again.",
+        isSavingPlace: false,
+    });
 };
 
 saveOriginPlace = async () => {
     const { mapMarkers } = this.state;
-    if (!mapMarkers?.origin) return;
-
-    await this.saveMarkerPlace(mapMarkers.origin, "Origin");
+    if (!mapMarkers?.origin) {
+        this.setState({
+            errorPopup: {
+                title: "Origin missing",
+                message: "Set an origin on the map before saving it.",
+            },
+        });
+        return;
+    }
+    this.openSavePlaceDialog("Origin", mapMarkers.origin);
 };
 
 saveDestinationPlace = async () => {
     const { mapMarkers } = this.state;
-    if (!mapMarkers?.destination) return;
-
-    await this.saveMarkerPlace(mapMarkers.destination, "Destination");
+    if (!mapMarkers?.destination) {
+        this.setState({
+            errorPopup: {
+                title: "Destination missing",
+                message: "Set a destination on the map before saving it.",
+            },
+        });
+        return;
+    }
+    this.openSavePlaceDialog("Destination", mapMarkers.destination);
 };
 
 generateStartTimes = () => {
@@ -1416,11 +1528,11 @@ setShowDropdown = (valueOrUpdater) => {
     }
 };
 
-setShowErrorPopup = (valueOrUpdater) => {
+setErrorPopup = (valueOrUpdater) => {
     if (typeof valueOrUpdater === "function") {
-        this.setState((prevState) => ({ showErrorPopup: valueOrUpdater(prevState.showErrorPopup) }));
+        this.setState((prevState) => ({ errorPopup: valueOrUpdater(prevState.errorPopup) }));
     } else {
-        this.setState({ showErrorPopup: valueOrUpdater });
+        this.setState({ errorPopup: valueOrUpdater });
     }
 };
 
@@ -1504,7 +1616,12 @@ fetchSavedDestinations = async () => {
         this.setState({ savedDestinations: data });
     } catch (e) {
         console.error("Failed to fetch saved destinations:", e);
-        alert("Failed to load saved destinations.");
+        this.setState({
+            errorPopup: {
+                title: "Saved destinations unavailable",
+                message: "We could not load your saved destinations. Please try again.",
+            },
+        });
     } finally {
         this.setState({ isLoadingSavedDestinations: false });
     }
@@ -1514,7 +1631,12 @@ selectSavedDestination = async (dest) => {
     const map = this.state.mapRef || this.mapInstanceRef;
     const cur = this.prevLocationRef?.current;
     if (!map || !cur) {
-        alert("Current location not available yet.");
+        this.setState({
+            errorPopup: {
+                title: "Location not ready",
+                message: "Your current location is not available yet. Please try again in a moment.",
+            },
+        });
         return;
     }
 
@@ -1546,6 +1668,27 @@ selectSavedDestination = async (dest) => {
 
     const selectedOffsetMinutes = this.state.selectedOffsetMinutes ?? 1;
     await this.fetchRoute(originMarker.position, destinationMarker.position, selectedOffsetMinutes, map);
+};
+
+deleteSavedDestination = async (destinationId) => {
+    if (!destinationId) return;
+    this.setState({ deletingDestinationId: destinationId });
+    try {
+        await apiDelete(`/user/saved-destinations/${destinationId}/`);
+        this.setState((prevState) => ({
+            savedDestinations: prevState.savedDestinations.filter((d) => d.id !== destinationId),
+        }));
+    } catch (error) {
+        console.error("Failed to delete saved destination:", error);
+        this.setState({
+            errorPopup: {
+                title: "Unable to remove destination",
+                message: "We could not remove this saved destination. Please try again.",
+            },
+        });
+    } finally {
+        this.setState({ deletingDestinationId: null });
+    }
 };
 
 render() {
@@ -1584,8 +1727,8 @@ render() {
             handleTimeChange={this.handleTimeChange}
             liveNavigateToDestination={this.liveNavigateToDestination}
             clearMap={this.clearMap}
-            showErrorPopup={this.state.showErrorPopup}
-            setShowErrorPopup={this.setShowErrorPopup}
+            errorPopup={this.state.errorPopup}
+            setErrorPopup={this.setErrorPopup}
             showDropdown={this.state.showDropdown}
             setShowDropdown={this.setShowDropdown}
             username={this.state.username}
@@ -1600,12 +1743,22 @@ render() {
             closeSaveMenu={this.closeSaveMenu}
             onSaveOriginPlace={this.handleSaveOriginClick}
             onSaveDestinationPlace={this.handleSaveDestinationClick}
+            savePlaceModalOpen={this.state.savePlaceModalOpen}
+            savePlaceType={this.state.savePlaceType}
+            savePlaceLabel={this.state.savePlaceLabel}
+            savePlaceError={this.state.savePlaceError}
+            isSavingPlace={this.state.isSavingPlace}
+            onSavePlaceLabelChange={this.updateSavePlaceLabel}
+            onSavePlaceCancel={this.closeSavePlaceDialog}
+            onSavePlaceConfirm={this.confirmSavePlace}
             openSavedDestinations={this.openSavedDestinations}
             closeSavedDestinations={this.closeSavedDestinations}
             savedDestinations={this.state.savedDestinations}
             showSavedDestinations={this.state.showSavedDestinations}
             isLoadingSavedDestinations={this.state.isLoadingSavedDestinations}
+            deletingDestinationId={this.state.deletingDestinationId}
             selectSavedDestination={this.selectSavedDestination}
+            onDeleteSavedDestination={this.deleteSavedDestination}
             onRecenterRequest={this.handleRecenterRequest}
         />
     );

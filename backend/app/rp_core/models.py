@@ -412,9 +412,9 @@ class SavedDestination(models.Model):
     label = models.CharField(max_length=80)
     latitude = models.DecimalField(max_digits=14, decimal_places=6)
     longitude = models.DecimalField(max_digits=14, decimal_places=6)
-    created_at = models.DateTimeField()
-    user = models.ForeignKey(AppUser, on_delete=models.CASCADE)
-    address = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name='saved_destinations')
+    address = models.CharField(max_length=255, blank=True, default="")
 
     class Meta:
         db_table = 'rp_core_saveddestination'
