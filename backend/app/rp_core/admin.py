@@ -18,7 +18,22 @@ class AppUserAdmin(UserAdmin):
     search_fields = ('username', 'email')
     
     # Show deletion confirmation with related objects
-    actions = ['delete_selected']
+    actions = ['safe_delete_users']
+    
+    def safe_delete_users(self, request, queryset):
+        """Delete users with error handling to show exceptions in UI"""
+        success_count = 0
+        for user in queryset:
+            try:
+                username = user.username
+                user.delete()
+                success_count += 1
+            except Exception as e:
+                self.message_user(request, f"Error deleting {username}: {str(e)}", level='error')
+        
+        if success_count > 0:
+            self.message_user(request, f"Successfully deleted {success_count} users.", level='success')
+    safe_delete_users.short_description = "Safe delete selected users (Debug)"
     
     # Fields to display when editing an existing user
     fieldsets = (
