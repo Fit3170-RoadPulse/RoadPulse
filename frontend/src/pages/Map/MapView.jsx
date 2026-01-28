@@ -715,14 +715,6 @@ export default class MapView extends Component {
                                             <div className="route-info-gradient-bar" />
                                             <div className="saved-destinations-mobile-header">
                                                 <h3>Saved destinations</h3>
-                                                <button
-                                                    type="button"
-                                                    className="saved-destinations-close"
-                                                    onClick={closeSavedDestinations}
-                                                    aria-label="Close saved destinations"
-                                                >
-                                                    ✕
-                                                </button>
                                             </div>
 
                                             {isLoadingSavedDestinations ? (
