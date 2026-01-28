@@ -584,6 +584,7 @@ body.rp-search-open .origin-toggle {
 .saved-destinations-mobile-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -595,24 +596,6 @@ body.rp-search-open .origin-toggle {
   color: #111827;
 }
 
-.saved-destinations-back {
-  border: none;
-  background: #f3f4f6;
-  color: #111827;
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  transition: background 0.2s ease;
-}
-
-.saved-destinations-back:hover {
-  background: #e5e7eb;
-}
 
 .saved-destinations-header {
   display: flex;
