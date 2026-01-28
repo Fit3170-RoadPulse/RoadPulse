@@ -28,7 +28,10 @@ from rp_core.services.incident_reporting import (
     grant_vote_provisional_point,
 )
 
-from .incident_report import (
+import hashlib
+import json
+import requests
+
 from .incident_report import (
     IncidentReportCreateSerializer,
     IncidentReportSerializer,
@@ -37,12 +40,6 @@ from .incident_report import (
 )
 from .event_serializers import RewardSerializer, RewardCreateUpdateSerializer, AdminProfileSerializer, SavedDestinationSerializer
 from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption, SavedDestination
-
-
-import hashlib
-import json
-import requests
-
 
 
 User = get_user_model()
