@@ -7,6 +7,7 @@ import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDe
 import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
 import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent.jsx";
 import NavigationDirectionsList from "../../components/NavigationOverlay/NavigationDirectionsList";
+import NavigationDirectionsList from "../../components/NavigationOverlay/NavigationDirectionsList";
 
 export default class MapView extends Component {
     state = {

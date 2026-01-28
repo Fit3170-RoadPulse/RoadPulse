@@ -10,6 +10,8 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 from math import asin, cos, radians, sin, sqrt
 
@@ -26,6 +28,7 @@ from rp_core.services.incident_reporting import (
     grant_vote_provisional_point,
 )
 
+from .incident_report import (
 from .incident_report import (
     IncidentReportCreateSerializer,
     IncidentReportSerializer,
@@ -876,6 +879,37 @@ def admin_reward_detail(request, reward_id):
             {"detail": "Reward deleted successfully."},
             status=status.HTTP_204_NO_CONTENT
         )
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def mark_voucher_redeemed(request, redemption_id):
+    """
+    Mark a specific redemption/voucher as used/redeemed
+    """
+    try:
+        voucher = RewardRedemption.objects.get(pk=redemption_id, user=request.user)
+    except RewardRedemption.DoesNotExist:
+        return Response(
+            {"detail": "Voucher not found or does not belong to user."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if voucher.redeemed_at:
+         return Response({
+            "id": voucher.id,
+            "redeemed_at": voucher.redeemed_at,
+            "status": "redeemed"
+        })
+    
+    voucher.redeemed_at = timezone.now()
+    voucher.save(update_fields=["redeemed_at"])
+    
+    return Response({
+        "id": voucher.id,
+        "redeemed_at": voucher.redeemed_at,
+        "status": "redeemed"
+    })
 
 
 @api_view(["GET"])
