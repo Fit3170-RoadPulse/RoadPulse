@@ -4,8 +4,7 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet } from 
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
-import { fetchMapConfig } from "../../lib/mapConfig";
-import { fetchMapConfig } from "../../lib/mapConfig";
+
 
 export default class MapController extends Component {
     constructor(props) {
@@ -160,8 +159,8 @@ export default class MapController extends Component {
 
         if (prevState.prevLocationRef?.current !== this.state.prevLocationRef?.current ||
             prevState.reports !== this.state.reports ||
-            prevState.selectedReport !== this.state.selectedReport){
-                this.proximityReports();
+            prevState.selectedReport !== this.state.selectedReport) {
+            this.proximityReports();
         }
 
 
@@ -199,8 +198,8 @@ export default class MapController extends Component {
     }
 
 
-    proximityReports(){
-        
+    proximityReports() {
+
         if (!this.state.prevLocationRef?.current || this.state.reports.length === 0) return;
 
         const userLat = this.state.prevLocationRef.current.latitude;
@@ -236,7 +235,7 @@ export default class MapController extends Component {
             }
         }
     };
-    
+
 
     loadUserData = async () => {
         if (!isAuthenticated()) {
@@ -598,7 +597,7 @@ export default class MapController extends Component {
         let destinationMarker = this.state.mapMarkers.destination;
 
         const currentPos = this.getCurrentUserLatLng(this.prevLocationRef.current);
-        
+
         if (!originMarker) {
             if (currentPos) {
                 originMarker = new AdvancedMarkerElement({
@@ -690,7 +689,8 @@ export default class MapController extends Component {
                     position: { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude },
                     title: "A",
                 });
-                this.setState({ mapMarkers: { origin: originMarker, destination: null },
+                this.setState({
+                    mapMarkers: { origin: originMarker, destination: null },
                     hasOrigin: true,
                 });
             }
@@ -701,7 +701,8 @@ export default class MapController extends Component {
                     position: clicked,
                     title: "A",
                 });
-                this.setState({ mapMarkers: { origin: originMarker, destination: null },
+                this.setState({
+                    mapMarkers: { origin: originMarker, destination: null },
                     hasOrigin: true,
                 });
             } else if (!destinationMarker) {
@@ -720,11 +721,11 @@ export default class MapController extends Component {
                     hasOrigin: true,
                     hasDestination: true,
                 },
-                () => {
-                    console.log("After destination set:", this.state.mapMarkers);
-                }
-            );
-                
+                    () => {
+                        console.log("After destination set:", this.state.mapMarkers);
+                    }
+                );
+
                 this.fetchRoute(originMarker.position, destinationMarker.position, times[0].offsetMinutes, map);
             } else {
                 originMarker.map = null;
@@ -756,7 +757,8 @@ export default class MapController extends Component {
                         // Just return or show toast
                         return;
                     }
-                    this.setState({ mapMarkers: { origin: originMarker, destination: null },
+                    this.setState({
+                        mapMarkers: { origin: originMarker, destination: null },
                         hasOrigin: true,
                     });
                 } else {
@@ -765,12 +767,13 @@ export default class MapController extends Component {
                         position: clicked,
                         title: "A",
                     });
-                    this.setState({ mapMarkers: { origin: originMarker, destination: null },
+                    this.setState({
+                        mapMarkers: { origin: originMarker, destination: null },
                         hasOrigin: true,
                     });
                 }
             }
-        console.log("mapMarkers in state:", this.state.mapMarkers);
+            console.log("mapMarkers in state:", this.state.mapMarkers);
         });
     };
     handleTollRouteChange = async () => {
@@ -1033,7 +1036,7 @@ export default class MapController extends Component {
                     avoidTolls: this.state.isTollRoadsOn,
                 }, {
                     signal: controller.signal,
-                    timeout: 20000, 
+                    timeout: 20000,
                 });
 
                 console.log("Route response:", response.data);
@@ -1079,9 +1082,9 @@ export default class MapController extends Component {
             if (error.response && error.response.data) {
                 console.error("Backend Error Details:", error.response.data);
             }
-            
+
             this.setState({ routeInfo: null });
-            
+
             // Show error if 502 Bad Gateway or Timeout
             if ((error.response && error.response.status === 502) || error.code === 'ECONNABORTED') {
                 this.setState({ showErrorPopup: true });
@@ -1195,7 +1198,7 @@ export default class MapController extends Component {
             console.log("Saved place:", label, address);
         } catch (e) {
             console.error("Failed to save place:", e);
-            
+
             const status = e?.response?.status;
             if (status === 401) alert("Not logged in / token expired.");
             else if (status === 400) alert("Bad request (backend field mismatch).");

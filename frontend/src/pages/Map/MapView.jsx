@@ -7,7 +7,7 @@ import IncidentDetailsCard from "../../components/IncidentDetailsCard/IncidentDe
 import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
 import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent.jsx";
 import NavigationDirectionsList from "../../components/NavigationOverlay/NavigationDirectionsList";
-import NavigationDirectionsList from "../../components/NavigationOverlay/NavigationDirectionsList";
+
 
 export default class MapView extends Component {
     state = {
@@ -368,13 +368,13 @@ export default class MapView extends Component {
                     <>
                         <div className="map-nav-overlay">
                             <div className="map-nav-container">
-                            <NavigationDirectionsList 
-                                steps={routeInfo?.steps} 
-                                currentStepIndex={navigationIndex} 
-                                speed={speedKmh}
-                                eta={routeInfo?.arrival_time}
-                                onEndNavigation={showNavEndScreen}
-                            />
+                                <NavigationDirectionsList
+                                    steps={routeInfo?.steps}
+                                    currentStepIndex={navigationIndex}
+                                    speed={speedKmh}
+                                    eta={routeInfo?.arrival_time}
+                                    onEndNavigation={showNavEndScreen}
+                                />
                             </div>
 
                             {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
@@ -429,7 +429,7 @@ export default class MapView extends Component {
                                     </button>
                                 </div>
                             </div>
-    
+
                             <div className="speed-tracker">
                                 <SpeedTracker speedKmh={speedKmh} />
                             </div>
@@ -528,27 +528,27 @@ export default class MapView extends Component {
                             <div className={`origin-toggle-slider ${isAToBState ? "left" : "right"}`} />
 
                             <div className="origin-toggle-options">
-                            <button
-                                className={`origin-toggle-option ${isAToBState ? "active" : ""}`}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setIsAToBState(true);
-                                }}
-                            >
-                                A to B
-                            </button>
+                                <button
+                                    className={`origin-toggle-option ${isAToBState ? "active" : ""}`}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setIsAToBState(true);
+                                    }}
+                                >
+                                    A to B
+                                </button>
 
-                            <button
-                                className={`origin-toggle-option ${!isAToBState ? "active" : ""}`}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setIsAToBState(false);
-                                }}
-                            >
-                                Current location
-                            </button>
+                                <button
+                                    className={`origin-toggle-option ${!isAToBState ? "active" : ""}`}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setIsAToBState(false);
+                                    }}
+                                >
+                                    Current location
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -663,7 +663,7 @@ export default class MapView extends Component {
                             </div>
                         </div>
                     )}
-                    
+
                     {/* Modern Route Info Card */}
                     {showRouteOptions && (
                         <div
@@ -698,8 +698,8 @@ export default class MapView extends Component {
                                     {/* Route Options */}
                                     <div class="route-info-card">
                                         <div className="route-info-gradient-bar" />
-                                        <RouteOptionsComponent 
-                                            isTollRoadsOn={isTollRoadsOn} 
+                                        <RouteOptionsComponent
+                                            isTollRoadsOn={isTollRoadsOn}
                                             toggleTollRoads={toggleTollRoads}>
                                         </RouteOptionsComponent>
 
@@ -991,7 +991,7 @@ export default class MapView extends Component {
                     <div className="saved-destinations-overlay" onClick={closeSavedDestinations}>
                         <div className="route-info-card saved-destinations-card" onClick={(e) => e.stopPropagation()}>
                             <div className="route-info-gradient-bar" />
-                        
+
                             <div className="saved-destinations-header">
                                 <h3>Saved destinations</h3>
                                 <button className="saved-destinations-close" onClick={closeSavedDestinations}>✕</button>
@@ -1001,22 +1001,22 @@ export default class MapView extends Component {
                                 <div className="saved-destinations-loading">Loading...</div>
                             ) : (
                                 <div className="saved-destinations-list">
-                                {savedDestinations?.length ? savedDestinations.map((d) => (
-                                    <button
-                                    key={d.id}
-                                    className="saved-destinations-item"
-                                    onClick={() => selectSavedDestination(d)}
-                                    >
-                                    <div className="saved-destinations-title">{d.label}</div>
-                                    <div className="saved-destinations-sub">
-                                        {d.address?.trim()
-                                            ? d.address
-                                            : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
-                                    </div>
-                                    </button>
-                                )) : (
-                                    <div className="saved-destinations-empty">No saved destinations yet.</div>
-                                )}
+                                    {savedDestinations?.length ? savedDestinations.map((d) => (
+                                        <button
+                                            key={d.id}
+                                            className="saved-destinations-item"
+                                            onClick={() => selectSavedDestination(d)}
+                                        >
+                                            <div className="saved-destinations-title">{d.label}</div>
+                                            <div className="saved-destinations-sub">
+                                                {d.address?.trim()
+                                                    ? d.address
+                                                    : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
+                                            </div>
+                                        </button>
+                                    )) : (
+                                        <div className="saved-destinations-empty">No saved destinations yet.</div>
+                                    )}
                                 </div>
                             )}
                         </div>

@@ -21,14 +21,6 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'event_date')
 
 
-@admin.register(SavedDestination)
-class SavedDestinationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'label', 'address', 'user')
-    search_fields = ('label', 'address', 'user__username')
-    list_filter = ('created_at',)
-
-
-
 @admin.register(AppUser)
 class AppUserAdmin(UserAdmin):
     list_display = ('id', 'username', 'email', 'reward_points', 'is_staff', 'is_active')
