@@ -428,7 +428,7 @@ export default class MapController extends Component {
 
             try {
                 const base = import.meta.env.VITE_API_URL;
-                const departureTime = new Date().toISOString();
+                const departureTime = this.getDepartureTimeISO(0);
 
                 const res = await axios.post(
                     `${base}/api/map/compute-route/`,
@@ -932,17 +932,25 @@ export default class MapController extends Component {
         return true;
     };
 
-buildRouteCacheKey = (origin, destination, departureTime) => {
-    const originPos = this.normalizeLatLng(origin);
-    const destPos = this.normalizeLatLng(destination);
-    return `${originPos.lat},${originPos.lng}:${destPos.lat},${destPos.lng}:${departureTime}`;
-};
+    buildRouteCacheKey = (origin, destination, departureTime) => {
+        const originPos = this.normalizeLatLng(origin);
+        const destPos = this.normalizeLatLng(destination);
+        return `${originPos.lat},${originPos.lng}:${destPos.lat},${destPos.lng}:${departureTime}`;
+    };
+
+    getDepartureTimeISO = (offsetMinutes = 0) => {
+        const nowMs = Date.now();
+        const offsetMs = (Number.isFinite(offsetMinutes) ? offsetMinutes : 0) * 60000;
+        const minLeadMs = 60000; // Google Routes rejects past/near-past times; keep at least 1 minute ahead.
+        const targetMs = nowMs + offsetMs;
+        const safeMs = Math.max(targetMs, nowMs + minLeadMs);
+        return new Date(safeMs).toISOString();
+    };
 
 fetchRoute = async (origin, destination, selectedOffset, map) => {
     this.setState({ isLoadingRoute: true });
     const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
-    const departureDate = new Date(Date.now() + selectedOffset * 60000);
-    const departureTime = departureDate.toISOString();
+    const departureTime = this.getDepartureTimeISO(selectedOffset);
     const cacheKey = this.buildRouteCacheKey(origin, destination, departureTime);
 
     if (this.lastRouteSelectionRef === cacheKey && this.state.routeInfo) {
