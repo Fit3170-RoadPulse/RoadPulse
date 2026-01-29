@@ -16,6 +16,8 @@ export default class MapView extends Component {
     };
     lastViewportInsets = null;
     freezeViewportInsets = false;
+    savePlaceInputFocused = false;
+    searchInputFocused = false;
 
     componentDidMount = () => {
         this.syncTimeSelectorClass();
@@ -43,8 +45,8 @@ export default class MapView extends Component {
         if (prevProps.savePlaceModalOpen !== this.props.savePlaceModalOpen) {
             this.syncSavePlaceClass();
             if (!this.props.savePlaceModalOpen) {
-                this.freezeViewportInsets = false;
-                this.updateMobileViewportVars();
+                this.savePlaceInputFocused = false;
+                this.updateMapInputLock();
             }
         }
     };
@@ -55,6 +57,9 @@ export default class MapView extends Component {
         document.body.classList.remove("rp-route-dragging");
         document.body.classList.remove("rp-incident-dragging");
         document.body.classList.remove("rp-map-page");
+        document.body.classList.remove("rp-map-input-lock");
+        this.savePlaceInputFocused = false;
+        this.searchInputFocused = false;
         this.freezeViewportInsets = false;
         this.unbindViewportListeners();
         this.resetMobileViewportVars();
@@ -149,18 +154,42 @@ export default class MapView extends Component {
         window.removeEventListener("orientationchange", this.updateMobileViewportVars);
     };
 
-    handleSavePlaceInputFocus = () => {
-        if (typeof window === "undefined") return;
+    updateMapInputLock = () => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
         if (window.innerWidth > 768) return;
-        this.freezeViewportInsets = true;
+        const shouldLock = this.savePlaceInputFocused || this.searchInputFocused;
+        this.freezeViewportInsets = shouldLock;
+        if (shouldLock) {
+            document.body.classList.add("rp-map-input-lock");
+        } else {
+            document.body.classList.remove("rp-map-input-lock");
+        }
         this.updateMobileViewportVars();
     };
 
+    setMapInputFocus = (type, isFocused) => {
+        if (type === "savePlace") {
+            this.savePlaceInputFocused = isFocused;
+        } else if (type === "search") {
+            this.searchInputFocused = isFocused;
+        }
+        this.updateMapInputLock();
+    };
+
+    handleSavePlaceInputFocus = () => {
+        this.setMapInputFocus("savePlace", true);
+    };
+
     handleSavePlaceInputBlur = () => {
-        if (typeof window === "undefined") return;
-        if (window.innerWidth > 768) return;
-        this.freezeViewportInsets = false;
-        this.updateMobileViewportVars();
+        this.setMapInputFocus("savePlace", false);
+    };
+
+    handleSearchInputFocus = () => {
+        this.setMapInputFocus("search", true);
+    };
+
+    handleSearchInputBlur = () => {
+        this.setMapInputFocus("search", false);
     };
 
     routeDragActive = false;
@@ -203,6 +232,7 @@ export default class MapView extends Component {
     };
 
     handleRoutePointerDown = (event) => {
+        if (this.freezeViewportInsets) return;
         event.preventDefault();
         event.stopPropagation();
         if (event.pointerId != null && event.currentTarget?.setPointerCapture) {
@@ -230,6 +260,7 @@ export default class MapView extends Component {
 
     handleRouteSheetPointerDown = (event) => {
         if (window.innerWidth > 768) return;
+        if (this.freezeViewportInsets) return;
         if (!event.currentTarget) return;
         const rect = event.currentTarget.getBoundingClientRect();
         const offsetY = event.clientY - rect.top;
@@ -308,6 +339,7 @@ export default class MapView extends Component {
 
     handleRouteTouchStart = (event) => {
         if (this.routeDragActive) return;
+        if (this.freezeViewportInsets) return;
         event.preventDefault();
         event.stopPropagation();
         const clientY = event.touches?.[0]?.clientY;
@@ -332,6 +364,7 @@ export default class MapView extends Component {
 
     handleRouteSheetTouchStart = (event) => {
         if (window.innerWidth > 768) return;
+        if (this.freezeViewportInsets) return;
         if (!event.currentTarget) return;
         const clientY = event.touches?.[0]?.clientY;
         if (typeof clientY !== "number") return;
@@ -586,6 +619,8 @@ export default class MapView extends Component {
                         showRouteUI={showRouteOptions || showSavedDestinations}
                         userLocation={userLocation}
                         mapData={mapData}
+                        onSearchInputFocus={this.handleSearchInputFocus}
+                        onSearchInputBlur={this.handleSearchInputBlur}
                         onSavedDestinationsClick={openSavedDestinations}
                     />
                 </div>

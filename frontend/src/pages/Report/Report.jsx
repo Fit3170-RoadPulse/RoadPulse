@@ -31,6 +31,8 @@ export default function Report() {
     const reportDragStartYRef = useRef(0);
     const reportDragStartHeightRef = useRef(42);
     const reportDragRafRef = useRef(null);
+    const lastViewportInsetsRef = useRef(null);
+    const freezeViewportInsetsRef = useRef(false);
     useEffect(() => {
         if (typeof document === "undefined") return;
         document.body.classList.add("rp-report-page");
@@ -39,8 +41,100 @@ export default function Report() {
         }
         return () => {
             document.body.classList.remove("rp-report-page");
+            document.body.classList.remove("rp-report-input-lock");
         };
     }, []);
+
+    const updateMobileViewportVars = useCallback(() => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
+        const body = document.body;
+        const isMobile = window.innerWidth <= 768;
+        const vv = window.visualViewport;
+
+        if (!isMobile || !vv) {
+            body.style.removeProperty("--mobile-browser-ui-top");
+            body.style.setProperty("--mobile-browser-ui-bottom", "0px");
+            lastViewportInsetsRef.current = { top: 0, bottom: 0 };
+            return;
+        }
+
+        const offsetTop = Math.max(0, vv.offsetTop || 0);
+        const bottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
+        const nextInsets = { top: offsetTop, bottom: bottomInset };
+        const shouldFreeze = freezeViewportInsetsRef.current;
+
+        if (!lastViewportInsetsRef.current) {
+            lastViewportInsetsRef.current = nextInsets;
+        }
+
+        const appliedInsets = shouldFreeze ? lastViewportInsetsRef.current : nextInsets;
+        if (!shouldFreeze) {
+            lastViewportInsetsRef.current = nextInsets;
+        }
+
+        if (appliedInsets.top > 0) {
+            body.style.setProperty("--mobile-browser-ui-top", `${appliedInsets.top}px`);
+        } else {
+            body.style.removeProperty("--mobile-browser-ui-top");
+        }
+        body.style.setProperty("--mobile-browser-ui-bottom", `${appliedInsets.bottom}px`);
+    }, []);
+
+    const bindViewportListeners = useCallback(() => {
+        if (typeof window === "undefined") return;
+        const vv = window.visualViewport;
+        if (vv) {
+            vv.addEventListener("resize", updateMobileViewportVars);
+            vv.addEventListener("scroll", updateMobileViewportVars);
+        }
+        window.addEventListener("resize", updateMobileViewportVars);
+        window.addEventListener("orientationchange", updateMobileViewportVars);
+    }, [updateMobileViewportVars]);
+
+    const unbindViewportListeners = useCallback(() => {
+        if (typeof window === "undefined") return;
+        const vv = window.visualViewport;
+        if (vv) {
+            vv.removeEventListener("resize", updateMobileViewportVars);
+            vv.removeEventListener("scroll", updateMobileViewportVars);
+        }
+        window.removeEventListener("resize", updateMobileViewportVars);
+        window.removeEventListener("orientationchange", updateMobileViewportVars);
+    }, [updateMobileViewportVars]);
+
+    useEffect(() => {
+        updateMobileViewportVars();
+        bindViewportListeners();
+        return () => {
+            freezeViewportInsetsRef.current = false;
+            unbindViewportListeners();
+            if (typeof document !== "undefined") {
+                document.body.style.removeProperty("--mobile-browser-ui-top");
+                document.body.style.removeProperty("--mobile-browser-ui-bottom");
+                document.body.classList.remove("rp-report-input-lock");
+            }
+        };
+    }, [bindViewportListeners, unbindViewportListeners, updateMobileViewportVars]);
+
+    const handleDetailsInputFocus = useCallback(() => {
+        if (typeof window === "undefined") return;
+        if (window.innerWidth > 768) return;
+        freezeViewportInsetsRef.current = true;
+        if (typeof document !== "undefined") {
+            document.body.classList.add("rp-report-input-lock");
+        }
+        updateMobileViewportVars();
+    }, [updateMobileViewportVars]);
+
+    const handleDetailsInputBlur = useCallback(() => {
+        if (typeof window === "undefined") return;
+        if (window.innerWidth > 768) return;
+        freezeViewportInsetsRef.current = false;
+        if (typeof document !== "undefined") {
+            document.body.classList.remove("rp-report-input-lock");
+        }
+        updateMobileViewportVars();
+    }, [updateMobileViewportVars]);
 
     function getAccessToken() {
         const raw = (localStorage.getItem("access") || "").trim();
@@ -179,6 +273,7 @@ export default function Report() {
 
     const handleReportPointerDown = useCallback((event) => {
         if (window.innerWidth > 768) return;
+        if (freezeViewportInsetsRef.current) return;
         event.preventDefault();
         event.stopPropagation();
         startReportDrag(event.clientY);
@@ -509,6 +604,8 @@ export default function Report() {
                                     <ReportComponent
                                         location={selectedLocation}
                                         onClose={() => setIsClicked(false)}
+                                        onDetailsFocus={handleDetailsInputFocus}
+                                        onDetailsBlur={handleDetailsInputBlur}
                                         onSubmitted={(newReport) => {
                                             if (newReport?.id) {
                                                 setReports((prev) => [newReport, ...prev.filter((r) => r.id !== newReport.id)]);

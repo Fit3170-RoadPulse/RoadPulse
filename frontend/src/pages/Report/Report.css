@@ -216,6 +216,18 @@ body.rp-report-dragging .report-sheet-scroll {
         -webkit-overflow-scrolling: touch;
     }
 
+    body.rp-report-input-lock .report-sheet {
+        touch-action: none;
+    }
+
+    body.rp-report-input-lock .report-sheet-scroll {
+        overflow: hidden;
+    }
+
+    body.rp-report-input-lock .report-sheet-handle {
+        pointer-events: none;
+    }
+
     .report-container .gm-style .gm-style-mtc {
         margin-top: var(--map-top-row-offset) !important;
         margin-left: calc(12px + var(--safe-left)) !important;

@@ -18,6 +18,8 @@ export default function MapPage({
   userLocation = null,
   mapData = null,
   showSearch = true,
+  onSearchInputFocus,
+  onSearchInputBlur,
   onSavedDestinationsClick = null,
 }) {
   const [query, setQuery] = useState("");
@@ -393,6 +395,10 @@ export default function MapPage({
                   onChange={(e) => setQuery(e.target.value)}
                   onFocus={() => {
                     if (suggestions.length > 0) setShowSuggestions(true);
+                    if (typeof onSearchInputFocus === "function") onSearchInputFocus();
+                  }}
+                  onBlur={() => {
+                    if (typeof onSearchInputBlur === "function") onSearchInputBlur();
                   }}
                   ref={inputRef}
                 />
