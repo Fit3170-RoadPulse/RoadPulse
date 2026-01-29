@@ -190,6 +190,7 @@ export default function MapComponent({
                 const pos = { lat, lng };
                 lastUserLocationRef.current = { lat, lng, accuracyMeters, timestamp: Date.now() };
                 setHasLocation(true);
+                const accuracyRadiusMeters = 150;
 
                 if (!userMarkerRef.current) {
                     userMarkerRef.current = new g.maps.Marker({
@@ -215,7 +216,7 @@ export default function MapComponent({
                     userAccuracyCircleRef.current = new g.maps.Circle({
                         map,
                         center: pos,
-                        radius: Math.max(10, Number(accuracyMeters) || 0),
+                        radius: accuracyRadiusMeters,
                         fillColor: "#60A5FA",
                         fillOpacity: 0.18,
                         strokeColor: "#3B82F6",
@@ -226,7 +227,7 @@ export default function MapComponent({
                     });
                 } else {
                     userAccuracyCircleRef.current.setCenter(pos);
-                    userAccuracyCircleRef.current.setRadius(Math.max(10, Number(accuracyMeters) || 0));
+                    userAccuracyCircleRef.current.setRadius(accuracyRadiusMeters);
                 }
 
                 if (!hasCenteredRef.current) {
