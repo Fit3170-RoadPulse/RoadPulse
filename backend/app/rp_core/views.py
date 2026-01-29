@@ -17,10 +17,12 @@ from django.views.decorators.csrf import csrf_exempt
 from math import asin, cos, radians, sin, sqrt
 
 from rest_framework import status, views, serializers
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.generics import DestroyAPIView
 
 from rp_core.services.points import deduct_points, add_points
 from rp_core.services.incident_reporting import (
@@ -1019,7 +1021,7 @@ def admin_profile(request):
     return Response(serializer.data)
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
-def saved_destinations(request):
+def saved_destinations(request, pk=None):
     """
     GET: list current user's saved destinations
     POST: create a new saved destination for current user
