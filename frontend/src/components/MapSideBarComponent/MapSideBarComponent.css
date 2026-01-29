@@ -252,6 +252,11 @@
         z-index: 900;
     }
 
+    .search-input {
+        font-size: 16px;
+        line-height: 1.4;
+    }
+
     .saved-destinations-quick {
         display: none;
     }

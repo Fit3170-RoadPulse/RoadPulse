@@ -17,6 +17,7 @@ export default class MapView extends Component {
 
     componentDidMount = () => {
         this.syncTimeSelectorClass();
+        this.syncSavePlaceClass();
         if (typeof document !== "undefined") {
             document.body.classList.add("rp-map-page");
         }
@@ -37,10 +38,14 @@ export default class MapView extends Component {
         if (prevProps.showTimeSelector !== this.props.showTimeSelector) {
             this.syncTimeSelectorClass();
         }
+        if (prevProps.savePlaceModalOpen !== this.props.savePlaceModalOpen) {
+            this.syncSavePlaceClass();
+        }
     };
 
     componentWillUnmount = () => {
         document.body.classList.remove("rp-time-selector-open");
+        document.body.classList.remove("rp-save-place-open");
         document.body.classList.remove("rp-route-dragging");
         document.body.classList.remove("rp-incident-dragging");
         document.body.classList.remove("rp-map-page");
@@ -62,6 +67,16 @@ export default class MapView extends Component {
         }
     };
 
+    syncSavePlaceClass = () => {
+        if (typeof document === "undefined") return;
+        const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+        if (this.props.savePlaceModalOpen && isMobile) {
+            document.body.classList.add("rp-save-place-open");
+        } else {
+            document.body.classList.remove("rp-save-place-open");
+        }
+    };
+
     updateMobileViewportVars = () => {
         if (typeof window === "undefined" || typeof document === "undefined") return;
         const body = document.body;
@@ -71,6 +86,7 @@ export default class MapView extends Component {
         if (!isMobile || !vv) {
             body.style.removeProperty("--mobile-browser-ui-top");
             body.style.setProperty("--mobile-browser-ui-bottom", "0px");
+            this.syncSavePlaceClass();
             return;
         }
 
@@ -83,6 +99,7 @@ export default class MapView extends Component {
             body.style.removeProperty("--mobile-browser-ui-top");
         }
         body.style.setProperty("--mobile-browser-ui-bottom", `${bottomInset}px`);
+        this.syncSavePlaceClass();
     };
 
     resetMobileViewportVars = () => {
@@ -423,6 +440,7 @@ export default class MapView extends Component {
         const isMobileView = typeof window !== "undefined" && window.innerWidth <= 768;
         const showSavedDestinationsSheet = showSavedDestinations && isMobileView;
         const showRouteSheet = showRouteOptions || showSavedDestinationsSheet;
+        const showSavePlaceSheet = savePlaceModalOpen && isMobileView;
 
         return (
             <div className="map-page-container">
@@ -741,6 +759,87 @@ export default class MapView extends Component {
                         </div>
                     )}
 
+                    {/* Mobile Save Place Sheet */}
+                    {showSavePlaceSheet && (
+                        <div
+                            className="save-place-sheet-container"
+                            style={{ "--route-sheet-height": `${routeSheetHeightVh}vh` }}
+                        >
+                            <div
+                                className="route-info-sheet save-place-sheet"
+                                onPointerDown={this.handleRouteSheetPointerDown}
+                                onTouchStart={this.handleRouteSheetTouchStart}
+                            >
+                                <button
+                                    type="button"
+                                    className="time-picker-back"
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                    onTouchStart={(event) => event.stopPropagation()}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        onSavePlaceCancel();
+                                    }}
+                                    aria-label="Back to route details"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    type="button"
+                                    className="route-info-handle"
+                                    aria-label="Drag to resize save place sheet"
+                                />
+                                <div className="route-info-scroll">
+                                    <div className="route-info-card">
+                                        <div className="save-place-card">
+                                            <div className="save-place-header">
+                                                <h3>Save {savePlaceType || "place"}</h3>
+                                            </div>
+                                            <label className="save-place-label" htmlFor="save-place-input-sheet">
+                                                Name this {savePlaceType ? savePlaceType.toLowerCase() : "place"}
+                                            </label>
+                                            <input
+                                                id="save-place-input-sheet"
+                                                className={`save-place-input ${savePlaceError ? "has-error" : ""}`}
+                                                value={savePlaceLabel}
+                                                onChange={(e) => onSavePlaceLabelChange(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        onSavePlaceConfirm();
+                                                    }
+                                                }}
+                                                placeholder="e.g. Home, Office"
+                                                maxLength={80}
+                                                autoFocus
+                                            />
+                                            {savePlaceError && (
+                                                <div className="save-place-error">{savePlaceError}</div>
+                                            )}
+                                            <div className="save-place-actions">
+                                                <button
+                                                    type="button"
+                                                    className="save-place-btn ghost"
+                                                    onClick={onSavePlaceCancel}
+                                                    disabled={isSavingPlace}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="save-place-btn primary"
+                                                    onClick={onSavePlaceConfirm}
+                                                    disabled={isSavingPlace || !savePlaceLabel?.trim()}
+                                                >
+                                                    {isSavingPlace ? "Saving..." : "Save"}
+                                                </button>
+                                            </div>
+                                            <div className="save-place-hint">Up to 80 characters.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Modern Route Info Card */}
                     {showRouteSheet && (
                         <div
@@ -986,7 +1085,7 @@ export default class MapView extends Component {
 
 
                     {/* Save Place Modal */}
-                    {savePlaceModalOpen && (
+                    {savePlaceModalOpen && !isMobileView && (
                         <div className="save-place-overlay" onClick={onSavePlaceCancel}>
                             <div className="save-place-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
                                 <div className="save-place-header">

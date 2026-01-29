@@ -187,3 +187,13 @@ button:focus-visible {
     @apply text-foreground;
   }
 }
+
+@media (max-width: 768px) {
+  /* Prevent mobile browsers from zooming on focus for text inputs. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+    line-height: 1.4;
+  }
+}

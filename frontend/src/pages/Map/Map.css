@@ -272,6 +272,10 @@ body.rp-search-open .origin-toggle {
     display: none;
 }
 
+.save-place-sheet-container {
+    display: none;
+}
+
 .time-picker-back {
     display: none;
 }
@@ -1704,6 +1708,10 @@ body.rp-incident-dragging .map-incident-scroll {
         display: none;
     }
 
+    body.rp-save-place-open .route-info-container {
+        display: none;
+    }
+
     .time-picker-sheet-container {
         position: absolute;
         display: block;
@@ -1717,7 +1725,26 @@ body.rp-incident-dragging .map-incident-scroll {
         pointer-events: auto;
     }
 
+    .save-place-sheet-container {
+        position: absolute;
+        display: block;
+        left: 0;
+        right: 0;
+        bottom: var(--mobile-nav-height);
+        z-index: 1001;
+        width: 100vw;
+        max-width: 100vw;
+        box-sizing: border-box;
+        pointer-events: auto;
+    }
+
     .time-picker-sheet {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .save-place-sheet {
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
@@ -1821,6 +1848,10 @@ body.rp-incident-dragging .map-incident-scroll {
         padding-top: 22px;
     }
 
+    .save-place-sheet .route-info-card {
+        padding-top: 22px;
+    }
+
     .time-picker-sheet .time-picker-card {
         width: 100%;
         max-width: none;
@@ -1828,6 +1859,17 @@ body.rp-incident-dragging .map-incident-scroll {
         border-radius: 0;
         background: transparent;
         box-shadow: none;
+    }
+
+    .save-place-sheet .save-place-card {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+        animation: none;
     }
 
     .route-info-card + .route-info-card {
