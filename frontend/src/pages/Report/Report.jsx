@@ -102,6 +102,16 @@ export default function Report() {
         body.style.setProperty("--mobile-browser-ui-bottom", `${appliedInsets.bottom}px`);
     }, []);
 
+    const scheduleViewportSync = useCallback(() => {
+        if (typeof window === "undefined") return;
+        if (viewportSyncTimeoutRef.current) {
+            clearTimeout(viewportSyncTimeoutRef.current);
+        }
+        viewportSyncTimeoutRef.current = window.setTimeout(() => {
+            updateMobileViewportVars();
+        }, 150);
+    }, [updateMobileViewportVars]);
+
     const bindViewportListeners = useCallback(() => {
         if (typeof window === "undefined") return;
         const vv = window.visualViewport;
@@ -111,7 +121,7 @@ export default function Report() {
         }
         window.addEventListener("resize", updateMobileViewportVars);
         window.addEventListener("orientationchange", updateMobileViewportVars);
-    }, [updateMobileViewportVars, scheduleViewportSync]);
+    }, [updateMobileViewportVars]);
 
     const unbindViewportListeners = useCallback(() => {
         if (typeof window === "undefined") return;
@@ -122,7 +132,7 @@ export default function Report() {
         }
         window.removeEventListener("resize", updateMobileViewportVars);
         window.removeEventListener("orientationchange", updateMobileViewportVars);
-    }, [updateMobileViewportVars, scheduleViewportSync]);
+    }, [updateMobileViewportVars]);
 
     useEffect(() => {
         updateMobileViewportVars();
@@ -143,23 +153,13 @@ export default function Report() {
         };
     }, [bindViewportListeners, unbindViewportListeners, updateMobileViewportVars]);
 
-    const scheduleViewportSync = useCallback(() => {
-        if (typeof window === "undefined") return;
-        if (viewportSyncTimeoutRef.current) {
-            clearTimeout(viewportSyncTimeoutRef.current);
-        }
-        viewportSyncTimeoutRef.current = window.setTimeout(() => {
-            updateMobileViewportVars();
-        }, 150);
-    }, [updateMobileViewportVars]);
-
     const handleDetailsInputFocus = useCallback(() => {
         if (typeof window === "undefined") return;
         if (window.innerWidth > 768) return;
         freezeViewportInsetsRef.current = true;
         updateMobileViewportVars();
         scheduleViewportSync();
-    }, [updateMobileViewportVars]);
+    }, [scheduleViewportSync, updateMobileViewportVars]);
 
     const handleDetailsInputBlur = useCallback(() => {
         if (typeof window === "undefined") return;
@@ -167,7 +167,7 @@ export default function Report() {
         freezeViewportInsetsRef.current = false;
         updateMobileViewportVars();
         scheduleViewportSync();
-    }, [updateMobileViewportVars]);
+    }, [scheduleViewportSync, updateMobileViewportVars]);
 
     function getAccessToken() {
         const raw = (localStorage.getItem("access") || "").trim();
