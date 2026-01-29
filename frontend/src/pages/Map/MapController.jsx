@@ -630,6 +630,8 @@ export default class MapController extends Component {
                     showRouteOptions: false,
                     availableTimes: [],
                     selectedOffsetMinutes: 1,
+                    hasOrigin: true,
+                    hasDestination: false,
                 });
                 return;
             }
@@ -657,6 +659,8 @@ export default class MapController extends Component {
             availableTimes: times,
             selectedOffsetMinutes: selectedOffset,
             showRouteOptions: true,
+            hasOrigin: true,
+            hasDestination: true,
         });
 
         this.fetchRoute(originMarker.position, destinationMarker.position, selectedOffset, map);
