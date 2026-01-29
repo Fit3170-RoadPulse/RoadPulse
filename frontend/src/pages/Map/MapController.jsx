@@ -1265,7 +1265,7 @@ generateStartTimes = () => {
     const totalSlots = 24;
 
     for (let i = 0; i < totalSlots; i++) {
-        const offsetMinutes = i === 0 ? 5 : i * intervalMinutes;
+        const offsetMinutes = i === 0 ? 0 : i * intervalMinutes;
         const futureTime = new Date(now.getTime() + offsetMinutes * 60000);
 
         const hours = futureTime.getHours();
