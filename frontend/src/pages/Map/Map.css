@@ -1310,7 +1310,11 @@ body.rp-incident-dragging .map-incident-scroll {
 }
 
 .map-incident-sheet {
-    display: contents;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    min-height: 0;
 }
 
 .map-incident-handle {
@@ -1318,7 +1322,10 @@ body.rp-incident-dragging .map-incident-scroll {
 }
 
 .map-incident-scroll {
-    display: contents;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Logout confirmation overlay */
