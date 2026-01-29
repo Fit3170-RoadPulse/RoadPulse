@@ -609,7 +609,7 @@ export default class MapController extends Component {
         let originMarker = this.state.mapMarkers.origin;
         let destinationMarker = this.state.mapMarkers.destination;
 
-        const currentPos = this.getCurrentUserLatLng(this.prevLocationRef.current);
+        const currentPos = this.getCurrentUserLatLng();
 
         if (!originMarker) {
             if (currentPos) {
@@ -690,16 +690,17 @@ export default class MapController extends Component {
 
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
             console.log(this.isAToBRef.current, "isAToB");
-            console.log("currentlocation ", this.prevLocationRef.current);
+            const currentPos = this.getCurrentUserLatLng();
+            console.log("currentlocation ", currentPos);
 
             originMarker = this.state.mapMarkers.origin;
             destinationMarker = this.state.mapMarkers.destination;
 
-            if (!this.isAToBRef.current && this.prevLocationRef.current) {
-                console.log("Setting origin to user location:", this.prevLocationRef.current);
+            if (!this.isAToBRef.current && currentPos) {
+                console.log("Setting origin to user location:", currentPos);
                 originMarker = new AdvancedMarkerElement({
                     map: map,
-                    position: { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude },
+                    position: currentPos,
                     title: "A",
                 });
                 this.setState({
@@ -756,7 +757,7 @@ export default class MapController extends Component {
                 });
 
                 if (!this.isAToBRef.current) {
-                    const curPos = this.getCurrentUserLatLng(this.prevLocationRef.current);
+                    const curPos = this.getCurrentUserLatLng();
                     if (curPos) {
                         console.log("Setting origin to user location:", curPos);
                         originMarker = new AdvancedMarkerElement({
@@ -868,8 +869,19 @@ export default class MapController extends Component {
 
     getCurrentUserLatLng = (fallbackLocation) => {
         const cur = this.prevLocationRef.current;
-        const lat = Number(cur?.latitude ?? cur?.lat ?? fallbackLocation?.lat ?? fallbackLocation?.latitude);
-        const lng = Number(cur?.longitude ?? cur?.lng ?? fallbackLocation?.lng ?? fallbackLocation?.longitude);
+        const fallback = fallbackLocation ?? this.state?.userLocation;
+        const lat = Number(
+            cur?.latitude ??
+            cur?.lat ??
+            fallback?.latitude ??
+            fallback?.lat
+        );
+        const lng = Number(
+            cur?.longitude ??
+            cur?.lng ??
+            fallback?.longitude ??
+            fallback?.lng
+        );
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
         return { lat, lng };
     };
@@ -1567,8 +1579,13 @@ setReports = (valueOrUpdater) => {
 
 setIsAToBState = (valueOrUpdater) => {
     if (typeof valueOrUpdater === "function") {
-        this.setState((prevState) => ({ isAToBState: valueOrUpdater(prevState.isAToBState) }));
+        this.setState((prevState) => {
+            const nextValue = valueOrUpdater(prevState.isAToBState);
+            this.isAToBRef.current = nextValue;
+            return { isAToBState: nextValue };
+        });
     } else {
+        this.isAToBRef.current = valueOrUpdater;
         this.setState({ isAToBState: valueOrUpdater });
     }
 };
@@ -1638,7 +1655,7 @@ fetchSavedDestinations = async () => {
 
 selectSavedDestination = async (dest) => {
     const map = this.state.mapRef || this.mapInstanceRef;
-    const cur = this.prevLocationRef?.current;
+    const cur = this.getCurrentUserLatLng();
     if (!map || !cur) {
         this.setState({
             errorPopup: {
@@ -1659,7 +1676,7 @@ selectSavedDestination = async (dest) => {
 
     const originMarker = new AdvancedMarkerElement({
         map,
-        position: { lat: cur.latitude, lng: cur.longitude },
+        position: { lat: cur.lat, lng: cur.lng },
         title: "A",
     });
 
