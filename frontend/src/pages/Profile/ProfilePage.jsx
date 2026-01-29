@@ -57,11 +57,7 @@ export default function ProfilePage() {
   const [passwordMsg, setPasswordMsg] = useState(null);
   
   // Route options state
-    const contextRoutePreferences = useRoutePreferences() || {};
-    if (!contextRoutePreferences) {
-        throw new Error("useRoutePreferences must be used within a RoutePreferencesProvider");
-    }
-    const [isTollRoadsOn, setIsTollRoadsOn] = contextRoutePreferences;
+    const [isTollRoadsOn, setIsTollRoadsOn] = useRoutePreferences() || {};
 
   useEffect(() => {
     const nextSection = getSectionFromParams(searchParams);
