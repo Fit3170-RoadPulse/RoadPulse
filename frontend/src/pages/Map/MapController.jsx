@@ -4,9 +4,11 @@ import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet, apiDel
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
-import { setCookie, getCookie } from "../../lib/utils.js";
+import { RoutePreferencesContext } from "@/components/RoutePreferencesContext";
 
 export default class MapController extends Component {
+    static contextType = RoutePreferencesContext;
+
     constructor(props) {
         super(props);
         this.state = {
@@ -43,14 +45,13 @@ export default class MapController extends Component {
             rawSpeedKmh: 0,
             etaRemainingText: null,
             etaRemainingMinutes: null,
-            isTollRoadsOn: false,
             chosenRouteState: null,
             showSaveMenu: false,
             showSavedDestinations: false,
             savedDestinations: [],
             isLoadingSavedDestinations: false,
         };
-
+        this.prevtoll
         this.lastRouteSelectionRef = null;
         this.prevLocationRef = { current: null };
         this.locationPollingData = { current: null };
@@ -138,7 +139,8 @@ export default class MapController extends Component {
             this.updateTimeSelector();
         }
 
-        if (prevState.isTollRoadsOn !== this.state.isTollRoadsOn) {
+        if (this.prevToll !== this.context.isTollRoadsOn) {
+            this.prevToll = this.context.isTollRoadsOn;
             this.handleTollRouteChange();
         }
 
@@ -244,7 +246,6 @@ export default class MapController extends Component {
 
         try {
             const data = await fetchRewardAccount();
-            this.state.isTollRoadsOn = getCookie("tollRoads") === "true";
             this.setState({ points: data.reward_points, username: data.username });
         } catch (err) {
             console.error("Failed to fetch user data:", err);
@@ -686,7 +687,6 @@ export default class MapController extends Component {
         });
     };
     handleTollRouteChange = async () => {
-        setCookie("tollRoads", this.state.isTollRoadsOn ? "true" : "false", 30);
         const map = this.state.mapRef || this.mapInstanceRef;
         const { mapMarkers, isLoadingRoute, selectedOffsetMinutes } = this.state;
         if (!mapMarkers.origin || !mapMarkers.destination || !map) return;
@@ -756,7 +756,7 @@ export default class MapController extends Component {
                     origin: { latitude: originPos.lat, longitude: originPos.lng },
                     destination: { latitude: destPos.lat, longitude: destPos.lng },
                     startTimes: [departureTime],
-                    avoidTolls: this.state.isTollRoadsOn,
+                    avoidTolls: this.context.isTollRoadsOn,
                 }, {
                     signal: controller.signal,
                 });
@@ -1264,7 +1264,7 @@ export default class MapController extends Component {
         }
     };
     toggleTollRoads = async () => {
-        this.setState({ isTollRoadsOn: !this.state.isTollRoadsOn });
+        this.context.setIsTollRoadsOn(prev => !prev);
     };
 
     toggleSaveMenu = () => {
@@ -1397,7 +1397,7 @@ export default class MapController extends Component {
                 showTimeSelector={this.state.showTimeSelector}
                 showTimeSelectorFunction={this.showTimeSelectorFunction}
                 showRouteOptions={this.state.showRouteOptions}
-                isTollRoadsOn={this.state.isTollRoadsOn}
+                isTollRoadsOn={this.context.isTollRoadsOn}
                 toggleTollRoads={this.toggleTollRoads}
                 availableTimes={this.state.availableTimes}
                 selectedOffsetMinutes={this.state.selectedOffsetMinutes}

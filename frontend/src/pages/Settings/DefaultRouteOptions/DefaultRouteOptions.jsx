@@ -3,12 +3,10 @@ import RouteOptionsComponent from "../../../components/RouteOptionsComponent/Rou
 import { useState, useEffect, use } from "react";
 import SettingMenu from "../Menu/SettingMenu";
 import { Link, useNavigate } from "react-router-dom";
-import { setCookie, getCookie } from "../../../lib/utils.js";
+import { useRoutePreferences } from "@/components/RoutePreferencesContext";
 
 export default function DefaultRouteOptions() {
-    const [isTollRoadsOn, setIsTollRoadsOn] = useState(() => {
-        return getCookie("tollRoads") === "true";
-    });
+    const {isTollRoadsOn, setIsTollRoadsOn} = useRoutePreferences();
     const navigate = useNavigate();
 
     // tollroads functions for handling toll roads toggle
@@ -16,11 +14,6 @@ export default function DefaultRouteOptions() {
         setIsTollRoadsOn(!isTollRoadsOn);
     }
 
-    // Update tollroads cookie
-    useEffect(() => {
-        setCookie("tollRoads", isTollRoadsOn ? "true" : "false", 30);
-    }, [isTollRoadsOn]);
-    
     return (
         <div class="route-options-box">
 
