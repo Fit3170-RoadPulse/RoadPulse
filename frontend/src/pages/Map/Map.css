@@ -1966,6 +1966,7 @@ body.rp-incident-dragging .map-incident-scroll {
     }
 
     .map-incident-panel {
+        position: fixed;
         left: 0;
         right: 0;
         top: auto;
@@ -1981,6 +1982,7 @@ body.rp-incident-dragging .map-incident-scroll {
     .map-incident-panel-content {
         height: auto;
         padding: 0;
+        justify-content: flex-end;
     }
 
     .map-incident-sheet {
@@ -1993,8 +1995,8 @@ body.rp-incident-dragging .map-incident-scroll {
         box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
         border: 1px solid rgba(255, 255, 255, 0.7);
         overflow: hidden;
-        height: auto;
-        max-height: var(--incident-sheet-height, 42vh);
+        height: var(--incident-sheet-height, 42vh);
+        max-height: 78vh;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
         touch-action: pan-y;
@@ -2039,7 +2041,7 @@ body.rp-incident-dragging .map-incident-scroll {
         overscroll-behavior: contain;
         touch-action: pan-y;
         padding-top: 6px;
-        padding-bottom: calc(12px + var(--safe-bottom));
+        padding-bottom: 0;
         min-height: 0;
         position: relative;
         z-index: 1;
@@ -2050,6 +2052,7 @@ body.rp-incident-dragging .map-incident-scroll {
         height: auto;
         overflow: visible;
     }
+
 
     .map-incident-scroll .incident-card-accent {
         margin-top: 0;
