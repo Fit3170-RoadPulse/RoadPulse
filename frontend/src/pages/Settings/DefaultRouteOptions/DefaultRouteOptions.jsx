@@ -11,7 +11,7 @@ export default function DefaultRouteOptions() {
 
     // tollroads functions for handling toll roads toggle
     let toggleTollRoads = () => {
-        setIsTollRoadsOn(!isTollRoadsOn);
+        setIsTollRoadsOn(prev => !prev);
     }
 
     return (
