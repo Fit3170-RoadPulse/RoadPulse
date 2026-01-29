@@ -14,6 +14,8 @@ export default class MapView extends Component {
         routeSheetHeightVh: 38,
         incidentSheetHeightVh: 42,
     };
+    lastViewportInsets = null;
+    freezeViewportInsets = false;
 
     componentDidMount = () => {
         this.syncTimeSelectorClass();
@@ -40,6 +42,10 @@ export default class MapView extends Component {
         }
         if (prevProps.savePlaceModalOpen !== this.props.savePlaceModalOpen) {
             this.syncSavePlaceClass();
+            if (!this.props.savePlaceModalOpen) {
+                this.freezeViewportInsets = false;
+                this.updateMobileViewportVars();
+            }
         }
     };
 
@@ -49,6 +55,7 @@ export default class MapView extends Component {
         document.body.classList.remove("rp-route-dragging");
         document.body.classList.remove("rp-incident-dragging");
         document.body.classList.remove("rp-map-page");
+        this.freezeViewportInsets = false;
         this.unbindViewportListeners();
         this.resetMobileViewportVars();
         window.removeEventListener("pointermove", this.handleIncidentPointerMove);
@@ -86,19 +93,31 @@ export default class MapView extends Component {
         if (!isMobile || !vv) {
             body.style.removeProperty("--mobile-browser-ui-top");
             body.style.setProperty("--mobile-browser-ui-bottom", "0px");
+            this.lastViewportInsets = { top: 0, bottom: 0 };
             this.syncSavePlaceClass();
             return;
         }
 
         const offsetTop = Math.max(0, vv.offsetTop || 0);
         const bottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
+        const nextInsets = { top: offsetTop, bottom: bottomInset };
+        const shouldFreeze = this.freezeViewportInsets;
 
-        if (offsetTop > 0) {
-            body.style.setProperty("--mobile-browser-ui-top", `${offsetTop}px`);
+        if (!this.lastViewportInsets) {
+            this.lastViewportInsets = nextInsets;
+        }
+
+        const appliedInsets = shouldFreeze ? this.lastViewportInsets : nextInsets;
+        if (!shouldFreeze) {
+            this.lastViewportInsets = nextInsets;
+        }
+
+        if (appliedInsets.top > 0) {
+            body.style.setProperty("--mobile-browser-ui-top", `${appliedInsets.top}px`);
         } else {
             body.style.removeProperty("--mobile-browser-ui-top");
         }
-        body.style.setProperty("--mobile-browser-ui-bottom", `${bottomInset}px`);
+        body.style.setProperty("--mobile-browser-ui-bottom", `${appliedInsets.bottom}px`);
         this.syncSavePlaceClass();
     };
 
@@ -128,6 +147,20 @@ export default class MapView extends Component {
         }
         window.removeEventListener("resize", this.updateMobileViewportVars);
         window.removeEventListener("orientationchange", this.updateMobileViewportVars);
+    };
+
+    handleSavePlaceInputFocus = () => {
+        if (typeof window === "undefined") return;
+        if (window.innerWidth > 768) return;
+        this.freezeViewportInsets = true;
+        this.updateMobileViewportVars();
+    };
+
+    handleSavePlaceInputBlur = () => {
+        if (typeof window === "undefined") return;
+        if (window.innerWidth > 768) return;
+        this.freezeViewportInsets = false;
+        this.updateMobileViewportVars();
     };
 
     routeDragActive = false;
@@ -801,6 +834,8 @@ export default class MapView extends Component {
                                                 id="save-place-input-sheet"
                                                 className={`save-place-input ${savePlaceError ? "has-error" : ""}`}
                                                 value={savePlaceLabel}
+                                                onFocus={this.handleSavePlaceInputFocus}
+                                                onBlur={this.handleSavePlaceInputBlur}
                                                 onChange={(e) => onSavePlaceLabelChange(e.target.value)}
                                                 onKeyDown={(e) => {
                                                     if (e.key === "Enter") {
@@ -1106,6 +1141,8 @@ export default class MapView extends Component {
                                     id="save-place-input"
                                     className={`save-place-input ${savePlaceError ? "has-error" : ""}`}
                                     value={savePlaceLabel}
+                                    onFocus={this.handleSavePlaceInputFocus}
+                                    onBlur={this.handleSavePlaceInputBlur}
                                     onChange={(e) => onSavePlaceLabelChange(e.target.value)}
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") {
