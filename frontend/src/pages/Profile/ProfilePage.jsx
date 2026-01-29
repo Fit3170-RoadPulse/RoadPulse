@@ -57,7 +57,7 @@ export default function ProfilePage() {
   const [passwordMsg, setPasswordMsg] = useState(null);
   
   // Route options state
-    const contextRoutePreferences = useRoutePreferences();
+    const contextRoutePreferences = useRoutePreferences() || {};
     if (!contextRoutePreferences) {
         throw new Error("useRoutePreferences must be used within a RoutePreferencesProvider");
     }
