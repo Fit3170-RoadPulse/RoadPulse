@@ -1611,6 +1611,11 @@ body.rp-incident-dragging .map-incident-scroll {
 }
 
 @media (max-width: 768px) {
+    html.rp-map-page {
+        overflow: hidden;
+        height: 100%;
+    }
+
     body.rp-map-page {
         overflow: hidden;
         overscroll-behavior: none;

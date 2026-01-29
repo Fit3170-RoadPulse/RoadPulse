@@ -17,15 +17,16 @@ export default class MapView extends Component {
     lastViewportInsets = null;
     freezeViewportInsets = false;
     savePlaceInputFocused = false;
-    savePlaceLockActive = false;
     searchInputFocused = false;
     mapInputLockActive = false;
+    viewportSyncTimeout = null;
 
     componentDidMount = () => {
         this.syncTimeSelectorClass();
         this.syncSavePlaceClass();
         if (typeof document !== "undefined") {
             document.body.classList.add("rp-map-page");
+            document.documentElement.classList.add("rp-map-page");
         }
         if (typeof window !== "undefined") {
             window.scrollTo(0, 0);
@@ -48,7 +49,6 @@ export default class MapView extends Component {
             this.syncSavePlaceClass();
             if (!this.props.savePlaceModalOpen) {
                 this.savePlaceInputFocused = false;
-                this.savePlaceLockActive = false;
                 this.updateMobileViewportVars();
             }
         }
@@ -60,13 +60,17 @@ export default class MapView extends Component {
         document.body.classList.remove("rp-route-dragging");
         document.body.classList.remove("rp-incident-dragging");
         document.body.classList.remove("rp-map-page");
+        document.documentElement.classList.remove("rp-map-page");
         document.body.classList.remove("rp-map-input-lock");
         document.body.classList.remove("rp-map-keyboard-open");
         this.savePlaceInputFocused = false;
-        this.savePlaceLockActive = false;
         this.searchInputFocused = false;
         this.freezeViewportInsets = false;
         this.mapInputLockActive = false;
+        if (this.viewportSyncTimeout) {
+            clearTimeout(this.viewportSyncTimeout);
+            this.viewportSyncTimeout = null;
+        }
         this.unbindViewportListeners();
         this.resetMobileViewportVars();
         window.removeEventListener("pointermove", this.handleIncidentPointerMove);
@@ -107,9 +111,7 @@ export default class MapView extends Component {
             this.lastViewportInsets = { top: 0, bottom: 0 };
             this.freezeViewportInsets = false;
             this.mapInputLockActive = false;
-            if (!(this.savePlaceInputFocused || this.searchInputFocused)) {
-                body.classList.remove("rp-map-input-lock");
-            }
+            body.classList.remove("rp-map-input-lock");
             body.classList.remove("rp-map-keyboard-open");
             this.syncSavePlaceClass();
             return;
@@ -118,18 +120,17 @@ export default class MapView extends Component {
         const offsetTop = Math.max(0, vv.offsetTop || 0);
         const bottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
         const nextInsets = { top: offsetTop, bottom: bottomInset };
-        const lockRequested = this.savePlaceLockActive || this.searchInputFocused;
         const keyboardOpen = bottomInset > 80;
-        const freezeRequested = this.savePlaceInputFocused || this.searchInputFocused;
-        const shouldFreeze = freezeRequested && keyboardOpen;
+        const inputFocused = this.savePlaceInputFocused || this.searchInputFocused;
+        const shouldFreeze = inputFocused && keyboardOpen;
         this.freezeViewportInsets = shouldFreeze;
-        this.mapInputLockActive = lockRequested;
-        if (lockRequested) {
+        this.mapInputLockActive = shouldFreeze;
+        if (shouldFreeze) {
             body.classList.add("rp-map-input-lock");
         } else {
             body.classList.remove("rp-map-input-lock");
         }
-        if (shouldFreeze) {
+        if (keyboardOpen) {
             body.classList.add("rp-map-keyboard-open");
         } else {
             body.classList.remove("rp-map-keyboard-open");
@@ -181,16 +182,24 @@ export default class MapView extends Component {
         window.removeEventListener("orientationchange", this.updateMobileViewportVars);
     };
 
+    scheduleViewportSync = () => {
+        if (typeof window === "undefined") return;
+        if (this.viewportSyncTimeout) {
+            clearTimeout(this.viewportSyncTimeout);
+        }
+        this.viewportSyncTimeout = window.setTimeout(() => {
+            this.updateMobileViewportVars();
+        }, 150);
+    };
+
     setMapInputFocus = (type, isFocused) => {
         if (type === "savePlace") {
             this.savePlaceInputFocused = isFocused;
-            if (isFocused) {
-                this.savePlaceLockActive = true;
-            }
         } else if (type === "search") {
             this.searchInputFocused = isFocused;
         }
         this.updateMobileViewportVars();
+        this.scheduleViewportSync();
     };
 
     handleSavePlaceInputFocus = () => {

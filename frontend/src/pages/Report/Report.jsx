@@ -34,14 +34,17 @@ export default function Report() {
     const lastViewportInsetsRef = useRef(null);
     const freezeViewportInsetsRef = useRef(false);
     const reportInputLockActiveRef = useRef(false);
+    const viewportSyncTimeoutRef = useRef(null);
     useEffect(() => {
         if (typeof document === "undefined") return;
         document.body.classList.add("rp-report-page");
+        document.documentElement.classList.add("rp-report-page");
         if (typeof window !== "undefined") {
             window.scrollTo(0, 0);
         }
         return () => {
             document.body.classList.remove("rp-report-page");
+            document.documentElement.classList.remove("rp-report-page");
             document.body.classList.remove("rp-report-input-lock");
             document.body.classList.remove("rp-report-keyboard-open");
         };
@@ -57,9 +60,8 @@ export default function Report() {
             body.style.removeProperty("--mobile-browser-ui-top");
             body.style.setProperty("--mobile-browser-ui-bottom", "0px");
             lastViewportInsetsRef.current = { top: 0, bottom: 0 };
-            if (!reportInputLockActiveRef.current) {
-                body.classList.remove("rp-report-input-lock");
-            }
+            reportInputLockActiveRef.current = false;
+            body.classList.remove("rp-report-input-lock");
             body.classList.remove("rp-report-keyboard-open");
             return;
         }
@@ -67,10 +69,10 @@ export default function Report() {
         const offsetTop = Math.max(0, vv.offsetTop || 0);
         const bottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
         const nextInsets = { top: offsetTop, bottom: bottomInset };
-        const lockRequested = reportInputLockActiveRef.current;
         const keyboardOpen = bottomInset > 80;
         const shouldFreeze = freezeViewportInsetsRef.current && keyboardOpen;
-        if (lockRequested) {
+        reportInputLockActiveRef.current = shouldFreeze;
+        if (shouldFreeze) {
             body.classList.add("rp-report-input-lock");
         } else {
             body.classList.remove("rp-report-input-lock");
@@ -107,7 +109,7 @@ export default function Report() {
         }
         window.addEventListener("resize", updateMobileViewportVars);
         window.addEventListener("orientationchange", updateMobileViewportVars);
-    }, [updateMobileViewportVars]);
+    }, [updateMobileViewportVars, scheduleViewportSync]);
 
     const unbindViewportListeners = useCallback(() => {
         if (typeof window === "undefined") return;
@@ -118,7 +120,7 @@ export default function Report() {
         }
         window.removeEventListener("resize", updateMobileViewportVars);
         window.removeEventListener("orientationchange", updateMobileViewportVars);
-    }, [updateMobileViewportVars]);
+    }, [updateMobileViewportVars, scheduleViewportSync]);
 
     useEffect(() => {
         updateMobileViewportVars();
@@ -132,15 +134,29 @@ export default function Report() {
                 document.body.classList.remove("rp-report-input-lock");
                 document.body.classList.remove("rp-report-keyboard-open");
             }
+            if (viewportSyncTimeoutRef.current) {
+                clearTimeout(viewportSyncTimeoutRef.current);
+                viewportSyncTimeoutRef.current = null;
+            }
         };
     }, [bindViewportListeners, unbindViewportListeners, updateMobileViewportVars]);
+
+    const scheduleViewportSync = useCallback(() => {
+        if (typeof window === "undefined") return;
+        if (viewportSyncTimeoutRef.current) {
+            clearTimeout(viewportSyncTimeoutRef.current);
+        }
+        viewportSyncTimeoutRef.current = window.setTimeout(() => {
+            updateMobileViewportVars();
+        }, 150);
+    }, [updateMobileViewportVars]);
 
     const handleDetailsInputFocus = useCallback(() => {
         if (typeof window === "undefined") return;
         if (window.innerWidth > 768) return;
         freezeViewportInsetsRef.current = true;
-        reportInputLockActiveRef.current = true;
         updateMobileViewportVars();
+        scheduleViewportSync();
     }, [updateMobileViewportVars]);
 
     const handleDetailsInputBlur = useCallback(() => {
@@ -148,6 +164,7 @@ export default function Report() {
         if (window.innerWidth > 768) return;
         freezeViewportInsetsRef.current = false;
         updateMobileViewportVars();
+        scheduleViewportSync();
     }, [updateMobileViewportVars]);
 
     function getAccessToken() {
