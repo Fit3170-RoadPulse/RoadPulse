@@ -34,26 +34,54 @@ export default function MapComponent({
     const pendingExternalLocationRef = useRef(null);
     const lastUserLocationRef = useRef(null);
     const [hasLocation, setHasLocation] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
+    const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
+    const isFullscreen = isNativeFullscreen || isPseudoFullscreen;
 
     useEffect(() => {
         const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement);
+            setIsNativeFullscreen(!!document.fullscreenElement);
         };
         document.addEventListener("fullscreenchange", handleFullscreenChange);
         return () => {
             document.removeEventListener("fullscreenchange", handleFullscreenChange);
+            // Cleanup pseudo class on unmount
+            if (typeof document !== "undefined") {
+                document.body.classList.remove("rp-pseudo-fullscreen");
+            }
         };
     }, []);
 
     const handleFullscreenToggle = () => {
         if (!mapHolderRef.current) return;
-        if (!document.fullscreenElement) {
-            mapHolderRef.current.requestFullscreen().catch((err) => {
-                console.error(`Error attempting to enable fullscreen mode: ${err.message} (${err.name})`);
-            });
+
+        // 1. Exit if currently in either mode
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(console.error);
+            return;
+        }
+        if (isPseudoFullscreen) {
+            setIsPseudoFullscreen(false);
+            document.body.classList.remove("rp-pseudo-fullscreen");
+            return;
+        }
+
+        // 2. Try Native Enter
+        const element = mapHolderRef.current;
+        if (element.requestFullscreen) {
+            element.requestFullscreen()
+                .then(() => {
+                    // Success: Native event listener will update state
+                })
+                .catch((err) => {
+                    console.warn("Native fullscreen not supported/allowed. Falling back to pseudo-fullscreen.", err);
+                    setIsPseudoFullscreen(true);
+                    document.body.classList.add("rp-pseudo-fullscreen");
+                });
         } else {
-            document.exitFullscreen();
+            // 3. Fallback (iOS Safari often lacks requestFullscreen on divs)
+            setIsPseudoFullscreen(true);
+            document.body.classList.add("rp-pseudo-fullscreen");
         }
     };
 

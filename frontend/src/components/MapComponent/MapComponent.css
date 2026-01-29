@@ -277,3 +277,33 @@ body .gm-fullscreen-control,
     height: 0 !important;
     pointer-events: none !important;
 }
+
+/* Pseudo-Fullscreen Styles (for iOS/Mobile fallback) */
+body.rp-pseudo-fullscreen .map-holder {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important; /* Use dynamic viewport height for mobile */
+    z-index: 99999 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    background: white; /* Ensure no transparent background shows through */
+}
+
+/* Hide other UI elements when in pseudo-fullscreen */
+body.rp-pseudo-fullscreen .map-overlay-ui,   /* Search bar & Bottom sheet container */
+body.rp-pseudo-fullscreen .origin-toggle,    /* Origin toggle */
+body.rp-pseudo-fullscreen .time-picker-container, /* Time picker */
+body.rp-pseudo-fullscreen .map-incident-panel /* Incident panel */
+{
+    display: none !important;
+}
+
+/* Ensure map controls stay visible on top of the fixed map */
+body.rp-pseudo-fullscreen .map-fullscreen-container,
+body.rp-pseudo-fullscreen .map-recenter-container,
+body.rp-pseudo-fullscreen .map-saved-destinations-container {
+    z-index: 100000 !important;
+}
+
