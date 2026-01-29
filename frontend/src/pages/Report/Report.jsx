@@ -67,10 +67,12 @@ export default function Report() {
         }
 
         const offsetTop = Math.max(0, vv.offsetTop || 0);
-        const bottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
+        const rawBottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
+        const inputFocused = freezeViewportInsetsRef.current;
+        const bottomInset = (!inputFocused && rawBottomInset > 80) ? 0 : rawBottomInset;
         const nextInsets = { top: offsetTop, bottom: bottomInset };
         const keyboardOpen = bottomInset > 80;
-        const shouldFreeze = freezeViewportInsetsRef.current && keyboardOpen;
+        const shouldFreeze = inputFocused && keyboardOpen;
         reportInputLockActiveRef.current = shouldFreeze;
         if (shouldFreeze) {
             body.classList.add("rp-report-input-lock");
