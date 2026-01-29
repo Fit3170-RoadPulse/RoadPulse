@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, X } from "lucide-react";
 import "./ProfilePage.css";
 import { clearAuth, fetchRewardAccount, updateProfile, fetchEmergencyContact, updateEmergencyContact } from "../../lib/api";
 import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent";
+import { useRoutePreferences } from "@/components/RoutePreferencesContext";
 
 const VALID_SECTIONS = new Set([
   "profile",
@@ -56,7 +57,7 @@ export default function ProfilePage() {
   const [passwordMsg, setPasswordMsg] = useState(null);
   
   // Route options state
-  const [isTollRoadsOn, setIsTollRoadsOn] = useState(false);
+  const [isTollRoadsOn, setIsTollRoadsOn] = useRoutePreferences();
 
   useEffect(() => {
     const nextSection = getSectionFromParams(searchParams);
@@ -215,7 +216,7 @@ export default function ProfilePage() {
 
 
   const toggleTollRoads = () => {
-    setIsTollRoadsOn(!isTollRoadsOn);
+    setIsTollRoadsOn(prev => !prev);
   };
 
   const renderContent = () => {
