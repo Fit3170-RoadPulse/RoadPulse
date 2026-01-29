@@ -1,22 +1,45 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import "./ProfilePage.css";
 import { clearAuth, fetchRewardAccount, updateProfile, fetchEmergencyContact, updateEmergencyContact } from "../../lib/api";
 import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent";
 
+const VALID_SECTIONS = new Set([
+  "profile",
+  "change-password",
+  "route-options",
+  "emergency-contact",
+]);
+
+const SETTINGS_SECTIONS = new Set([
+  "change-password",
+  "route-options",
+  "emergency-contact",
+]);
+
+const getSectionFromParams = (searchParams) => {
+  const raw = searchParams.get("section");
+  return VALID_SECTIONS.has(raw) ? raw : "profile";
+};
+
+const isSettingsSection = (section) => SETTINGS_SECTIONS.has(section);
+
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(() =>
+    isSettingsSection(getSectionFromParams(searchParams))
+  );
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [points, setPoints] = useState(0);
   const [distance, setDistance] = useState(0);
   const [dateJoined, setDateJoined] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState("profile");
+  const [activeSection, setActiveSection] = useState(() => getSectionFromParams(searchParams));
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState("");
   const [profileMsg, setProfileMsg] = useState(null);
@@ -34,6 +57,12 @@ export default function ProfilePage() {
   
   // Route options state
   const [isTollRoadsOn, setIsTollRoadsOn] = useState(false);
+
+  useEffect(() => {
+    const nextSection = getSectionFromParams(searchParams);
+    setActiveSection(nextSection);
+    setSettingsOpen(isSettingsSection(nextSection));
+  }, [searchParams]);
 
   useEffect(() => {
     async function loadUserData() {
@@ -71,6 +100,20 @@ export default function ProfilePage() {
     loadUserData();
     loadEmergencyContact();
   }, [navigate]);
+
+  const updateSection = (section) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (section === "profile") {
+      nextParams.delete("section");
+    } else {
+      nextParams.set("section", section);
+    }
+    setActiveSection(section);
+    if (isSettingsSection(section)) {
+      setSettingsOpen(true);
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const handleLogout = () => {
     clearAuth();
@@ -465,7 +508,7 @@ export default function ProfilePage() {
             <li>
               <button 
                 className={`profile-menu-item ${activeSection === "profile" ? "active" : ""}`}
-                onClick={() => setActiveSection("profile")}
+                onClick={() => updateSection("profile")}
               >
                 Profile
               </button>
@@ -493,7 +536,7 @@ export default function ProfilePage() {
                   <li>
                     <button 
                       className={`profile-submenu-item ${activeSection === "change-password" ? "active" : ""}`}
-                      onClick={() => setActiveSection("change-password")}
+                      onClick={() => updateSection("change-password")}
                     >
                       Change Password
                     </button>
@@ -501,7 +544,7 @@ export default function ProfilePage() {
                   <li>
                     <button 
                       className={`profile-submenu-item ${activeSection === "route-options" ? "active" : ""}`}
-                      onClick={() => setActiveSection("route-options")}
+                      onClick={() => updateSection("route-options")}
                     >
                       Default Route Options
                     </button>
@@ -509,7 +552,7 @@ export default function ProfilePage() {
                   <li>
                     <button 
                       className={`profile-submenu-item ${activeSection === "emergency-contact" ? "active" : ""}`}
-                      onClick={() => setActiveSection("emergency-contact")}
+                      onClick={() => updateSection("emergency-contact")}
                     >
                       Emergency Contact
                     </button>
