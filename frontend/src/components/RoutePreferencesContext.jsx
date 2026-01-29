@@ -7,7 +7,9 @@ export const RoutePreferencesContext = createContext({
 
 export function RoutePreferencesProvider({ children }) {
     const [isTollRoadsOn, setIsTollRoadsOn] = useState(() => {
-        return localStorage.getItem("tollRoads") === "true";
+        // initialize from localStorage or default
+        const stored = localStorage.getItem("tollRoads");
+        return stored === null ? true : stored === "true";
     });
 
     useEffect(() => {

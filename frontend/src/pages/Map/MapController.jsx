@@ -148,7 +148,7 @@ export default class MapController extends Component {
             this.updateTimeSelector();
         }
 
-        if (this.prevToll !== this.context.isTollRoadsOn) {
+        if (this.prevToll !== this.context.isTollRoadsOn && this.context.isTollRoadsOn !== undefined) {
             this.prevToll = this.context.isTollRoadsOn;
             this.handleTollRouteChange();
         }
