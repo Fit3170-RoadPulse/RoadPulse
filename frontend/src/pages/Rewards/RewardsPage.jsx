@@ -56,11 +56,11 @@ function RewardsPage() {
     // Delete confirmation state
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteRewardId, setDeleteRewardId] = useState(null);
-    
+
     // Error Modal State
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
-    
+
     // Purchase confirmation state
     const [showPurchaseConfirm, setShowPurchaseConfirm] = useState(false);
 
@@ -350,6 +350,7 @@ function RewardsPage() {
 
             setIsEditing(false);
             await loadAdminRewards();
+            await loadExchangeItemsRefresh();
         } catch (err) {
             let msg = err.message;
             if (msg.includes("stock") && msg.includes("0")) {
@@ -370,12 +371,12 @@ function RewardsPage() {
             await deleteReward(deleteRewardId);
             await loadAdminRewards();
             await loadExchangeItemsRefresh();
-            
+
             // CRITICAL: Refresh user points because they might have received a refund
             // Re-use the data loading logic or call fetchRewardAccount directly
             const accountData = await fetchRewardAccount();
             setPoints(accountData.reward_points ?? 0);
-            
+
             setSuccessMessage("Reward deleted successfully!");
             setShowSuccessNotification(true);
             setTimeout(() => setShowSuccessNotification(false), 3000);
@@ -689,8 +690,8 @@ function RewardsPage() {
                                     <p className="font-medium mb-2">{selectedVoucher.description}</p>
                                     <p className="text-sm text-gray-600">Redeemed: {new Date(selectedVoucher.redeemed_at).toLocaleDateString()}</p>
                                     <div className={`inline-block px-3 py-1 rounded-full text-xs font-medium mt-2 ${selectedVoucher.status === "active"
-                                            ? "bg-green-100 text-green-800"
-                                            : "bg-red-100 text-red-800"
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-red-100 text-red-800"
                                         }`}>
                                         {selectedVoucher.status === "active" ? "Active" : "Used"}
                                     </div>
@@ -1013,14 +1014,14 @@ function RewardsPage() {
 
             {/* Error Modal */}
             {showErrorModal && (
-                <div 
+                <div
                     className="error-modal-overlay"
-                    role="dialog" 
+                    role="dialog"
                     aria-modal="true"
                 >
-                    <div 
+                    <div
                         className="error-modal-backdrop"
-                        onClick={() => setShowErrorModal(false)} 
+                        onClick={() => setShowErrorModal(false)}
                     />
                     <div className="error-modal-card">
                         <div className="error-modal-header">
@@ -1031,13 +1032,13 @@ function RewardsPage() {
                                 Action Failed
                             </h3>
                         </div>
-                        
+
                         <div className="error-card-body">
                             <p className="error-message-text">
                                 {errorMessage}
                             </p>
                         </div>
-                        
+
                         <div className="error-card-footer">
                             <button
                                 onClick={() => setShowErrorModal(false)}
