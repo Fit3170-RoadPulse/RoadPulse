@@ -16,12 +16,14 @@ import RewardsPage from './pages/Rewards/RewardsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import DefaultRouteOptions from './pages/Settings/DefaultRouteOptions/DefaultRouteOptions';
+import { RoutePreferencesProvider } from './components/RoutePreferencesContext';
 import ProfilePage from './pages/Profile/ProfilePage';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <ErrorBoundary>
+        <RoutePreferencesProvider>
         <Routes>
           {/* If you want to navigate to a page via filepath, I think you must include the route here */}
           <Route path="/" element={<LoginPage />} />
@@ -75,6 +77,7 @@ createRoot(document.getElementById('root')).render(
           {/* 404 Not Found - Must be last */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </RoutePreferencesProvider>
       </ErrorBoundary>
     </BrowserRouter>
   </StrictMode>,
