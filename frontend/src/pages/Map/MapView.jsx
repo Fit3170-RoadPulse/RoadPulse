@@ -16,6 +16,7 @@ export default class MapView extends Component {
     };
     lastViewportInsets = null;
     freezeViewportInsets = false;
+    baseBrowserBottomInset = 0;
     savePlaceInputFocused = false;
     searchInputFocused = false;
     mapInputLockActive = false;
@@ -119,11 +120,14 @@ export default class MapView extends Component {
 
         const offsetTop = Math.max(0, vv.offsetTop || 0);
         const rawBottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
+        if (rawBottomInset <= 80) {
+            this.baseBrowserBottomInset = rawBottomInset;
+        }
         const inputFocused = this.savePlaceInputFocused || this.searchInputFocused;
-        const bottomInset = (!inputFocused && rawBottomInset > 80) ? 0 : rawBottomInset;
+        const keyboardOpen = inputFocused && rawBottomInset > (this.baseBrowserBottomInset + 80);
+        const bottomInset = keyboardOpen ? rawBottomInset : this.baseBrowserBottomInset;
         const nextInsets = { top: offsetTop, bottom: bottomInset };
-        const keyboardOpen = bottomInset > 80;
-        const shouldFreeze = inputFocused && keyboardOpen;
+        const shouldFreeze = keyboardOpen;
         this.freezeViewportInsets = shouldFreeze;
         this.mapInputLockActive = shouldFreeze;
         if (shouldFreeze) {
