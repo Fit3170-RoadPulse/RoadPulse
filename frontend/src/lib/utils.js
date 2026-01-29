@@ -8,12 +8,24 @@ export function cn(...inputs) {
 export const setCookie = (name, value, days) => {
     const expirationDate = new Date();
     expirationDate.setDate(expirationDate.getDate() + days);
-    document.cookie = `${name}=${value}; expires=${expirationDate.toUTCString()}; path=/`;
+
+    const isSecure = window.location.protocol === "https:";
+
+    document.cookie = `
+        ${name}=${value};
+        expires=${expirationDate.toUTCString()};
+        path=/;
+        SameSite=Lax;
+        ${isSecure ? "Secure;" : ""}
+    `;
 };
 
 export const getCookie = (name) => {
-    const cookies = document.cookie
+    return document.cookie
         .split("; ")
-        .find((row) => row.startsWith(`${name}=`));
-    return cookies ? cookies.split("=")[1] : null;
+        .reduce((acc, cookie) => {
+            const [key, ...val] = cookie.split("=");
+            if (key === name) acc = val.join("=");
+            return acc;
+        }, null);
 };
