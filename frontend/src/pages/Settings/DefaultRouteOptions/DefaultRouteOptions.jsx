@@ -6,7 +6,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { setCookie, getCookie } from "../../../lib/utils.js";
 
 export default function DefaultRouteOptions() {
-    const [isTollRoadsOn, setIsTollRoadsOn] = useState(getCookie("tollRoads") === "true");
+    const [isTollRoadsOn, setIsTollRoadsOn] = useState(() => {
+        return getCookie("tollRoads") === "true";
+    });
     const navigate = useNavigate();
 
     // tollroads functions for handling toll roads toggle
