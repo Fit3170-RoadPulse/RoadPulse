@@ -111,6 +111,50 @@
     outline: none;
 }
 
+/* Fullscreen Button */
+.map-fullscreen-container {
+    position: absolute;
+    top: calc(60px + var(--safe-top, 0px));
+    right: calc(300px + var(--safe-right, 0px)); /* Default desktop fallback */
+    bottom: auto;
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.map-fullscreen-button {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    border: none;
+    padding: 0;
+    background: #ffffff;
+    color: #4b5563; /* Gray-600 */
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    outline: none;
+}
+
+.map-fullscreen-icon {
+    width: 26px;
+    height: 26px;
+    stroke-width: 2.5;
+    vector-effect: non-scaling-stroke;
+}
+
+.map-fullscreen-button:hover,
+.map-fullscreen-button:focus {
+    background-color: #f3f4f6;
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(31, 41, 55, 0.15);
+    outline: none;
+}
+
+
 @media (min-width: 769px) {
     .map-recenter-container {
         /* Keep it bottom-right, but offset left so it doesn't overlap
@@ -126,6 +170,16 @@
 
     .map-saved-destinations-container {
         display: none;
+    }
+
+    .map-fullscreen-container {
+        --gm-control-size: 44px;
+        --gm-control-gap: 12px;
+        top: auto;
+        right: calc(
+            24px + var(--safe-right, 0px) + var(--gm-control-size) + var(--gm-control-gap) + 56px + 12px
+        );
+        bottom: calc(24px + var(--safe-bottom, 0px));
     }
 }
 
@@ -143,6 +197,14 @@
         right: calc(
             12px + var(--safe-right, 0px) + (var(--map-top-button-size, 40px) + var(--map-top-row-gap, 10px)) * 2
         );
+        bottom: auto;
+    }
+
+    /* Fullscreen: Slot 0 (Edge). Align with Search Bar End.
+       Fullscreen (Right: 12px) -> Recenter (Right: 62px) -> Saved (Right: 112px). */
+    .map-fullscreen-container {
+        top: var(--map-top-row-offset, calc(12px + var(--safe-top, 0px)));
+        right: calc(12px + var(--safe-right, 0px));
         bottom: auto;
     }
 
@@ -169,6 +231,18 @@
         height: 22px;
         stroke-width: 2.5;
     }
+
+    .map-fullscreen-button {
+        width: var(--map-top-button-size, 40px);
+        height: var(--map-top-button-size, 40px);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    }
+
+    .map-fullscreen-icon {
+        width: 22px;
+        height: 22px;
+        stroke-width: 2.5;
+    }
 }
 
 @media (min-width: 769px) {
@@ -182,4 +256,24 @@
         );
         bottom: calc(24px + var(--safe-bottom, 0px));
     }
+    
+    .map-fullscreen-container {
+        --gm-control-size: 44px;
+        --gm-control-gap: 12px;
+        top: calc(60px + var(--safe-top, 0px));
+        right: calc(24px + var(--safe-right, 0px));
+        bottom: auto;
+    }
+}
+
+/* Force hide native Google Maps fullscreen control as we have a custom one */
+body .gm-fullscreen-control,
+.map-page-container .gm-fullscreen-control,
+.gm-fullscreen-control {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    pointer-events: none !important;
 }

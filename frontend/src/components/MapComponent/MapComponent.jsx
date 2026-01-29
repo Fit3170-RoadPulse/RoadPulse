@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LocateFixed, Star } from "lucide-react";
+import { LocateFixed, Star, Maximize, Minimize } from "lucide-react";
 import "./MapComponent.css";
 import { ensureMapsLoaderOptions, loadMapsLibrary } from "../../lib/googleMapsLoader";
 
@@ -24,6 +24,7 @@ export default function MapComponent({
     onSavedDestinationsClick = null,
 }) {
     const mapRef = useRef(null);
+    const mapHolderRef = useRef(null);
     const mapInstance = useRef(null);
     const userMarkerRef = useRef(null);
     const userAccuracyCircleRef = useRef(null);
@@ -33,6 +34,28 @@ export default function MapComponent({
     const pendingExternalLocationRef = useRef(null);
     const lastUserLocationRef = useRef(null);
     const [hasLocation, setHasLocation] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener("fullscreenchange", handleFullscreenChange);
+        return () => {
+            document.removeEventListener("fullscreenchange", handleFullscreenChange);
+        };
+    }, []);
+
+    const handleFullscreenToggle = () => {
+        if (!mapHolderRef.current) return;
+        if (!document.fullscreenElement) {
+            mapHolderRef.current.requestFullscreen().catch((err) => {
+                console.error(`Error attempting to enable fullscreen mode: ${err.message} (${err.name})`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    };
 
     useEffect(() => {
         if (typeof document === "undefined" || typeof window === "undefined") return;
@@ -161,12 +184,13 @@ export default function MapComponent({
                 center: { lat: -34.397, lng: 150.644 },
                 zoom: 8,
                 mapId: MAP_ID,
+                fullscreenControl: false,
                 renderingType: google.maps.RenderingType.VECTOR,
                 ...(isMobile
                     ? {
                         zoomControl: false,
                         mapTypeControl: true,
-                        fullscreenControl: true,
+                        fullscreenControl: false,
                         streetViewControl: false,
                         rotateControl: false,
                         scaleControl: false,
@@ -294,7 +318,7 @@ export default function MapComponent({
     }, [externalUserLocation, useExternalUserLocation]);
 
     return (
-        <div className="map-holder">
+        <div ref={mapHolderRef} className="map-holder">
             <div
                 ref={mapRef}
                 className="map-div"
@@ -318,6 +342,31 @@ export default function MapComponent({
                     </button>
                 </div>
             )}
+            <div className="map-fullscreen-container">
+                <button
+                    type="button"
+                    className="map-fullscreen-button"
+                    onClick={handleFullscreenToggle}
+                    aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                    title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                >
+                    {isFullscreen ? (
+                        <Minimize
+                            className="map-fullscreen-icon"
+                            size={26}
+                            strokeWidth={2.5}
+                            absoluteStrokeWidth
+                        />
+                    ) : (
+                        <Maximize
+                            className="map-fullscreen-icon"
+                            size={26}
+                            strokeWidth={2.5}
+                            absoluteStrokeWidth
+                        />
+                    )}
+                </button>
+            </div>
             {typeof onSavedDestinationsClick === "function" && (
                 <div className="map-saved-destinations-container">
                     <button
