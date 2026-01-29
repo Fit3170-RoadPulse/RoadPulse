@@ -60,7 +60,7 @@ export default class MapController extends Component {
             savePlaceError: "",
             isSavingPlace: false,
         };
-        this.prevtoll
+        this.prevtoll = false;
         this.lastRouteSelectionRef = null;
         this.prevLocationRef = { current: null };
         this.locationPollingData = { current: null };
