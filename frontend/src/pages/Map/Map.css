@@ -1856,7 +1856,19 @@ body.rp-incident-dragging .map-incident-scroll {
         pointer-events: none;
     }
 
-    body.rp-map-input-lock .map-wrapper {
+    body.rp-map-keyboard-open .map-wrapper {
+        pointer-events: none;
+    }
+
+    body.rp-map-input-lock .map-incident-sheet {
+        touch-action: none;
+    }
+
+    body.rp-map-input-lock .map-incident-scroll {
+        overflow: hidden;
+    }
+
+    body.rp-map-input-lock .map-incident-handle {
         pointer-events: none;
     }
 

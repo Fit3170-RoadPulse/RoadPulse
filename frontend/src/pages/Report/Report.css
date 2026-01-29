@@ -224,7 +224,16 @@ body.rp-report-dragging .report-sheet-scroll {
         overflow: hidden;
     }
 
+    body.rp-report-input-lock .report-sheet-scroll > .rp-report-card,
+    body.rp-report-input-lock .report-sheet-scroll > .incident-card {
+        overflow: hidden;
+    }
+
     body.rp-report-input-lock .report-sheet-handle {
+        pointer-events: none;
+    }
+
+    body.rp-report-keyboard-open .report-map-wrapper {
         pointer-events: none;
     }
 

@@ -33,6 +33,7 @@ export default function Report() {
     const reportDragRafRef = useRef(null);
     const lastViewportInsetsRef = useRef(null);
     const freezeViewportInsetsRef = useRef(false);
+    const reportInputLockActiveRef = useRef(false);
     useEffect(() => {
         if (typeof document === "undefined") return;
         document.body.classList.add("rp-report-page");
@@ -42,6 +43,7 @@ export default function Report() {
         return () => {
             document.body.classList.remove("rp-report-page");
             document.body.classList.remove("rp-report-input-lock");
+            document.body.classList.remove("rp-report-keyboard-open");
         };
     }, []);
 
@@ -55,13 +57,29 @@ export default function Report() {
             body.style.removeProperty("--mobile-browser-ui-top");
             body.style.setProperty("--mobile-browser-ui-bottom", "0px");
             lastViewportInsetsRef.current = { top: 0, bottom: 0 };
+            if (!reportInputLockActiveRef.current) {
+                body.classList.remove("rp-report-input-lock");
+            }
+            body.classList.remove("rp-report-keyboard-open");
             return;
         }
 
         const offsetTop = Math.max(0, vv.offsetTop || 0);
         const bottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
         const nextInsets = { top: offsetTop, bottom: bottomInset };
-        const shouldFreeze = freezeViewportInsetsRef.current;
+        const lockRequested = reportInputLockActiveRef.current;
+        const keyboardOpen = bottomInset > 80;
+        const shouldFreeze = freezeViewportInsetsRef.current && keyboardOpen;
+        if (lockRequested) {
+            body.classList.add("rp-report-input-lock");
+        } else {
+            body.classList.remove("rp-report-input-lock");
+        }
+        if (shouldFreeze) {
+            body.classList.add("rp-report-keyboard-open");
+        } else {
+            body.classList.remove("rp-report-keyboard-open");
+        }
 
         if (!lastViewportInsetsRef.current) {
             lastViewportInsetsRef.current = nextInsets;
@@ -112,6 +130,7 @@ export default function Report() {
                 document.body.style.removeProperty("--mobile-browser-ui-top");
                 document.body.style.removeProperty("--mobile-browser-ui-bottom");
                 document.body.classList.remove("rp-report-input-lock");
+                document.body.classList.remove("rp-report-keyboard-open");
             }
         };
     }, [bindViewportListeners, unbindViewportListeners, updateMobileViewportVars]);
@@ -120,9 +139,7 @@ export default function Report() {
         if (typeof window === "undefined") return;
         if (window.innerWidth > 768) return;
         freezeViewportInsetsRef.current = true;
-        if (typeof document !== "undefined") {
-            document.body.classList.add("rp-report-input-lock");
-        }
+        reportInputLockActiveRef.current = true;
         updateMobileViewportVars();
     }, [updateMobileViewportVars]);
 
@@ -130,9 +147,6 @@ export default function Report() {
         if (typeof window === "undefined") return;
         if (window.innerWidth > 768) return;
         freezeViewportInsetsRef.current = false;
-        if (typeof document !== "undefined") {
-            document.body.classList.remove("rp-report-input-lock");
-        }
         updateMobileViewportVars();
     }, [updateMobileViewportVars]);
 
@@ -229,6 +243,14 @@ export default function Report() {
         reportSheetHeightRef.current = reportSheetHeightVh;
     }, [reportSheetHeightVh]);
 
+    useEffect(() => {
+        if (!isClicked) {
+            reportInputLockActiveRef.current = false;
+            freezeViewportInsetsRef.current = false;
+            updateMobileViewportVars();
+        }
+    }, [isClicked, updateMobileViewportVars]);
+
 
     const setReportSheetHeight = useCallback((nextHeight) => {
         if (reportDragRafRef.current) cancelAnimationFrame(reportDragRafRef.current);
@@ -273,7 +295,7 @@ export default function Report() {
 
     const handleReportPointerDown = useCallback((event) => {
         if (window.innerWidth > 768) return;
-        if (freezeViewportInsetsRef.current) return;
+        if (reportInputLockActiveRef.current) return;
         event.preventDefault();
         event.stopPropagation();
         startReportDrag(event.clientY);
@@ -313,6 +335,7 @@ export default function Report() {
 
     const handleReportSheetTouchStart = useCallback((event) => {
         if (window.innerWidth > 768) return;
+        if (reportInputLockActiveRef.current) return;
         if (!event.currentTarget) return;
         const clientY = event.touches?.[0]?.clientY;
         if (typeof clientY !== "number") return;
