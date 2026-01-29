@@ -34,7 +34,6 @@ export default function Report() {
     const lastViewportInsetsRef = useRef(null);
     const freezeViewportInsetsRef = useRef(false);
     const reportInputLockActiveRef = useRef(false);
-    const baseBrowserBottomInsetRef = useRef(0);
     const viewportSyncTimeoutRef = useRef(null);
     useEffect(() => {
         if (typeof document === "undefined") return;
@@ -69,12 +68,9 @@ export default function Report() {
 
         const offsetTop = Math.max(0, vv.offsetTop || 0);
         const rawBottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
-        if (rawBottomInset <= 80) {
-            baseBrowserBottomInsetRef.current = rawBottomInset;
-        }
         const inputFocused = freezeViewportInsetsRef.current;
-        const keyboardOpen = inputFocused && rawBottomInset > (baseBrowserBottomInsetRef.current + 80);
-        const bottomInset = keyboardOpen ? rawBottomInset : baseBrowserBottomInsetRef.current;
+        const keyboardOpen = inputFocused && rawBottomInset > 80;
+        const bottomInset = keyboardOpen ? rawBottomInset : 0;
         const nextInsets = { top: offsetTop, bottom: bottomInset };
         const shouldFreeze = keyboardOpen;
         reportInputLockActiveRef.current = shouldFreeze;
