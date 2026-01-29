@@ -112,47 +112,7 @@
 }
 
 /* Fullscreen Button */
-.map-fullscreen-container {
-    position: absolute;
-    top: calc(60px + var(--safe-top, 0px));
-    right: calc(300px + var(--safe-right, 0px)); /* Default desktop fallback */
-    bottom: auto;
-    z-index: 1000;
-    pointer-events: auto;
-}
 
-.map-fullscreen-button {
-    width: 56px;
-    height: 56px;
-    border-radius: 999px;
-    border: none;
-    padding: 0;
-    background: #ffffff;
-    color: #4b5563; /* Gray-600 */
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 0;
-    cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-    outline: none;
-}
-
-.map-fullscreen-icon {
-    width: 26px;
-    height: 26px;
-    stroke-width: 2.5;
-    vector-effect: non-scaling-stroke;
-}
-
-.map-fullscreen-button:hover,
-.map-fullscreen-button:focus {
-    background-color: #f3f4f6;
-    transform: translateY(-1px);
-    box-shadow: 0 14px 28px rgba(31, 41, 55, 0.15);
-    outline: none;
-}
 
 
 @media (min-width: 769px) {
@@ -171,40 +131,20 @@
     .map-saved-destinations-container {
         display: none;
     }
-
-    .map-fullscreen-container {
-        --gm-control-size: 44px;
-        --gm-control-gap: 12px;
-        top: auto;
-        right: calc(
-            24px + var(--safe-right, 0px) + var(--gm-control-size) + var(--gm-control-gap) + 56px + 12px
-        );
-        bottom: calc(24px + var(--safe-bottom, 0px));
-    }
 }
 
 @media (max-width: 768px) {
     .map-recenter-container {
         top: var(--map-top-row-offset, calc(12px + var(--safe-top, 0px)));
-        right: calc(
-            12px + var(--safe-right, 0px) + var(--map-top-button-size, 40px) + var(--map-top-row-gap, 10px)
-        );
+        right: calc(12px + var(--safe-right, 0px));
         bottom: auto;
     }
 
     .map-saved-destinations-container {
         top: var(--map-top-row-offset, calc(12px + var(--safe-top, 0px)));
         right: calc(
-            12px + var(--safe-right, 0px) + (var(--map-top-button-size, 40px) + var(--map-top-row-gap, 10px)) * 2
+            12px + var(--safe-right, 0px) + var(--map-top-button-size, 40px) + var(--map-top-row-gap, 10px)
         );
-        bottom: auto;
-    }
-
-    /* Fullscreen: Slot 0 (Edge). Align with Search Bar End.
-       Fullscreen (Right: 12px) -> Recenter (Right: 62px) -> Saved (Right: 112px). */
-    .map-fullscreen-container {
-        top: var(--map-top-row-offset, calc(12px + var(--safe-top, 0px)));
-        right: calc(12px + var(--safe-right, 0px));
         bottom: auto;
     }
 
@@ -227,18 +167,6 @@
     }
 
     .map-saved-destinations-icon {
-        width: 22px;
-        height: 22px;
-        stroke-width: 2.5;
-    }
-
-    .map-fullscreen-button {
-        width: var(--map-top-button-size, 40px);
-        height: var(--map-top-button-size, 40px);
-        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
-    }
-
-    .map-fullscreen-icon {
         width: 22px;
         height: 22px;
         stroke-width: 2.5;
@@ -278,32 +206,5 @@ body .gm-fullscreen-control,
     pointer-events: none !important;
 }
 
-/* Pseudo-Fullscreen Styles (for iOS/Mobile fallback) */
-body.rp-pseudo-fullscreen .map-holder {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100dvh !important; /* Use dynamic viewport height for mobile */
-    z-index: 99999 !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
-    background: white; /* Ensure no transparent background shows through */
-}
 
-/* Hide other UI elements when in pseudo-fullscreen */
-body.rp-pseudo-fullscreen .map-overlay-ui,   /* Search bar & Bottom sheet container */
-body.rp-pseudo-fullscreen .origin-toggle,    /* Origin toggle */
-body.rp-pseudo-fullscreen .time-picker-container, /* Time picker */
-body.rp-pseudo-fullscreen .map-incident-panel /* Incident panel */
-{
-    display: none !important;
-}
-
-/* Ensure map controls stay visible on top of the fixed map */
-body.rp-pseudo-fullscreen .map-fullscreen-container,
-body.rp-pseudo-fullscreen .map-recenter-container,
-body.rp-pseudo-fullscreen .map-saved-destinations-container {
-    z-index: 100000 !important;
-}
 
