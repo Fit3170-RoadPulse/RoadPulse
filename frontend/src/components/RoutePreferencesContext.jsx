@@ -6,22 +6,31 @@ export const RoutePreferencesContext = createContext({
 });
 
 export function RoutePreferencesProvider({ children }) {
-    const [isTollRoadsOn, setIsTollRoadsOn] = useState(() => {
-        // initialize from localStorage or default
-        const stored = localStorage.getItem("tollRoads");
-        return stored === null ? true : stored === "true";
-    });
+  const [isTollRoadsOn, setIsTollRoadsOn] = useState(() => {
+    try {
+      const stored = localStorage.getItem("tollRoads");
+      return stored === null ? true : stored === "true";
+    } catch (err) {
+      console.warn("localStorage not available", err);
+      return true;
+    }
+  });
 
-    useEffect(() => {
-        localStorage.setItem("tollRoads", isTollRoadsOn.toString());
-    }, [isTollRoadsOn]);
+  useEffect(() => {
+    try {
+      localStorage.setItem("tollRoads", isTollRoadsOn.toString());
+    } catch (err) {
+      console.warn("Failed to write to localStorage", err);
+    }
+  }, [isTollRoadsOn]);
 
-    return (
-        <RoutePreferencesContext.Provider value={{ isTollRoadsOn, setIsTollRoadsOn }}>
-            {children}
-        </RoutePreferencesContext.Provider>
-    );
+  return (
+    <RoutePreferencesContext.Provider value={{ isTollRoadsOn, setIsTollRoadsOn }}>
+      {children}
+    </RoutePreferencesContext.Provider>
+  );
 }
+
 
 export function useRoutePreferences() {
     const context = useContext(RoutePreferencesContext);
