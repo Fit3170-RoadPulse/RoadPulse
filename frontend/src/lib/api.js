@@ -3,7 +3,7 @@
  * Automatically includes the access token from localStorage in request headers.
  */
 
-const API_BASE_URL = "http://localhost:8000/api";
+const API_BASE_URL = `${import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com"}/api`;
 
 /**
  * Get the access token from localStorage
@@ -62,18 +62,31 @@ export async function authenticatedFetch(endpoint, options = {}) {
     headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-  // If unauthorized (401), token might be expired
-  if (response.status === 401) {
-    clearAuth();
-    throw new Error("Authentication failed. Please login again.");
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    // If unauthorized (401), token might be expired
+    if (response.status === 401) {
+      clearAuth();
+      throw new Error("Authentication failed. Please login again.");
+    }
+
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === "AbortError") {
+      throw new Error("Request timed out");
+    }
+    throw error;
   }
-
-  return response;
 }
 
 /**
@@ -112,7 +125,21 @@ export async function apiPost(endpoint, data) {
     const error = await response
       .json()
       .catch(() => ({ detail: "Request failed" }));
-    throw new Error(error.detail || "Request failed");
+
+    let errorMessage = error.detail || "Request failed";
+
+    // Handle DRF field validation errors (e.g. { "stock": ["Cannot be negative"] })
+    if (!error.detail && typeof error === "object") {
+      const fieldErrors = Object.entries(error).map(([key, val]) => {
+        const msgs = Array.isArray(val) ? val.join(" ") : val;
+        return `${key}: ${msgs}`;
+      });
+      if (fieldErrors.length > 0) {
+        errorMessage = fieldErrors.join("\n");
+      }
+    }
+
+    throw new Error(errorMessage);
   }
 
   return response.json();
@@ -134,7 +161,21 @@ export async function apiPut(endpoint, data) {
     const error = await response
       .json()
       .catch(() => ({ detail: "Request failed" }));
-    throw new Error(error.detail || "Request failed");
+
+    let errorMessage = error.detail || "Request failed";
+
+    // Handle DRF field validation errors
+    if (!error.detail && typeof error === "object") {
+      const fieldErrors = Object.entries(error).map(([key, val]) => {
+        const msgs = Array.isArray(val) ? val.join(" ") : val;
+        return `${key}: ${msgs}`;
+      });
+      if (fieldErrors.length > 0) {
+        errorMessage = fieldErrors.join("\n");
+      }
+    }
+
+    throw new Error(errorMessage);
   }
 
   return response.json();
@@ -237,6 +278,23 @@ export async function apiPatch(endpoint, data) {
  */
 export async function updateProfile(data) {
   return apiPut("/profile/update/", data);
+}
+
+/**
+ * Fetch the user's emergency contact
+ * @returns {Promise<object>}
+ */
+export async function fetchEmergencyContact() {
+  return apiGet("/profile/emergency-contact/");
+}
+
+/**
+ * Update the user's emergency contact
+ * @param {object} data - Contact data { name, phone_number, relationship }
+ * @returns {Promise<object>}
+ */
+export async function updateEmergencyContact(data) {
+  return apiPost("/profile/emergency-contact/update/", data);
 }
 
 // --- Admin Rewards Management ---

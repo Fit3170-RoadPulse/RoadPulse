@@ -7,37 +7,40 @@ from django.core.exceptions import ValidationError
 from django.core.cache import cache
 from django.db import transaction
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 from math import asin, cos, radians, sin, sqrt
 
 from rest_framework import status, views, serializers
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.generics import DestroyAPIView
 
-from rp_core.services.points import deduct_points
+from rp_core.services.points import deduct_points, add_points
 from rp_core.services.incident_reporting import (
     close_and_settle_report,
     grant_report_provisional_point,
     grant_vote_provisional_point,
 )
 
-from .incidentReport import (
+import hashlib
+import json
+import requests
+
+from .incident_report import (
     IncidentReportCreateSerializer,
     IncidentReportSerializer,
     IncidentReportVoteCreateSerializer,
     RegisterSerializerIncidentReport,
 )
-from .event_serializers import RewardSerializer, RewardCreateUpdateSerializer, AdminProfileSerializer
-from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption
-
-
-import hashlib
-import json
-import requests
-
+from .event_serializers import RewardSerializer, RewardCreateUpdateSerializer, AdminProfileSerializer, SavedDestinationSerializer
+from .models import AppUser, ExchangeItem, IncidentReport, IncidentReportVote, RewardRedemption, SavedDestination
 
 
 User = get_user_model()
@@ -69,10 +72,76 @@ def add_hazard_delay_to_duration(base_duration):
     
     return base_duration + total_delay_seconds
 
+def root(_req):
+    """Root endpoint - returns API information and all available endpoints"""
+    return JsonResponse({
+        "service": "RoadPulse API",
+        "version": "1.0",
+        "status": "running",
+        "documentation": "List of all available API endpoints",
+        "endpoints": {
+            "admin": {
+                "admin_panel": "/admin/",
+                "admin_rewards_list": "/api/admin/rewards/",
+                "admin_reward_detail": "/api/admin/rewards/{id}/",
+                "admin_profile": "/api/admin/profile/",
+            },
+            "authentication": {
+                "register": "/api/register/",
+                "login": "/api/login/",
+                "token_refresh": "/api/token/refresh/",
+                "forgot_password": "/api/forgot-password/",
+                "change_password": "/api/change-password/",
+            },
+            "map": {
+                "map_config": "/api/map/",
+                "location_data": "/api/map/location/",
+                "compute_route": "/api/map/compute-route/",
+            },
+            "user": {
+                "reward_account": "/api/rewards/account/",
+                "update_profile": "/api/profile/update/",
+                "update_distance": "/api/user/distance/",
+            },
+            "incidents": {
+                "list_and_create": "/api/incident-reports/",
+                "vote": "/api/incident-reports/{id}/vote/",
+            },
+            "rewards": {
+                "list_items": "/api/rewards/items/",
+                "redeem_reward": "/api/rewards/redeem/",
+                "user_redemptions": "/api/rewards/redemptions/",
+                "mark_redeemed": "/api/rewards/redemptions/{id}/redeem/",
+            },
+            "system": {
+                "health": "/api/health/",
+                "samples": "/api/samples/",
+            }
+        },
+        "note": "Some endpoints require authentication. Use /api/login/ to obtain access token."
+    })
+
 def health(_req):
+    from django.db import connection
+    
+    db_status = "ok"
+    db_error = None
+    
+    # Test database connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        db_status = "connected"
+    except Exception as e:
+        db_status = "error"
+        db_error = str(e)
+    
     return JsonResponse({
         "status": "ok",
-        "service": "RoadPulse API"
+        "service": "RoadPulse API",
+        "database": db_status,
+        "database_error": db_error
     })
 
 
@@ -236,12 +305,75 @@ def update_profile(request):
     
     user.save()
     
+    
     return Response({
         "id": user.id,
         "username": user.username,
         "email": user.email,
         "detail": "Profile updated successfully."
     })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_emergency_contact(request):
+    """
+    Get the user's emergency contact.
+    """
+    try:
+        # Assuming only one major emergency contact for now, or get the one marked is_emergency
+        contact = request.user.contacts.filter(is_emergency=True).first()
+        if not contact:
+            # Fallback: get the first contact if any
+             contact = request.user.contacts.first()
+        
+        if not contact:
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+            
+        from .serializers import ContactSerializer
+        return Response(ContactSerializer(contact).data)
+    except Exception as e:
+         return Response({"detail": str(e)}, status=500)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_emergency_contact(request):
+    """
+    Create or update the user's emergency contact.
+    Enforces a single emergency contact per user for this feature.
+    """
+    from .models import Contact
+    from .serializers import ContactSerializer
+    
+    data = request.data
+    user = request.user
+    
+    # Check if existing emergency contact
+    contact = user.contacts.filter(is_emergency=True).first()
+    
+    if not contact:
+        # Check if any contact exists to upgrade or just create new
+        # For simplicity, if no contact marked is_emergency, we treat any existing as candidate or create new
+        # But per requirements "add a emergency contact", we can just create/update the one.
+        pass
+
+    if contact:
+        serializer = ContactSerializer(contact, data=data, partial=True)
+    else:
+        # Create new
+        # Force is_emergency=True
+        data_copy = data.copy()
+        data_copy['is_emergency'] = True
+        serializer = ContactSerializer(data=data_copy)
+
+    if serializer.is_valid():
+        if not contact:
+             serializer.save(user=user)
+        else:
+             serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # List available exchange items
@@ -257,15 +389,6 @@ def map(_req):
 def incident_reports(request):
     if request.method == "GET":
         # Close & settle any expired open reports (time limit reached)
-        now = timezone.now()
-        expired_open = IncidentReport.objects.filter(
-            status=IncidentReport.Status.OPEN,
-            expires_at__isnull=False,
-            expires_at__lte=now,
-        ).values_list("id", flat=True)[:200]
-        for rid in expired_open:
-            close_and_settle_report(rid)
-
         reports = IncidentReport.objects.active()[:500]
         return Response(IncidentReportSerializer(reports, many=True).data)
 
@@ -386,6 +509,7 @@ def locationData(_req):
                          "maximumAge": settings.MAXIMUM_AGE,
                          })
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(views.APIView):
     def post(self, request):
         serializer = RegisterSerializerIncidentReport(data=request.data)
@@ -395,30 +519,45 @@ class RegisterView(views.APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(views.APIView):
     def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+        
         email = request.data.get("email")
         password = request.data.get("password")
 
         if not email or not password:
             return Response({"detail": "Email and password are required."}, status=400)
         
-        # Use email for authentication (custom backend handles this)
-        user = authenticate(request, email=email, password=password)
+        try:
+            logger.info(f"Login attempt for email: {email}")
+            
+            # Use email for authentication (custom backend handles this)
+            user = authenticate(request, email=email, password=password)
+            
+            logger.info(f"Authentication result: {'success' if user else 'failed'}")
 
-        if user is None:
-            return Response({"detail": "Invalid email or password. Please try again."}, status=401)
+            if user is None:
+                return Response({"detail": "Invalid email or password. Please try again."}, status=401)
 
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            "username": user.username,
-            "email": user.email,
-            "is_staff": user.is_staff,
-            "is_superuser": user.is_superuser,
-        })
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "username": user.username,
+                "email": user.email,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+            })
+        except Exception as e:
+            logger.error(f"Login error: {type(e).__name__}: {str(e)}")
+            return Response({
+                "detail": f"Authentication error: {str(e)}"
+            }, status=500)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ForgotPasswordView(views.APIView):
     def post(self, request):
         email = request.data.get("email")
@@ -742,8 +881,8 @@ def admin_rewards(request):
     Admin-only endpoint
     """
     if request.method == "GET":
-        # Only show active rewards in admin interface (deleted rewards have is_active=False)
-        rewards = ExchangeItem.objects.filter(is_active=True)
+        # Show all rewards in admin interface (including inactive ones)
+        rewards = ExchangeItem.objects.all().order_by('-is_active', 'name')
         serializer = RewardSerializer(rewards, many=True)
         return Response(serializer.data)
     
@@ -795,11 +934,45 @@ def admin_reward_detail(request, reward_id):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == "DELETE":
-        reward.is_active = False
-        reward.save(update_fields=["is_active"])
+        # Refund points for unredeemed vouchers
+        unredeemed_vouchers = RewardRedemption.objects.filter(item=reward, redeemed_at__isnull=True)
+        print(f"DEBUG: Deleting reward {reward.id} ({reward.name}). Found {unredeemed_vouchers.count()} unredeemed vouchers.")
+        
+        refund_count = 0
+        total_refunded = 0
+        
+        with transaction.atomic():
+            for voucher in unredeemed_vouchers:
+                user = voucher.user
+                original_points = user.reward_points
+                print(f"DEBUG: Refunding user {user.username} (ID: {user.id}). Current Points: {original_points}. Refund Amount: {voucher.points_spent}")
+                
+                # Use add_points service to ensure transaction record is created
+                add_points(
+                    user=user, 
+                    amount=voucher.points_spent, 
+                    reason="reward_deletion_refund", 
+                    ref=f"refund_reward_{reward.id}_voucher_{voucher.id}"
+                )
+                
+                # Refresh to check new value
+                user.refresh_from_db()
+                print(f"DEBUG: User {user.username} points after refund: {user.reward_points}")
+                
+                refund_count += 1
+                total_refunded += voucher.points_spent
+            
+            # Delete the reward (cascades to delete all redemptions)
+            reward.delete()
+            print("DEBUG: Reward deleted from database.")
+
         return Response(
-            {"detail": "Reward deleted successfully."},
-            status=status.HTTP_204_NO_CONTENT
+            {
+                "detail": f"Reward deleted. Refunded {total_refunded} points to {refund_count} users.",
+                "refunded_count": refund_count,
+                "total_points_refunded": total_refunded
+            },
+            status=status.HTTP_200_OK
         )
 
 
@@ -818,19 +991,23 @@ def mark_voucher_redeemed(request, redemption_id):
         )
     
     if voucher.redeemed_at:
+         # Already redeemed, but if we are here, it might be a race condition or stale data.
+         # For "delete on redeem" logic, if it's already redeemed, it should have been deleted.
+         # We can try to delete it again or just return success.
+         voucher.delete()
          return Response({
-            "id": voucher.id,
-            "redeemed_at": voucher.redeemed_at,
-            "status": "redeemed"
+            "id": redemption_id,
+            "status": "deleted",
+            "detail": "Voucher redeemed and deleted."
         })
     
-    voucher.redeemed_at = timezone.now()
-    voucher.save(update_fields=["redeemed_at"])
+    # Perform the "redemption" action which is now a deletion
+    voucher.delete()
     
     return Response({
-        "id": voucher.id,
-        "redeemed_at": voucher.redeemed_at,
-        "status": "redeemed"
+        "id": redemption_id,
+        "status": "deleted",
+        "detail": "Voucher redeemed and deleted."
     })
 
 
@@ -840,3 +1017,30 @@ def admin_profile(request):
     """Get admin profile information"""
     serializer = AdminProfileSerializer(request.user)
     return Response(serializer.data)
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def saved_destinations(request, pk=None):
+    """
+    GET: list current user's saved destinations
+    POST: create a new saved destination for current user
+    """
+    if request.method == "GET":
+        qs = SavedDestination.objects.filter(user=request.user).order_by("-created_at")
+        serializer = SavedDestinationSerializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # POST
+    serializer = SavedDestinationSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=request.user)  # attach user here (don't trust client)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def saved_destination_detail(request, destination_id):
+    destination = get_object_or_404(SavedDestination, id=destination_id, user=request.user)
+    destination.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)

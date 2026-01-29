@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LocateFixed } from "lucide-react";
+import { LocateFixed, Star } from "lucide-react";
 import "./MapComponent.css";
 import { ensureMapsLoaderOptions, loadMapsLibrary } from "../../lib/googleMapsLoader";
 
@@ -21,8 +21,10 @@ export default function MapComponent({
     showRecenterButton = true,
     onRecenterRequest = null,
     recenterMinZoom = 14,
+    onSavedDestinationsClick = null,
 }) {
     const mapRef = useRef(null);
+    const mapHolderRef = useRef(null);
     const mapInstance = useRef(null);
     const userMarkerRef = useRef(null);
     const userAccuracyCircleRef = useRef(null);
@@ -32,6 +34,88 @@ export default function MapComponent({
     const pendingExternalLocationRef = useRef(null);
     const lastUserLocationRef = useRef(null);
     const [hasLocation, setHasLocation] = useState(false);
+
+
+
+    useEffect(() => {
+        if (typeof document === "undefined" || typeof window === "undefined") return;
+        const mediaQuery = window.matchMedia("(max-width: 768px)");
+        const isWithinMap = (target) => {
+            if (!target || typeof target.closest !== "function") return false;
+            return Boolean(target.closest(".map-div"));
+        };
+        const shouldBlockZoom = (event) => !isWithinMap(event.target);
+
+        const handleTouchStart = (event) => {
+            if (event.touches?.length > 1 && shouldBlockZoom(event)) {
+                event.preventDefault();
+            }
+        };
+
+        const handleTouchMove = (event) => {
+            if (event.touches?.length > 1 && shouldBlockZoom(event)) {
+                event.preventDefault();
+            }
+        };
+
+        const handleGesture = (event) => {
+            if (shouldBlockZoom(event)) {
+                event.preventDefault();
+            }
+        };
+
+        const handleWheel = (event) => {
+            if (!event.ctrlKey || !shouldBlockZoom(event)) return;
+            event.preventDefault();
+        };
+
+        let listenersAttached = false;
+        const attachListeners = () => {
+            if (listenersAttached) return;
+            listenersAttached = true;
+            document.addEventListener("touchstart", handleTouchStart, { passive: false });
+            document.addEventListener("touchmove", handleTouchMove, { passive: false });
+            document.addEventListener("gesturestart", handleGesture, { passive: false });
+            document.addEventListener("gesturechange", handleGesture, { passive: false });
+            document.addEventListener("gestureend", handleGesture, { passive: false });
+            document.addEventListener("wheel", handleWheel, { passive: false });
+        };
+
+        const detachListeners = () => {
+            if (!listenersAttached) return;
+            listenersAttached = false;
+            document.removeEventListener("touchstart", handleTouchStart);
+            document.removeEventListener("touchmove", handleTouchMove);
+            document.removeEventListener("gesturestart", handleGesture);
+            document.removeEventListener("gesturechange", handleGesture);
+            document.removeEventListener("gestureend", handleGesture);
+            document.removeEventListener("wheel", handleWheel);
+        };
+
+        const handleMediaChange = () => {
+            if (mediaQuery.matches) {
+                attachListeners();
+            } else {
+                detachListeners();
+            }
+        };
+
+        handleMediaChange();
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener("change", handleMediaChange);
+        } else if (mediaQuery.addListener) {
+            mediaQuery.addListener(handleMediaChange);
+        }
+
+        return () => {
+            detachListeners();
+            if (mediaQuery.removeEventListener) {
+                mediaQuery.removeEventListener("change", handleMediaChange);
+            } else if (mediaQuery.removeListener) {
+                mediaQuery.removeListener(handleMediaChange);
+            }
+        };
+    }, []);
 
     const handleRecenterClick = () => {
         const map = mapInstance.current;
@@ -80,12 +164,13 @@ export default function MapComponent({
                 center: { lat: -34.397, lng: 150.644 },
                 zoom: 8,
                 mapId: MAP_ID,
+                fullscreenControl: false,
                 renderingType: google.maps.RenderingType.VECTOR,
                 ...(isMobile
                     ? {
                         zoomControl: false,
                         mapTypeControl: true,
-                        fullscreenControl: true,
+                        fullscreenControl: false,
                         streetViewControl: false,
                         rotateControl: false,
                         scaleControl: false,
@@ -213,7 +298,7 @@ export default function MapComponent({
     }, [externalUserLocation, useExternalUserLocation]);
 
     return (
-        <div className="map-holder">
+        <div ref={mapHolderRef} className="map-holder">
             <div
                 ref={mapRef}
                 className="map-div"
@@ -232,6 +317,24 @@ export default function MapComponent({
                             className="map-recenter-icon"
                             size={32}
                             strokeWidth={2.75}
+                            absoluteStrokeWidth
+                        />
+                    </button>
+                </div>
+            )}
+            {typeof onSavedDestinationsClick === "function" && (
+                <div className="map-saved-destinations-container">
+                    <button
+                        type="button"
+                        className="map-saved-destinations-button"
+                        onClick={onSavedDestinationsClick}
+                        aria-label="Open saved destinations"
+                        title="Saved destinations"
+                    >
+                        <Star
+                            className="map-saved-destinations-icon"
+                            size={26}
+                            strokeWidth={2.5}
                             absoluteStrokeWidth
                         />
                     </button>

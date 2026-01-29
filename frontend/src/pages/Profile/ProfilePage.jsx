@@ -1,26 +1,55 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import "./ProfilePage.css";
-import { clearAuth, fetchRewardAccount, updateProfile } from "../../lib/api";
+import { clearAuth, fetchRewardAccount, updateProfile, fetchEmergencyContact, updateEmergencyContact } from "../../lib/api";
 import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent";
+import { useRoutePreferences } from "@/components/RoutePreferencesContext";
+
+const VALID_SECTIONS = new Set([
+  "profile",
+  "change-password",
+  "route-options",
+  "emergency-contact",
+]);
+
+const SETTINGS_SECTIONS = new Set([
+  "change-password",
+  "route-options",
+  "emergency-contact",
+]);
+
+const getSectionFromParams = (searchParams) => {
+  const raw = searchParams.get("section");
+  return VALID_SECTIONS.has(raw) ? raw : "profile";
+};
+
+const isSettingsSection = (section) => SETTINGS_SECTIONS.has(section);
 
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(() =>
+    isSettingsSection(getSectionFromParams(searchParams))
+  );
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [points, setPoints] = useState(0);
   const [distance, setDistance] = useState(0);
   const [dateJoined, setDateJoined] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState("profile");
+  const [activeSection, setActiveSection] = useState(() => getSectionFromParams(searchParams));
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState("");
   const [profileMsg, setProfileMsg] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  // Emergency Contact State
+  const [emergencyContact, setEmergencyContact] = useState({ name: "", phone: "" });
+  const [emergencyMsg, setEmergencyMsg] = useState(null);
+  const [emergencyLoading, setEmergencyLoading] = useState(false);
   
   // Change password form state
   const [passwordValues, setPasswordValues] = useState({ current: "", newPass: "", repeat: "" });
@@ -28,7 +57,13 @@ export default function ProfilePage() {
   const [passwordMsg, setPasswordMsg] = useState(null);
   
   // Route options state
-  const [isTollRoadsOn, setIsTollRoadsOn] = useState(false);
+    const {isTollRoadsOn, setIsTollRoadsOn} = useRoutePreferences() || {};
+
+  useEffect(() => {
+    const nextSection = getSectionFromParams(searchParams);
+    setActiveSection(nextSection);
+    setSettingsOpen(isSettingsSection(nextSection));
+  }, [searchParams]);
 
   useEffect(() => {
     async function loadUserData() {
@@ -50,8 +85,36 @@ export default function ProfilePage() {
         setLoading(false);
       }
     }
+    async function loadEmergencyContact() {
+        try {
+            const contact = await fetchEmergencyContact();
+            if (contact) {
+                setEmergencyContact({
+                    name: contact.name || "",
+                    phone: contact.phone_number || "",
+                });
+            }
+        } catch (err) {
+            console.error("Failed to load emergency contact", err);
+        }
+    }
     loadUserData();
+    loadEmergencyContact();
   }, [navigate]);
+
+  const updateSection = (section) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (section === "profile") {
+      nextParams.delete("section");
+    } else {
+      nextParams.set("section", section);
+    }
+    setActiveSection(section);
+    if (isSettingsSection(section)) {
+      setSettingsOpen(true);
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const handleLogout = () => {
     clearAuth();
@@ -96,7 +159,8 @@ export default function ProfilePage() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/change-password/", {
+      const base = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${base}/api/change-password/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -126,8 +190,33 @@ export default function ProfilePage() {
     }
   };
 
+  const handleEmergencySave = async (e) => {
+    e.preventDefault();
+    setEmergencyMsg(null);
+    setEmergencyLoading(true);
+
+    if (!emergencyContact.name || !emergencyContact.phone) {
+        setEmergencyMsg({ type: "error", text: "Please fill in both name and phone number." });
+        setEmergencyLoading(false);
+        return;
+    }
+
+    try {
+        await updateEmergencyContact({
+            name: emergencyContact.name,
+            phone_number: emergencyContact.phone,
+        });
+        setEmergencyMsg({ type: "success", text: "Emergency contact updated successfully!" });
+    } catch (err) {
+        setEmergencyMsg({ type: "error", text: err.message || "Failed to update emergency contact." });
+    } finally {
+        setEmergencyLoading(false);
+    }
+  };
+
+
   const toggleTollRoads = () => {
-    setIsTollRoadsOn(!isTollRoadsOn);
+    setIsTollRoadsOn(prev => !prev);
   };
 
   const renderContent = () => {
@@ -237,6 +326,60 @@ export default function ProfilePage() {
           </div>
         );
 
+      case "emergency-contact":
+        return (
+          <div className="profile-settings-content">
+            <h2>Emergency Contact</h2>
+            <p className="profile-description">
+                Set a primary emergency contact. This number will be called when you use the Emergency Help button.
+            </p>
+            
+            {emergencyMsg && (
+              <div className={`profile-msg ${emergencyMsg.type === "error" ? "error" : "success"}`}>
+                {emergencyMsg.text}
+              </div>
+            )}
+
+            <form className="profile-form" onSubmit={handleEmergencySave}>
+              <div className="profile-form-row">
+                <label htmlFor="emergency-name">Contact Name</label>
+                <div className="profile-input-group">
+                  <input
+                    id="emergency-name"
+                    type="text"
+                    value={emergencyContact.name}
+                    onChange={(e) => setEmergencyContact({ ...emergencyContact, name: e.target.value })}
+                    placeholder="e.g. Mum, Partner"
+                  />
+                </div>
+              </div>
+
+              <div className="profile-form-row">
+                <label htmlFor="emergency-phone">Phone Number</label>
+                <div className="profile-input-group">
+                  <input
+                    id="emergency-phone"
+                    type="tel"
+                    value={emergencyContact.phone}
+                    onChange={(e) => setEmergencyContact({ ...emergencyContact, phone: e.target.value })}
+                    placeholder="e.g. 0400000000"
+                  />
+                </div>
+              </div>
+
+              <div className="profile-form-actions">
+                <button 
+                    type="submit" 
+                    className="profile-btn-primary"
+                    disabled={emergencyLoading}
+                >
+                  {emergencyLoading ? "Saving..." : "Save Contact"}
+                </button>
+              </div>
+            </form>
+          </div>
+        );
+
       default: // "profile"
         return (
           <div className="profile-info-section">
@@ -276,6 +419,17 @@ export default function ProfilePage() {
               <div className="profile-info-row">
                 <span className="profile-info-label">Total Distance</span>
                 <span className="profile-info-value">{distance.toFixed(2)} km</span>
+              </div>
+
+              <div className="profile-info-row">
+                <span className="profile-info-label">Emergency Contact</span>
+                <span className="profile-info-value">
+                  {emergencyContact.name ? (
+                    <>{emergencyContact.name} <span className="text-gray-400 text-sm">({emergencyContact.phone})</span></>
+                  ) : (
+                    <span className="text-gray-400 italic">Not Set</span>
+                  )}
+                </span>
               </div>
               
               <div className="profile-info-row">
@@ -355,7 +509,7 @@ export default function ProfilePage() {
             <li>
               <button 
                 className={`profile-menu-item ${activeSection === "profile" ? "active" : ""}`}
-                onClick={() => setActiveSection("profile")}
+                onClick={() => updateSection("profile")}
               >
                 Profile
               </button>
@@ -383,7 +537,7 @@ export default function ProfilePage() {
                   <li>
                     <button 
                       className={`profile-submenu-item ${activeSection === "change-password" ? "active" : ""}`}
-                      onClick={() => setActiveSection("change-password")}
+                      onClick={() => updateSection("change-password")}
                     >
                       Change Password
                     </button>
@@ -391,9 +545,17 @@ export default function ProfilePage() {
                   <li>
                     <button 
                       className={`profile-submenu-item ${activeSection === "route-options" ? "active" : ""}`}
-                      onClick={() => setActiveSection("route-options")}
+                      onClick={() => updateSection("route-options")}
                     >
                       Default Route Options
+                    </button>
+                  </li>
+                  <li>
+                    <button 
+                      className={`profile-submenu-item ${activeSection === "emergency-contact" ? "active" : ""}`}
+                      onClick={() => updateSection("emergency-contact")}
+                    >
+                      Emergency Contact
                     </button>
                   </li>
                 </ul>

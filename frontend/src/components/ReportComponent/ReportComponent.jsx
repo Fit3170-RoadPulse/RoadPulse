@@ -1,7 +1,7 @@
 import "./ReportComponent.css"
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export default function ReportComponent({ location, onClose, onSubmitted }) {
+export default function ReportComponent({ location, onClose, onSubmitted, onDetailsFocus, onDetailsBlur }) {
     const [reportType, setReportType] = useState("");
     const [description, setDescription] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -261,6 +261,8 @@ export default function ReportComponent({ location, onClose, onSubmitted }) {
                         placeholder="Describe what happened (what, where, and any hazards)."
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
+                        onFocus={onDetailsFocus}
+                        onBlur={onDetailsBlur}
                         maxLength={descriptionMaxLen}
                         required
                     />

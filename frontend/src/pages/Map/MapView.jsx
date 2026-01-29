@@ -8,14 +8,31 @@ import SpeedTracker from "../../components/SpeedTracker/SpeedTracker.jsx";
 import RouteOptionsComponent from "../../components/RouteOptionsComponent/RouteOptionsComponent.jsx";
 import NavigationDirectionsList from "../../components/NavigationOverlay/NavigationDirectionsList";
 
+
 export default class MapView extends Component {
     state = {
         routeSheetHeightVh: 38,
         incidentSheetHeightVh: 42,
     };
+    lastViewportInsets = null;
+    freezeViewportInsets = false;
+    savePlaceInputFocused = false;
+    searchInputFocused = false;
+    mapInputLockActive = false;
+    viewportSyncTimeout = null;
 
     componentDidMount = () => {
         this.syncTimeSelectorClass();
+        this.syncSavePlaceClass();
+        if (typeof document !== "undefined") {
+            document.body.classList.add("rp-map-page");
+            document.documentElement.classList.add("rp-map-page");
+        }
+        if (typeof window !== "undefined") {
+            window.scrollTo(0, 0);
+        }
+        this.updateMobileViewportVars();
+        this.bindViewportListeners();
     };
 
     componentDidUpdate = (prevProps) => {
@@ -28,12 +45,34 @@ export default class MapView extends Component {
         if (prevProps.showTimeSelector !== this.props.showTimeSelector) {
             this.syncTimeSelectorClass();
         }
+        if (prevProps.savePlaceModalOpen !== this.props.savePlaceModalOpen) {
+            this.syncSavePlaceClass();
+            if (!this.props.savePlaceModalOpen) {
+                this.savePlaceInputFocused = false;
+                this.updateMobileViewportVars();
+            }
+        }
     };
 
     componentWillUnmount = () => {
         document.body.classList.remove("rp-time-selector-open");
+        document.body.classList.remove("rp-save-place-open");
         document.body.classList.remove("rp-route-dragging");
         document.body.classList.remove("rp-incident-dragging");
+        document.body.classList.remove("rp-map-page");
+        document.documentElement.classList.remove("rp-map-page");
+        document.body.classList.remove("rp-map-input-lock");
+        document.body.classList.remove("rp-map-keyboard-open");
+        this.savePlaceInputFocused = false;
+        this.searchInputFocused = false;
+        this.freezeViewportInsets = false;
+        this.mapInputLockActive = false;
+        if (this.viewportSyncTimeout) {
+            clearTimeout(this.viewportSyncTimeout);
+            this.viewportSyncTimeout = null;
+        }
+        this.unbindViewportListeners();
+        this.resetMobileViewportVars();
         window.removeEventListener("pointermove", this.handleIncidentPointerMove);
         window.removeEventListener("pointerup", this.handleIncidentPointerUp);
         window.removeEventListener("pointercancel", this.handleIncidentPointerUp);
@@ -48,6 +87,136 @@ export default class MapView extends Component {
         } else {
             document.body.classList.remove("rp-time-selector-open");
         }
+    };
+
+    syncSavePlaceClass = () => {
+        if (typeof document === "undefined") return;
+        const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+        if (this.props.savePlaceModalOpen && isMobile) {
+            document.body.classList.add("rp-save-place-open");
+        } else {
+            document.body.classList.remove("rp-save-place-open");
+        }
+    };
+
+    updateMobileViewportVars = () => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
+        const body = document.body;
+        const isMobile = window.innerWidth <= 768;
+        const vv = window.visualViewport;
+
+        if (!isMobile || !vv) {
+            body.style.removeProperty("--mobile-browser-ui-top");
+            body.style.setProperty("--mobile-browser-ui-bottom", "0px");
+            this.lastViewportInsets = { top: 0, bottom: 0 };
+            this.freezeViewportInsets = false;
+            this.mapInputLockActive = false;
+            body.classList.remove("rp-map-input-lock");
+            body.classList.remove("rp-map-keyboard-open");
+            this.syncSavePlaceClass();
+            return;
+        }
+
+        const offsetTop = Math.max(0, vv.offsetTop || 0);
+        const rawBottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
+        const inputFocused = this.savePlaceInputFocused || this.searchInputFocused;
+        const keyboardOpen = inputFocused && rawBottomInset > 80;
+        const bottomInset = keyboardOpen ? rawBottomInset : 0;
+        const nextInsets = { top: offsetTop, bottom: bottomInset };
+        const shouldFreeze = keyboardOpen;
+        this.freezeViewportInsets = shouldFreeze;
+        this.mapInputLockActive = shouldFreeze;
+        if (shouldFreeze) {
+            body.classList.add("rp-map-input-lock");
+        } else {
+            body.classList.remove("rp-map-input-lock");
+        }
+        if (keyboardOpen) {
+            body.classList.add("rp-map-keyboard-open");
+        } else {
+            body.classList.remove("rp-map-keyboard-open");
+        }
+
+        if (!this.lastViewportInsets) {
+            this.lastViewportInsets = nextInsets;
+        }
+
+        const appliedInsets = shouldFreeze ? this.lastViewportInsets : nextInsets;
+        if (!shouldFreeze) {
+            this.lastViewportInsets = nextInsets;
+        }
+
+        if (appliedInsets.top > 0) {
+            body.style.setProperty("--mobile-browser-ui-top", `${appliedInsets.top}px`);
+        } else {
+            body.style.removeProperty("--mobile-browser-ui-top");
+        }
+        body.style.setProperty("--mobile-browser-ui-bottom", `${appliedInsets.bottom}px`);
+        this.syncSavePlaceClass();
+    };
+
+    resetMobileViewportVars = () => {
+        if (typeof document === "undefined") return;
+        document.body.style.removeProperty("--mobile-browser-ui-top");
+        document.body.style.removeProperty("--mobile-browser-ui-bottom");
+    };
+
+    bindViewportListeners = () => {
+        if (typeof window === "undefined") return;
+        const vv = window.visualViewport;
+        if (vv) {
+            vv.addEventListener("resize", this.updateMobileViewportVars);
+            vv.addEventListener("scroll", this.updateMobileViewportVars);
+        }
+        window.addEventListener("resize", this.updateMobileViewportVars);
+        window.addEventListener("orientationchange", this.updateMobileViewportVars);
+    };
+
+    unbindViewportListeners = () => {
+        if (typeof window === "undefined") return;
+        const vv = window.visualViewport;
+        if (vv) {
+            vv.removeEventListener("resize", this.updateMobileViewportVars);
+            vv.removeEventListener("scroll", this.updateMobileViewportVars);
+        }
+        window.removeEventListener("resize", this.updateMobileViewportVars);
+        window.removeEventListener("orientationchange", this.updateMobileViewportVars);
+    };
+
+    scheduleViewportSync = () => {
+        if (typeof window === "undefined") return;
+        if (this.viewportSyncTimeout) {
+            clearTimeout(this.viewportSyncTimeout);
+        }
+        this.viewportSyncTimeout = window.setTimeout(() => {
+            this.updateMobileViewportVars();
+        }, 150);
+    };
+
+    setMapInputFocus = (type, isFocused) => {
+        if (type === "savePlace") {
+            this.savePlaceInputFocused = isFocused;
+        } else if (type === "search") {
+            this.searchInputFocused = isFocused;
+        }
+        this.updateMobileViewportVars();
+        this.scheduleViewportSync();
+    };
+
+    handleSavePlaceInputFocus = () => {
+        this.setMapInputFocus("savePlace", true);
+    };
+
+    handleSavePlaceInputBlur = () => {
+        this.setMapInputFocus("savePlace", false);
+    };
+
+    handleSearchInputFocus = () => {
+        this.setMapInputFocus("search", true);
+    };
+
+    handleSearchInputBlur = () => {
+        this.setMapInputFocus("search", false);
     };
 
     routeDragActive = false;
@@ -90,6 +259,7 @@ export default class MapView extends Component {
     };
 
     handleRoutePointerDown = (event) => {
+        if (this.mapInputLockActive) return;
         event.preventDefault();
         event.stopPropagation();
         if (event.pointerId != null && event.currentTarget?.setPointerCapture) {
@@ -103,6 +273,7 @@ export default class MapView extends Component {
     };
 
     handleIncidentPointerDown = (event) => {
+        if (this.mapInputLockActive) return;
         event.preventDefault();
         event.stopPropagation();
         if (event.pointerId != null && event.currentTarget?.setPointerCapture) {
@@ -117,6 +288,7 @@ export default class MapView extends Component {
 
     handleRouteSheetPointerDown = (event) => {
         if (window.innerWidth > 768) return;
+        if (this.mapInputLockActive) return;
         if (!event.currentTarget) return;
         const rect = event.currentTarget.getBoundingClientRect();
         const offsetY = event.clientY - rect.top;
@@ -126,6 +298,7 @@ export default class MapView extends Component {
 
     handleIncidentSheetPointerDown = (event) => {
         if (window.innerWidth > 768) return;
+        if (this.mapInputLockActive) return;
         if (event.target?.closest?.(".incident-close-btn")) return;
         if (!event.currentTarget) return;
         const rect = event.currentTarget.getBoundingClientRect();
@@ -195,6 +368,7 @@ export default class MapView extends Component {
 
     handleRouteTouchStart = (event) => {
         if (this.routeDragActive) return;
+        if (this.mapInputLockActive) return;
         event.preventDefault();
         event.stopPropagation();
         const clientY = event.touches?.[0]?.clientY;
@@ -207,6 +381,7 @@ export default class MapView extends Component {
 
     handleIncidentTouchStart = (event) => {
         if (this.incidentDragActive) return;
+        if (this.mapInputLockActive) return;
         event.preventDefault();
         event.stopPropagation();
         const clientY = event.touches?.[0]?.clientY;
@@ -219,6 +394,7 @@ export default class MapView extends Component {
 
     handleRouteSheetTouchStart = (event) => {
         if (window.innerWidth > 768) return;
+        if (this.mapInputLockActive) return;
         if (!event.currentTarget) return;
         const clientY = event.touches?.[0]?.clientY;
         if (typeof clientY !== "number") return;
@@ -229,6 +405,7 @@ export default class MapView extends Component {
 
     handleIncidentSheetTouchStart = (event) => {
         if (window.innerWidth > 768) return;
+        if (this.mapInputLockActive) return;
         if (event.target?.closest?.(".incident-close-btn")) return;
         if (!event.currentTarget) return;
         const clientY = event.touches?.[0]?.clientY;
@@ -290,6 +467,8 @@ export default class MapView extends Component {
         const {
             mapData,
             setMarker,
+            hasOrigin,
+            hasDestination,
             isAToBRef,
             prevLocationRef,
             setUserLocation,
@@ -318,8 +497,16 @@ export default class MapView extends Component {
             handleTimeChange,
             liveNavigateToDestination,
             clearMap,
-            showErrorPopup,
-            setShowErrorPopup,
+            errorPopup,
+            setErrorPopup,
+            savePlaceModalOpen,
+            savePlaceType,
+            savePlaceLabel,
+            savePlaceError,
+            isSavingPlace,
+            onSavePlaceLabelChange,
+            onSavePlaceCancel,
+            onSavePlaceConfirm,
             showDropdown,
             setShowDropdown,
             username,
@@ -329,10 +516,28 @@ export default class MapView extends Component {
             setShowLogoutConfirm,
             showLogoutConfirm,
             handleLogout,
+            showSaveMenu,
+            toggleSaveMenu,
+            closeSaveMenu,
+            onSaveOriginPlace,
+            onSaveDestinationPlace,
+            mapMarkers,
+            openSavedDestinations,
+            showSavedDestinations,
+            isLoadingSavedDestinations,
+            savedDestinations,
+            closeSavedDestinations,
+            selectSavedDestination,
+            deletingDestinationId,
+            onDeleteSavedDestination,
             onPlaceSelected,
             onRecenterRequest,
         } = this.props;
         const { routeSheetHeightVh, incidentSheetHeightVh } = this.state;
+        const isMobileView = typeof window !== "undefined" && window.innerWidth <= 768;
+        const showSavedDestinationsSheet = showSavedDestinations && isMobileView;
+        const showRouteSheet = showRouteOptions || showSavedDestinationsSheet;
+        const showSavePlaceSheet = savePlaceModalOpen && isMobileView;
 
         return (
             <div className="map-page-container">
@@ -346,6 +551,7 @@ export default class MapView extends Component {
                         currentLocation={prevLocationRef}
                         onUserLocation={setUserLocation}
                         onRecenterRequest={onRecenterRequest}
+                        onSavedDestinationsClick={openSavedDestinations}
                     />
                 </div>
 
@@ -353,13 +559,13 @@ export default class MapView extends Component {
                     <>
                         <div className="map-nav-overlay">
                             <div className="map-nav-container">
-                            <NavigationDirectionsList 
-                                steps={routeInfo?.steps} 
-                                currentStepIndex={navigationIndex} 
-                                speed={speedKmh}
-                                eta={routeInfo?.arrival_time}
-                                onEndNavigation={showNavEndScreen}
-                            />
+                                <NavigationDirectionsList
+                                    steps={routeInfo?.steps}
+                                    currentStepIndex={navigationIndex}
+                                    speed={speedKmh}
+                                    eta={routeInfo?.arrival_time}
+                                    onEndNavigation={showNavEndScreen}
+                                />
                             </div>
 
                             {/* DEBUGGING MANUALLY CHANGE NAVIGATION INDEX*/}
@@ -414,7 +620,7 @@ export default class MapView extends Component {
                                     </button>
                                 </div>
                             </div>
-    
+
                             <div className="speed-tracker">
                                 <SpeedTracker speedKmh={speedKmh} />
                             </div>
@@ -441,9 +647,12 @@ export default class MapView extends Component {
                     <MapPage
                         onSearch={() => console.log("Search triggered!")}
                         onPlaceSelected={onPlaceSelected}
-                        showRouteUI={showRouteOptions}
+                        showRouteUI={showRouteOptions || showSavedDestinations}
                         userLocation={userLocation}
                         mapData={mapData}
+                        onSearchInputFocus={this.handleSearchInputFocus}
+                        onSearchInputBlur={this.handleSearchInputBlur}
+                        onSavedDestinationsClick={openSavedDestinations}
                     />
                 </div>
 
@@ -513,27 +722,27 @@ export default class MapView extends Component {
                             <div className={`origin-toggle-slider ${isAToBState ? "left" : "right"}`} />
 
                             <div className="origin-toggle-options">
-                            <button
-                                className={`origin-toggle-option ${isAToBState ? "active" : ""}`}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setIsAToBState(true);
-                                }}
-                            >
-                                A to B
-                            </button>
+                                <button
+                                    className={`origin-toggle-option ${isAToBState ? "active" : ""}`}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setIsAToBState(true);
+                                    }}
+                                >
+                                    A to B
+                                </button>
 
-                            <button
-                                className={`origin-toggle-option ${!isAToBState ? "active" : ""}`}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setIsAToBState(false);
-                                }}
-                            >
-                                Current location
-                            </button>
+                                <button
+                                    className={`origin-toggle-option ${!isAToBState ? "active" : ""}`}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setIsAToBState(false);
+                                    }}
+                                >
+                                    Current location
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -648,9 +857,92 @@ export default class MapView extends Component {
                             </div>
                         </div>
                     )}
-                    
+
+                    {/* Mobile Save Place Sheet */}
+                    {showSavePlaceSheet && (
+                        <div
+                            className="save-place-sheet-container"
+                            style={{ "--route-sheet-height": `${routeSheetHeightVh}vh` }}
+                        >
+                            <div
+                                className="route-info-sheet save-place-sheet"
+                                onPointerDown={this.handleRouteSheetPointerDown}
+                                onTouchStart={this.handleRouteSheetTouchStart}
+                            >
+                                <button
+                                    type="button"
+                                    className="time-picker-back"
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                    onTouchStart={(event) => event.stopPropagation()}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        onSavePlaceCancel();
+                                    }}
+                                    aria-label="Back to route details"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    type="button"
+                                    className="route-info-handle"
+                                    aria-label="Drag to resize save place sheet"
+                                />
+                                <div className="route-info-scroll">
+                                    <div className="route-info-card">
+                                        <div className="save-place-card">
+                                            <div className="save-place-header">
+                                                <h3>Save {savePlaceType || "place"}</h3>
+                                            </div>
+                                            <label className="save-place-label" htmlFor="save-place-input-sheet">
+                                                Name this {savePlaceType ? savePlaceType.toLowerCase() : "place"}
+                                            </label>
+                                            <input
+                                                id="save-place-input-sheet"
+                                                className={`save-place-input ${savePlaceError ? "has-error" : ""}`}
+                                                value={savePlaceLabel}
+                                                onFocus={this.handleSavePlaceInputFocus}
+                                                onBlur={this.handleSavePlaceInputBlur}
+                                                onChange={(e) => onSavePlaceLabelChange(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        onSavePlaceConfirm();
+                                                    }
+                                                }}
+                                                placeholder="e.g. Home, Office"
+                                                maxLength={80}
+                                                autoFocus
+                                            />
+                                            {savePlaceError && (
+                                                <div className="save-place-error">{savePlaceError}</div>
+                                            )}
+                                            <div className="save-place-actions">
+                                                <button
+                                                    type="button"
+                                                    className="save-place-btn ghost"
+                                                    onClick={onSavePlaceCancel}
+                                                    disabled={isSavingPlace}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="save-place-btn primary"
+                                                    onClick={onSavePlaceConfirm}
+                                                    disabled={isSavingPlace || !savePlaceLabel?.trim()}
+                                                >
+                                                    {isSavingPlace ? "Saving..." : "Save"}
+                                                </button>
+                                            </div>
+                                            <div className="save-place-hint">Up to 80 characters.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Modern Route Info Card */}
-                    {showRouteOptions && (
+                    {showRouteSheet && (
                         <div
                             className="route-info-container"
                             style={{ "--route-sheet-height": `${routeSheetHeightVh}vh` }}
@@ -680,97 +972,202 @@ export default class MapView extends Component {
                                 />
 
                                 <div className="route-info-scroll">
-                                    {/* Route Options */}
-                                    <div className="route-info-card">
-                                        <div className="route-info-gradient-bar" />
-                                        <RouteOptionsComponent
-                                            isTollRoadsOn={isTollRoadsOn}
-                                            toggleTollRoads={toggleTollRoads}
-                                        />
-                                    </div>
-
-                                    {/* Route Info */}
-                                    <div className="route-info-card">
-                                        <div className="route-info-gradient-bar" />
-
-                                        {isLoadingRoute && (
-                                            <div className="route-info-loading">
-                                                <div className="route-info-spinner" />
+                                    {showSavedDestinationsSheet ? (
+                                        <div className="route-info-card saved-destinations-sheet">
+                                            <div className="route-info-gradient-bar" />
+                                            <div className="saved-destinations-mobile-header">
+                                                <h3>Saved destinations</h3>
                                             </div>
-                                        )}
 
-                                        <h3 className="route-info-title">
-                                            Route Information
-                                        </h3>
-
-                                        <div className="route-info-items">
-                                            {/* Distance */}
-                                            <div className="route-info-item">
-                                                <div className="route-info-icon distance">
-                                                    <span>📍</span>
+                                            {isLoadingSavedDestinations ? (
+                                                <div className="saved-destinations-loading">Loading...</div>
+                                            ) : (
+                                                <div className="saved-destinations-list">
+                                                    {savedDestinations?.length ? savedDestinations.map((d) => (
+                                                        <div
+                                                            key={d.id}
+                                                            className="saved-destinations-item"
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            onClick={() => selectSavedDestination(d)}
+                                                            onKeyDown={(event) => {
+                                                                if (event.key === "Enter" || event.key === " ") {
+                                                                    event.preventDefault();
+                                                                    selectSavedDestination(d);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <div className="saved-destinations-item-header">
+                                                                <div className="saved-destinations-title">{d.label}</div>
+                                                                <button
+                                                                    type="button"
+                                                                    className="saved-destinations-remove"
+                                                                    onClick={(event) => {
+                                                                        event.preventDefault();
+                                                                        event.stopPropagation();
+                                                                        onDeleteSavedDestination(d.id);
+                                                                    }}
+                                                                    disabled={deletingDestinationId === d.id}
+                                                                    title="Remove saved destination"
+                                                                >
+                                                                    {deletingDestinationId === d.id ? "Removing..." : "Remove"}
+                                                                </button>
+                                                            </div>
+                                                            <div className="saved-destinations-sub">
+                                                                {d.address?.trim()
+                                                                    ? d.address
+                                                                    : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
+                                                            </div>
+                                                        </div>
+                                                    )) : (
+                                                        <div className="saved-destinations-empty">No saved destinations yet.</div>
+                                                    )}
                                                 </div>
-                                                <div>
-                                                    <div className="route-info-label">Distance</div>
-                                                    <div className="route-info-value">
-                                                        {routeInfo?.distanceKm ?? "N/A"} <span className="route-info-unit">km</span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* Route Options */}
+                                            <div class="route-info-card">
+                                                <div className="route-info-gradient-bar" />
+                                                <RouteOptionsComponent
+                                                    isTollRoadsOn={isTollRoadsOn}
+                                                    toggleTollRoads={toggleTollRoads}>
+                                                </RouteOptionsComponent>
+
+                                            </div>
+
+                                            {/* Route Info */}
+                                            <div className="route-info-card">
+                                                <div className="route-info-gradient-bar" />
+
+                                                {isLoadingRoute && (
+                                                    <div className="route-info-loading">
+                                                        <div className="route-info-spinner" />
+                                                    </div>
+                                                )}
+
+                                                <h3 className="route-info-title">
+                                                    Route Information
+                                                </h3>
+
+                                                <button
+                                                    className="route-info-star-btn"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        toggleSaveMenu();
+                                                    }}
+                                                    title="Save places"
+                                                    type="button"
+                                                >
+                                                    ⋮
+                                                </button>
+
+                                                {showSaveMenu && (
+                                                    <div className="route-info-save-menu" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            className="route-info-save-menu-item"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                onSaveOriginPlace();
+                                                            }}
+                                                            type="button"
+                                                            // disabled={!mapMarkers?.origin}
+                                                            disabled={!hasOrigin}
+                                                            title={!mapMarkers?.origin ? "Set an origin first" : "Save origin"}
+                                                        >
+                                                            Save origin <span className="route-info-star">⭐</span>
+                                                        </button>
+
+                                                        <button
+                                                            className="route-info-save-menu-item"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                onSaveDestinationPlace();
+                                                            }}
+                                                            type="button"
+                                                            // disabled={!mapMarkers?.destination}
+                                                            disabled={!hasDestination}
+                                                            title={!mapMarkers?.destination ? "Set a destination first" : "Save destination"}
+                                                        >
+                                                            Save destination <span className="route-info-star">⭐</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                <div className="route-info-items">
+                                                    {/* Directions - MOVED TOP FOR MOBILE */}
+                                                    <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
+                                                        <div className="route-info-icon">
+                                                            <span>🗺️</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-value">Directions {"->"}</div>
+                                                        </div>
+                                                    </button>
+
+                                                    {/* Directions */}
+                                                    <button className="route-time-select-item" onClick={showTimeSelectorFunction}>
+                                                        <div className="route-info-icon">
+                                                            <span>⌚</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-value">Choose a time</div>
+                                                        </div>
+                                                    </button>
+
+                                                    {/* Distance */}
+                                                    <div className="route-info-item">
+                                                        <div className="route-info-icon distance">
+                                                            <span>📍</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-label">Distance</div>
+                                                            <div className="route-info-value">
+                                                                {routeInfo?.distanceKm ?? "N/A"} <span className="route-info-unit">km</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Departure Time */}
+                                                    <div className="route-info-item">
+                                                        <div className="route-info-icon departure">
+                                                            <span>🚗</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-label">Departure</div>
+                                                            <div className="route-info-value">{routeInfo?.starting_time ?? "N/A"}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* ETA */}
+                                                    <div className="route-info-item">
+                                                        <div className="route-info-icon duration">
+                                                            <span>🕒</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-label">ETA</div>
+                                                            <div className="route-info-value">{routeInfo?.arrival_time ?? "N/A"}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Duration */}
+                                                    <div className="route-info-item">
+                                                        <div className="route-info-icon duration">
+                                                            <span>⏱️</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="route-info-label">Travel Time</div>
+                                                            <div className="route-info-value">{routeInfo?.eta ?? "N/A"}</div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Departure Time */}
-                                            <div className="route-info-item">
-                                                <div className="route-info-icon departure">
-                                                    <span>🚗</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-label">Departure</div>
-                                                    <div className="route-info-value">{routeInfo?.starting_time ?? "N/A"}</div>
-                                                </div>
-                                            </div>
-
-                                            {/* ETA */}
-                                            <div className="route-info-item">
-                                                <div className="route-info-icon duration">
-                                                    <span>🕒</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-label">ETA</div>
-                                                    <div className="route-info-value">{routeInfo?.arrival_time ?? "N/A"}</div>
-                                                </div>
-                                            </div>
-
-                                            {/* Duration */}
-                                            <div className="route-info-item">
-                                                <div className="route-info-icon duration">
-                                                    <span>⏱️</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-label">Travel Time</div>
-                                                    <div className="route-info-value">{routeInfo?.eta ?? "N/A"}</div>
-                                                </div>
-                                            </div>
-
-                                            {/* Directions */}
-                                            <button className="route-time-select-item" onClick={showTimeSelectorFunction}>
-                                                <div className="route-info-icon">
-                                                    <span>⌚</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-value">Choose a time</div>
-                                                </div>
-                                            </button>
-
-                                            {/* Directions */}
-                                            <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
-                                                <div className="route-info-icon">
-                                                    <span>🗺️</span>
-                                                </div>
-                                                <div>
-                                                    <div className="route-info-value">Directions {"->"}</div>
-                                                </div>
-                                            </button>
-                                        </div>
-                                    </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -788,98 +1185,87 @@ export default class MapView extends Component {
                     </div>
 
 
-                    {/* Error Popup */}
-                    {showErrorPopup && (
-                        <div style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 2000,
-                            backdropFilter: 'blur(4px)'
-                        }}>
-                            <div style={{
-                                backgroundColor: 'white',
-                                borderRadius: '16px',
-                                padding: '24px',
-                                width: '90%',
-                                maxWidth: '400px',
-                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                                textAlign: 'center',
-                                position: 'relative',
-                                animation: 'fadeIn 0.2s ease-out'
-                            }}>
-                                <button
-                                    onClick={() => setShowErrorPopup(false)}
-                                    style={{
-                                        position: 'absolute',
-                                        top: '16px',
-                                        right: '16px',
-                                        border: 'none',
-                                        background: 'transparent',
-                                        cursor: 'pointer',
-                                        padding: '4px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                >
-                                    <X size={20} color="#9ca3af" />
-                                </button>
-
-                                <div style={{
-                                    width: '48px',
-                                    height: '48px',
-                                    backgroundColor: '#fef2f2',
-                                    borderRadius: '50%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    margin: '0 auto 16px auto'
-                                }}>
-                                    <AlertTriangle size={24} color="#dc2626" />
+                    {/* Save Place Modal */}
+                    {savePlaceModalOpen && !isMobileView && (
+                        <div className="save-place-overlay" onClick={onSavePlaceCancel}>
+                            <div className="save-place-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                                <div className="save-place-header">
+                                    <h3>Save {savePlaceType || "place"}</h3>
+                                    <button
+                                        type="button"
+                                        className="save-place-close"
+                                        onClick={onSavePlaceCancel}
+                                        aria-label="Close save place dialog"
+                                    >
+                                        <X size={18} />
+                                    </button>
                                 </div>
-
-                                <h3 style={{
-                                    fontSize: '18px',
-                                    fontWeight: '600',
-                                    color: '#111827',
-                                    marginBottom: '8px',
-                                    marginTop: 0
-                                }}>
-                                    Server Error
-                                </h3>
-
-                                <p style={{
-                                    fontSize: '14px',
-                                    color: '#6b7280',
-                                    marginBottom: '24px',
-                                    lineHeight: '1.5'
-                                }}>
-                                    We encountered a 502 Bad Gateway error. The server is currently unavailable. Please try again later.
-                                </p>
-
-                                <button
-                                    onClick={() => setShowErrorPopup(false)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px',
-                                        backgroundColor: '#dc2626',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        fontWeight: '500',
-                                        fontSize: '14px',
-                                        cursor: 'pointer',
-                                        transition: 'background-color 0.2s'
+                                <label className="save-place-label" htmlFor="save-place-input">
+                                    Name this {savePlaceType ? savePlaceType.toLowerCase() : "place"}
+                                </label>
+                                <input
+                                    id="save-place-input"
+                                    className={`save-place-input ${savePlaceError ? "has-error" : ""}`}
+                                    value={savePlaceLabel}
+                                    onFocus={this.handleSavePlaceInputFocus}
+                                    onBlur={this.handleSavePlaceInputBlur}
+                                    onChange={(e) => onSavePlaceLabelChange(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            onSavePlaceConfirm();
+                                        }
                                     }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                                    placeholder="e.g. Home, Office"
+                                    maxLength={80}
+                                    autoFocus
+                                />
+                                {savePlaceError && (
+                                    <div className="save-place-error">{savePlaceError}</div>
+                                )}
+                                <div className="save-place-actions">
+                                    <button
+                                        type="button"
+                                        className="save-place-btn ghost"
+                                        onClick={onSavePlaceCancel}
+                                        disabled={isSavingPlace}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="save-place-btn primary"
+                                        onClick={onSavePlaceConfirm}
+                                        disabled={isSavingPlace || !savePlaceLabel?.trim()}
+                                    >
+                                        {isSavingPlace ? "Saving..." : "Save"}
+                                    </button>
+                                </div>
+                                <div className="save-place-hint">Up to 80 characters.</div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Error Popup */}
+                    {errorPopup && (
+                        <div className="rp-alert-overlay" onClick={() => setErrorPopup(null)}>
+                            <div className="rp-alert-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                                <button
+                                    type="button"
+                                    className="rp-alert-close"
+                                    onClick={() => setErrorPopup(null)}
+                                    aria-label="Close error dialog"
+                                >
+                                    <X size={18} />
+                                </button>
+                                <div className="rp-alert-icon">
+                                    <AlertTriangle size={22} />
+                                </div>
+                                <h3>{errorPopup.title || "Something went wrong"}</h3>
+                                <p>{errorPopup.message || "Please try again."}</p>
+                                <button
+                                    type="button"
+                                    className="rp-alert-action"
+                                    onClick={() => setErrorPopup(null)}
                                 >
                                     Close
                                 </button>
@@ -914,6 +1300,64 @@ export default class MapView extends Component {
                         </div>
                     )}
                 </div>
+                )}
+                {showSavedDestinations && !isMobileView && (
+                    <div className="saved-destinations-overlay" onClick={closeSavedDestinations}>
+                        <div className="route-info-card saved-destinations-card" onClick={(e) => e.stopPropagation()}>
+                            <div className="route-info-gradient-bar" />
+
+                            <div className="saved-destinations-header">
+                                <h3>Saved destinations</h3>
+                                <button className="saved-destinations-close" onClick={closeSavedDestinations}>✕</button>
+                            </div>
+
+                            {isLoadingSavedDestinations ? (
+                                <div className="saved-destinations-loading">Loading...</div>
+                            ) : (
+                                <div className="saved-destinations-list">
+                                    {savedDestinations?.length ? savedDestinations.map((d) => (
+                                        <div
+                                            key={d.id}
+                                            className="saved-destinations-item"
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() => selectSavedDestination(d)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === "Enter" || event.key === " ") {
+                                                    event.preventDefault();
+                                                    selectSavedDestination(d);
+                                                }
+                                            }}
+                                        >
+                                            <div className="saved-destinations-item-header">
+                                                <div className="saved-destinations-title">{d.label}</div>
+                                                <button
+                                                    type="button"
+                                                    className="saved-destinations-remove"
+                                                    onClick={(event) => {
+                                                        event.preventDefault();
+                                                        event.stopPropagation();
+                                                        onDeleteSavedDestination(d.id);
+                                                    }}
+                                                    disabled={deletingDestinationId === d.id}
+                                                    title="Remove saved destination"
+                                                >
+                                                    {deletingDestinationId === d.id ? "Removing..." : "Remove"}
+                                                </button>
+                                            </div>
+                                            <div className="saved-destinations-sub">
+                                                {d.address?.trim()
+                                                    ? d.address
+                                                    : `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`}
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <div className="saved-destinations-empty">No saved destinations yet.</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 )}
             </div>
         );

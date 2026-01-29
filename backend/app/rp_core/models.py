@@ -32,6 +32,32 @@ class AppUserManager(BaseUserManager):
         return self.create_user(email, username, password, **extra_fields)
 
 
+# Custom user manager to handle is_admin field
+class AppUserManager(BaseUserManager):
+    def create_user(self, email, username, password=None, **extra_fields):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        # Set is_admin to False by default for regular users
+        extra_fields.setdefault('is_admin', False)
+        user = self.model(email=email, username=username, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, username, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_admin', True)  # Set is_admin to True for superusers
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self.create_user(email, username, password, **extra_fields)
+
+
 # Custom user model
 class AppUser(AbstractUser):
     # Override username to allow duplicates
@@ -137,7 +163,7 @@ class RewardRedemption(models.Model):
     )
     item = models.ForeignKey(
         ExchangeItem,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="redemptions",
     )
     quantity = models.PositiveIntegerField(default=1)
@@ -359,3 +385,41 @@ class PointTransaction(models.Model):
     def __str__(self):
         sign = "-" if self.kind == self.Kind.SPEND else "+"
         return f"{self.user} {sign}{self.amount} ({self.reason})"
+
+
+# Restored models for legacy data access
+class Event(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    location = models.CharField(max_length=255)
+    event_date = models.DateTimeField()
+    max_participants = models.IntegerField()
+    points_reward = models.IntegerField()
+    is_active = models.BooleanField()
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    created_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        db_table = 'rp_core_event'
+        managed = True  # We want to manage it now
+        
+    def __str__(self):
+        return self.title
+
+
+class SavedDestination(models.Model):
+    label = models.CharField(max_length=80)
+    latitude = models.DecimalField(max_digits=14, decimal_places=6)
+    longitude = models.DecimalField(max_digits=14, decimal_places=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name='saved_destinations')
+    address = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        db_table = 'rp_core_saveddestination'
+        managed = True
+        unique_together = ('user', 'label')
+
+    def __str__(self):
+        return self.label

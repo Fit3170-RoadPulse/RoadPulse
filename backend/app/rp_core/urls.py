@@ -8,6 +8,9 @@ urlpatterns = [
     # path("map/", views.map_config, name="map-config"),
     path("rewards/account/", views.reward_account, name="reward-account"),
     path("profile/update/", views.update_profile, name="update-profile"),
+    path("profile/emergency-contact/", views.get_emergency_contact, name="get-emergency-contact"),
+    path("profile/emergency-contact/update/", views.update_emergency_contact, name="update-emergency-contact"),
+
     path("rewards/items/", views.list_exchange_items, name="exchange-items"),
     path("rewards/redemptions/", views.list_user_redemptions, name="user-redemptions"),
     path("rewards/redemptions/<int:redemption_id>/redeem/", views.mark_voucher_redeemed, name="mark-voucher-redeemed"),
@@ -19,4 +22,6 @@ urlpatterns = [
     path("admin/rewards/", views.admin_rewards, name="admin-rewards"),
     path("admin/rewards/<int:reward_id>/", views.admin_reward_detail, name="admin-reward-detail"),
     path("admin/profile/", views.admin_profile, name="admin-profile"),
+    path("user/saved-destinations/", views.saved_destinations, name="saved-destinations"),
+    path("user/saved-destinations/<int:destination_id>/", views.saved_destination_detail, name="saved-destination-detail"),
 ]

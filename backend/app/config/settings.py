@@ -3,13 +3,26 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 
-BASE_DIR = Path(__file__).resolve().parent.parent       # .../backend/app
-ROOT_DIR = BASE_DIR.parent.parent                       # .../RoadPulse
-load_dotenv(ROOT_DIR / ".env")
+BASE_DIR = Path(__file__).resolve().parent.parent       
+ROOT_DIR = BASE_DIR.parent.parent                       
+load_dotenv(ROOT_DIR / ".env")  # This will only work locally in development stage
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret")
-DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
+DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
+
+def _split_env_list(name: str, default: str = ""):
+    return [value.strip() for value in os.getenv(name, default).split(",") if value.strip()]
+
+
+_render_hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+ALLOWED_HOSTS = _split_env_list("DJANGO_ALLOWED_HOSTS")
+if _render_hostname:
+    ALLOWED_HOSTS.append(_render_hostname)
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     "rp_core",
@@ -19,6 +32,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    'cloudinary_storage',
+    'cloudinary',
     "rest_framework",
     "corsheaders",
 ]
@@ -58,14 +73,15 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",  # switch to postgis engine later if needed
-        "NAME": os.getenv("POSTGRES_DB", "roadpulse"),
-        "USER": os.getenv("POSTGRES_USER", "roadpulse"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "roadpulse"),
-        "HOST": os.getenv("POSTGRES_HOST", "db"),  # 'db' if backend runs in Docker
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "HOST": os.getenv("POSTGRES_HOST"),  # full Supabase host, no default
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
         "OPTIONS": {
-            "sslmode": os.getenv("POSTGRES_SSLMODE", "prefer"),
+            "sslmode": os.getenv("POSTGRES_SSLMODE", "require"),
+            "connect_timeout": 30,  # 30 second timeout for bulk operations
         },
     }
 }
@@ -98,28 +114,46 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = "your-email@gmail.com"
-EMAIL_HOST_PASSWORD = "your-app-password"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+GOOGLE_MAPS_ID = os.getenv("GOOGLE_MAPS_ID")
 AUTH_PASSWORD_VALIDATORS = []
 AUTH_USER_MODEL = 'rp_core.AppUser'
+
+AUTHENTICATION_BACKENDS = [
+    'rp_core.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
-GOOGLE_MAPS_API_KEY="AIzaSyBdbRFLLwPTNe7RR9zahjksLOHovFjGM-M"
-GOOGLE_MAPS_ID = "9f96fc85ced76649d1bf190d"
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 _use_static_manifest = os.getenv("DJANGO_STATIC_MANIFEST", "0") == "1"
-if _use_static_manifest:
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-else:
-    # Fallback that works even if collectstatic is not run on the host.
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
-    WHITENOISE_USE_FINDERS = True
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# Modern Storage Configuration (Django 4.2+)
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if _use_static_manifest else "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
+
+# Legacy settings (kept commented out for reference or fallback if needed)
+# STATICFILES_STORAGE = ...
+# DEFAULT_FILE_STORAGE = ...
+
+# Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -131,15 +165,16 @@ MAXIMUM_AGE = 15000
 
 # Allow configuring CORS origins via env for deployments (e.g., Render)
 _default_cors_origins = "http://localhost:5173,https://roadpulsefrontend.onrender.com"
-CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", _default_cors_origins).split(",")
-    if origin.strip()
-]
+CORS_ALLOWED_ORIGINS = _split_env_list("DJANGO_CORS_ALLOWED_ORIGINS", _default_cors_origins)
 
 _default_csrf_trusted_origins = "http://localhost:5173,https://roadpulsefrontend.onrender.com"
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", _default_csrf_trusted_origins).split(",")
-    if origin.strip()
-]
+CSRF_TRUSTED_ORIGINS = _split_env_list("DJANGO_CSRF_TRUSTED_ORIGINS", _default_csrf_trusted_origins)
+
+if _render_hostname:
+    _render_origin = f"https://{_render_hostname}"
+    if _render_origin not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(_render_origin)
+    if _render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_render_origin)
+
+CORS_ALLOW_CREDENTIALS = True

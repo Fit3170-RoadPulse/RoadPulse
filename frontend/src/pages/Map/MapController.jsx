@@ -1,12 +1,16 @@
 import { Component } from "react";
 import axios from "axios";
-import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost } from "../../lib/api";
+import { fetchRewardAccount, clearAuth, isAuthenticated, apiPost, apiGet, apiDelete, getAccessToken} from "../../lib/api";
 import { Easing, Tween } from "@tweenjs/tween.js";
 import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geolocationFiles.js";
 import MapView from "./MapView";
+import { RoutePreferencesContext } from "@/components/RoutePreferencesContext";
 import { fetchMapConfig } from "../../lib/mapConfig";
 
+
 export default class MapController extends Component {
+    static contextType = RoutePreferencesContext;
+
     constructor(props) {
         super(props);
         this.state = {
@@ -16,6 +20,8 @@ export default class MapController extends Component {
             username: "",
             routeInfo: null,
             mapMarkers: { origin: null, destination: null },
+            hasOrigin: false,
+            hasDestination: false,
             mapPolylines: [],
             availableTimes: [],
             selectedOffsetMinutes: 1,
@@ -23,7 +29,7 @@ export default class MapController extends Component {
             showRouteOptions: false,
             isLoadingRoute: false,
             mapRef: null,
-            showErrorPopup: false,
+            errorPopup: null,
             showLogoutConfirm: false,
             cumulativeDistance: 0,
             isMobileDevice: false,
@@ -41,10 +47,20 @@ export default class MapController extends Component {
             rawSpeedKmh: 0,
             etaRemainingText: null,
             etaRemainingMinutes: null,
-            isTollRoadsOn: false,
             chosenRouteState: null,
+            showSaveMenu: false,
+            showSavedDestinations: false,
+            savedDestinations: [],
+            isLoadingSavedDestinations: false,
+            deletingDestinationId: null,
+            savePlaceModalOpen: false,
+            savePlaceType: "",
+            savePlaceLabel: "",
+            savePlaceMarker: null,
+            savePlaceError: "",
+            isSavingPlace: false,
         };
-
+        this.prevtoll = false;
         this.lastRouteSelectionRef = null;
         this.prevLocationRef = { current: null };
         this.locationPollingData = { current: null };
@@ -132,7 +148,8 @@ export default class MapController extends Component {
             this.updateTimeSelector();
         }
 
-        if (prevState.isTollRoadsOn !== this.state.isTollRoadsOn) {
+        if (this.prevToll !== this.context.isTollRoadsOn && this.context.isTollRoadsOn !== undefined) {
+            this.prevToll = this.context.isTollRoadsOn;
             this.handleTollRouteChange();
         }
 
@@ -153,8 +170,8 @@ export default class MapController extends Component {
 
         if (prevState.prevLocationRef?.current !== this.state.prevLocationRef?.current ||
             prevState.reports !== this.state.reports ||
-            prevState.selectedReport !== this.state.selectedReport){
-                this.proximityReports();
+            prevState.selectedReport !== this.state.selectedReport) {
+            this.proximityReports();
         }
 
 
@@ -192,8 +209,8 @@ export default class MapController extends Component {
     }
 
 
-    proximityReports(){
-        
+    proximityReports() {
+
         if (!this.state.prevLocationRef?.current || this.state.reports.length === 0) return;
 
         const userLat = this.state.prevLocationRef.current.latitude;
@@ -229,7 +246,7 @@ export default class MapController extends Component {
             }
         }
     };
-    
+
 
     loadUserData = async () => {
         if (!isAuthenticated()) {
@@ -252,14 +269,14 @@ export default class MapController extends Component {
     };
 
     fetchReports = () => {
-        const base = import.meta.env.VITE_API_URL || "";
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
         return axios
-            .get(`${base}/api/incident-reports/`)
+            .get(`${base}/api/incident-reports/`, { timeout: 10000 })
             .then((r) => {
                 const nextReports = (Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false);
                 this.setState({ reports: nextReports });
             })
-            .catch(() => { });
+            .catch((err) => { console.error("Fetch reports failed:", err); });
     };
 
     startReportsPolling = () => {
@@ -269,7 +286,7 @@ export default class MapController extends Component {
     };
 
     startLocationPolling = () => {
-        const base = import.meta.env.VITE_API_URL || "";
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
         axios.get(`${base}/api/map/location/`).then((r) => {
             this.isMountedRef = true;
             let provider = null;
@@ -411,7 +428,7 @@ export default class MapController extends Component {
 
             try {
                 const base = import.meta.env.VITE_API_URL;
-                const departureTime = new Date().toISOString();
+                const departureTime = this.getDepartureTimeISO(0);
 
                 const res = await axios.post(
                     `${base}/api/map/compute-route/`,
@@ -563,6 +580,8 @@ export default class MapController extends Component {
             showRouteOptions: false,
             availableTimes: [],
             selectedOffsetMinutes: 1,
+            showSaveMenu: false,
+            showSavedDestinations: false,
         });
     };
 
@@ -590,9 +609,7 @@ export default class MapController extends Component {
         let originMarker = this.state.mapMarkers.origin;
         let destinationMarker = this.state.mapMarkers.destination;
 
-        const current = this.prevLocationRef.current;
-        const hasCurrent = Number.isFinite(current?.latitude) && Number.isFinite(current?.longitude);
-        const currentPos = hasCurrent ? { lat: current.latitude, lng: current.longitude } : null;
+        const currentPos = this.getCurrentUserLatLng();
 
         if (!originMarker) {
             if (currentPos) {
@@ -668,21 +685,27 @@ export default class MapController extends Component {
         });
 
         map.addListener("click", (e) => {
-            if (this.state.showNavigationScreen || this.state.isNavigationBegun) { return; }
+            const { showNavigationScreen, isNavigationBegun } = this.state;
+            if (showNavigationScreen || isNavigationBegun) { return; }
 
             const clicked = { lat: e.latLng.lat(), lng: e.latLng.lng() };
             console.log(this.isAToBRef.current, "isAToB");
-            console.log("currentlocation ", this.prevLocationRef.current);
+            const currentPos = this.getCurrentUserLatLng();
+            console.log("currentlocation ", currentPos);
 
-            let originMarker = this.state.mapMarkers.origin;
-            let destinationMarker = this.state.mapMarkers.destination;
+            originMarker = this.state.mapMarkers.origin;
+            destinationMarker = this.state.mapMarkers.destination;
 
-            if (!this.isAToBRef.current && this.prevLocationRef.current && !originMarker) {
-                console.log("Setting origin to user location:", this.prevLocationRef.current);
+            if (!this.isAToBRef.current && currentPos) {
+                console.log("Setting origin to user location:", currentPos);
                 originMarker = new AdvancedMarkerElement({
                     map: map,
-                    position: { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude },
+                    position: currentPos,
                     title: "A",
+                });
+                this.setState({
+                    mapMarkers: { origin: originMarker, destination: null },
+                    hasOrigin: true,
                 });
             }
 
@@ -692,45 +715,65 @@ export default class MapController extends Component {
                     position: clicked,
                     title: "A",
                 });
-                this.setState({ mapMarkers: { origin: originMarker, destination: null } });
+                this.setState({
+                    mapMarkers: { origin: originMarker, destination: null },
+                    hasOrigin: true,
+                });
             } else if (!destinationMarker) {
                 destinationMarker = new AdvancedMarkerElement({
                     map: map,
                     position: clicked,
                     title: "B",
                 });
-                this.setState({ mapMarkers: { origin: originMarker, destination: destinationMarker } });
-
                 const times = this.generateStartTimes();
                 this.setState({
+                    mapMarkers: { origin: originMarker, destination: destinationMarker },
+                    showSaveMenu: false,
                     availableTimes: times,
                     selectedOffsetMinutes: times[0]?.offsetMinutes ?? 1,
                     showRouteOptions: true,
-                });
-                
+                    hasOrigin: true,
+                    hasDestination: true,
+                },
+                    () => {
+                        console.log("After destination set:", this.state.mapMarkers);
+                    }
+                );
+
                 this.fetchRoute(originMarker.position, destinationMarker.position, times[0].offsetMinutes, map);
             } else {
                 originMarker.map = null;
                 destinationMarker.map = null;
 
-                this.setState((prevState) => {
-                    prevState.mapPolylines.forEach((polyline) => polyline.setMap(null));
-                    return { mapPolylines: [] };
-                });
+                this.state.mapPolylines.forEach((polyline) => polyline.setMap(null));
 
                 this.setState({
+                    mapPolylines: [],
                     routeInfo: null,
                     showRouteOptions: false,
                     availableTimes: [],
                     selectedOffsetMinutes: 1,
+                    showSaveMenu: false,
                 });
 
-                if (!this.isAToBRef.current && this.prevLocationRef.current) {
-                    console.log("Setting origin to user location:", this.prevLocationRef.current);
-                    originMarker = new AdvancedMarkerElement({
-                        map: map,
-                        position: { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude },
-                        title: "A",
+                if (!this.isAToBRef.current) {
+                    const curPos = this.getCurrentUserLatLng();
+                    if (curPos) {
+                        console.log("Setting origin to user location:", curPos);
+                        originMarker = new AdvancedMarkerElement({
+                            map: map,
+                            position: curPos,
+                            title: "A",
+                        });
+                    } else {
+                        console.warn("User location not valid yet, cannot set origin to current location.");
+                        // Do NOT fall back to manual pin if user explicitly wants 'Current Location' mode
+                        // Just return or show toast
+                        return;
+                    }
+                    this.setState({
+                        mapMarkers: { origin: originMarker, destination: null },
+                        hasOrigin: true,
                     });
                 } else {
                     originMarker = new AdvancedMarkerElement({
@@ -738,10 +781,13 @@ export default class MapController extends Component {
                         position: clicked,
                         title: "A",
                     });
+                    this.setState({
+                        mapMarkers: { origin: originMarker, destination: null },
+                        hasOrigin: true,
+                    });
                 }
-                destinationMarker = null;
-                this.setState({ mapMarkers: { origin: originMarker, destination: null } });
             }
+            console.log("mapMarkers in state:", this.state.mapMarkers);
         });
     };
     handleTollRouteChange = async () => {
@@ -823,8 +869,19 @@ export default class MapController extends Component {
 
     getCurrentUserLatLng = (fallbackLocation) => {
         const cur = this.prevLocationRef.current;
-        const lat = Number(cur?.latitude ?? cur?.lat ?? fallbackLocation?.lat ?? fallbackLocation?.latitude);
-        const lng = Number(cur?.longitude ?? cur?.lng ?? fallbackLocation?.lng ?? fallbackLocation?.longitude);
+        const fallback = fallbackLocation ?? this.state?.userLocation;
+        const lat = Number(
+            cur?.latitude ??
+            cur?.lat ??
+            fallback?.latitude ??
+            fallback?.lat
+        );
+        const lng = Number(
+            cur?.longitude ??
+            cur?.lng ??
+            fallback?.longitude ??
+            fallback?.lng
+        );
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
         return { lat, lng };
     };
@@ -881,444 +938,665 @@ export default class MapController extends Component {
         return `${originPos.lat},${originPos.lng}:${destPos.lat},${destPos.lng}:${departureTime}`;
     };
 
-    fetchRoute = async (origin, destination, selectedOffset, map) => {
-        this.setState({ isLoadingRoute: true });
-        const base = import.meta.env.VITE_API_URL;
-        const departureDate = new Date(Date.now() + selectedOffset * 60000);
-        const departureTime = departureDate.toISOString();
-        const cacheKey = this.buildRouteCacheKey(origin, destination, departureTime);
-        if (this.lastRouteSelectionRef === cacheKey && this.state.routeInfo) {
-            this.setState({ isLoadingRoute: false });
-            return;
-        }
-
-        try {
-            const cached = this.routeCacheRef.get(cacheKey);
-            let routeData = cached;
-            const originPos = this.normalizeLatLng(origin);
-            const destPos = this.normalizeLatLng(destination);
-
-            if (!routeData) {
-                this.activeRouteRequestRef?.abort?.();
-                const controller = new AbortController();
-                this.activeRouteRequestRef = controller;
-
-                const response = await axios.post(`${base}/api/map/compute-route/`, {
-                    origin: { latitude: originPos.lat, longitude: originPos.lng },
-                    destination: { latitude: destPos.lat, longitude: destPos.lng },
-                    startTimes: [departureTime],
-                    avoidTolls: this.state.isTollRoadsOn,
-                }, {
-                    signal: controller.signal,
-                });
-
-                console.log("Route response:", response.data);
-
-                if (response.data && response.data.length > 0) {
-                    routeData = response.data[0];
-                    this.routeCacheRef.set(cacheKey, routeData);
-                }
-            }
-
-            if (routeData) {
-                const polyline = await this.drawPolyLine(map, routeData.polyline);
-
-                this.setState((prevState) => ({ mapPolylines: [...prevState.mapPolylines, polyline] }));
-
-                const distanceKm = this.formatDistance(routeData.distance_meters);
-                const durationInfo = this.formatDurationInfo(routeData.duration);
-                const eta = durationInfo.text;
-                const baseDeparture = departureTime;
-                const starting_time = this.formatDate(baseDeparture);
-                const arrival_time = this.formatEtaTimeByMinutes(baseDeparture, durationInfo.totalMinutes);
-                const steps = this.formatSteps(routeData.legs);
-                console.log("Formatted steps:", steps);
-
-                this.setState({
-                    routeInfo: {
-                        distanceKm,
-                        eta,
-                        starting_time,
-                        arrival_time,
-                        distance_meters: routeData.distance_meters,
-                        duration: routeData.duration,
-                        steps,
-                    },
-                });
-                this.lastRouteSelectionRef = cacheKey;
-            }
-        } catch (error) {
-            if (error?.name !== "CanceledError" && error?.code !== "ERR_CANCELED") {
-                console.error("Error fetching route:", error);
-                if (error.response && error.response.data) {
-                    console.error("Backend Error Details:", error.response.data);
-                }
-            }
-            this.setState({ routeInfo: null });
-            if (error.response && error.response.status === 502) {
-                this.setState({ showErrorPopup: true });
-            }
-        } finally {
-            this.setState({ isLoadingRoute: false });
-        }
+    getDepartureTimeISO = (offsetMinutes = 0) => {
+        const nowMs = Date.now();
+        const offsetMs = (Number.isFinite(offsetMinutes) ? offsetMinutes : 0) * 60000;
+        const minLeadMs = 60000; // Google Routes rejects past/near-past times; keep at least 1 minute ahead.
+        const targetMs = nowMs + offsetMs;
+        const safeMs = Math.max(targetMs, nowMs + minLeadMs);
+        return new Date(safeMs).toISOString();
     };
 
-    formatSteps = (legs) => {
-        const steps = [];
-        if (legs && Array.isArray(legs)) {
-            legs.forEach((leg) => {
-                if (leg.steps && Array.isArray(leg.steps)) {
-                    leg.steps.forEach((step) => {
-                        steps.push(step);
-                    });
-                }
-            });
-        }
-        return steps;
-    };
+fetchRoute = async (origin, destination, selectedOffset, map) => {
+    this.setState({ isLoadingRoute: true });
+    const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
+    const departureTime = this.getDepartureTimeISO(selectedOffset);
+    const cacheKey = this.buildRouteCacheKey(origin, destination, departureTime);
 
-    drawPolyLine = async (map, encodedPolyline) => {
-        const maps = await google.maps.importLibrary("geometry");
-        const decodedPath = google.maps.geometry.encoding.decodePath(encodedPolyline);
-
-        const polyline = new google.maps.Polyline({
-            path: decodedPath,
-            geodesic: true,
-            strokeColor: "#2563eb",
-            strokeOpacity: 0.9,
-            strokeWeight: 5,
-            map,
-        });
-
-        return polyline;
-    };
-
-    generateStartTimes = () => {
-        const times = [];
-        const now = new Date();
-        const intervalMinutes = 5;
-        const totalSlots = 24;
-
-        for (let i = 0; i < totalSlots; i++) {
-            const offsetMinutes = i === 0 ? 5 : i * intervalMinutes;
-            const futureTime = new Date(now.getTime() + offsetMinutes * 60000);
-
-            const hours = futureTime.getHours();
-            const minutes = futureTime.getMinutes();
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            const displayHours = hours % 12 || 12;
-
-            times.push({
-                label: i === 0 ? 'Now' : `+${offsetMinutes} min`,
-                displayTime: `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`,
-                offsetMinutes: offsetMinutes
-            });
-        }
-        return times;
-    };
-
-    parseDurationSeconds = (durationSeconds) => {
-        let duration = durationSeconds;
-        if (typeof duration === "string") {
-            duration = duration.replace("s", "");
-        }
-        duration = Number(duration);
-        return Number.isFinite(duration) ? duration : null;
-    };
-
-    formatDurationInfo = (durationSeconds) => {
-        const duration = this.parseDurationSeconds(durationSeconds);
-        if (duration === null) {
-            return { text: "N/A", totalMinutes: null };
-        }
-        const totalMinutes = Math.max(0, Math.round(duration / 60));
-        const hrs = Math.floor(totalMinutes / 60);
-        const mins = totalMinutes % 60;
-        const text = hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`;
-        return { text, totalMinutes };
-    };
-
-    formatDistance = (meters) => {
-        if (!meters || isNaN(meters)) return "N/A";
-        return (meters / 1000).toFixed(1);
-    };
-
-    parseDepartureDate = (value) => {
-        if (!value) return null;
-        if (value instanceof Date) {
-            return Number.isNaN(value.getTime()) ? null : value;
-        }
-        const parsed = new Date(value);
-        if (!Number.isNaN(parsed.getTime())) return parsed;
-
-        const text = String(value).trim();
-        const match = text.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
-        if (!match) return null;
-
-        let hours = Number(match[1]);
-        const minutes = Number(match[2]);
-        const ampm = match[3]?.toUpperCase();
-        if (ampm) {
-            if (ampm === "PM" && hours < 12) hours += 12;
-            if (ampm === "AM" && hours === 12) hours = 0;
-        }
-        const date = new Date();
-        date.setHours(hours, minutes, 0, 0);
-        return date;
-    };
-
-    formatDate = (dateString) => {
-        const date = this.parseDepartureDate(dateString);
-        if (!date) return "N/A";
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
-
-    formatEtaTimeByMinutes = (departureTime, totalMinutes) => {
-        const departure = this.parseDepartureDate(departureTime);
-        if (!departure || !Number.isFinite(totalMinutes)) return "N/A";
-        const arrival = new Date(departure.getTime() + totalMinutes * 60000);
-        return arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
-
-    syncReportMarkers = () => {
-        const map = this.mapInstanceRef;
-        if (!this.state.mapReady || !map) return;
-
-        this.reportMarkersRunId += 1;
-        const runId = this.reportMarkersRunId;
-
-        (async () => {
-            const g = window.google;
-            if (!g?.maps?.importLibrary) return;
-            const { AdvancedMarkerElement } = await g.maps.importLibrary("marker");
-            if (runId !== this.reportMarkersRunId) return;
-
-            const markers = this.reportMarkersRef;
-            const nextIds = new Set(this.state.reports.map((r) => r.id));
-
-            for (const [id, marker] of markers.entries()) {
-                if (!nextIds.has(id)) {
-                    marker.map = null;
-                    markers.delete(id);
-                }
-            }
-
-            for (const report of this.state.reports) {
-                if (markers.has(report.id)) continue;
-                const lat = Number(report.latitude);
-                const lng = Number(report.longitude);
-                if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-
-                const marker = new AdvancedMarkerElement({
-                    map,
-                    position: { lat, lng },
-                    title: report.report_type,
-                    content: this.createIncidentPinContent(report.report_type),
-                });
-                marker.addListener("gmp-click", () => this.setSelectedReport(report));
-                markers.set(report.id, marker);
-            }
-        })().catch((err) => console.error("Failed to render incident report markers:", err));
-    };
-
-    handleNavigationProgress = () => {
-        const navigationPathway = this.state.routeInfo?.steps;
-        if (this.state.isNavigationBegun === false || !navigationPathway) return;
-
-        const userLoc = { lat: this.prevLocationRef.current?.latitude, lng: this.prevLocationRef.current?.longitude };
-        let nextPoint = { lat: 0, lng: 0 };
-        let shouldCameraPan = true;
-
-        let maxCutoffDistance = 100; // meters
-        console.log("Navigation Index:", this.state.navigationIndex);
-        console.log("Navigation Pathway Length:", navigationPathway?.length);
-        if (this.state.navigationIndex >= navigationPathway?.length) {
-            console.log("Reached destination in navigation mode.");
-            this.showNavEndScreen();
-            return;
-        }
-
-        if (this.state.navigationIndex == 0 && this.isAToBRef.current === true) {
-            nextPoint = navigationPathway[0];
-            shouldCameraPan = false;
-        } else if (this.state.navigationIndex < navigationPathway.length - 1) {
-            nextPoint = navigationPathway[this.state.navigationIndex + 1];
-            shouldCameraPan = true;
-        }
-
-        let distance = google.maps.geometry.spherical.computeDistanceBetween(
-            new google.maps.LatLng(userLoc.lat, userLoc.lng),
-            new google.maps.LatLng(nextPoint.lat, nextPoint.lng)
-        );
-
-        if (shouldCameraPan === true && distance < maxCutoffDistance) {
-            const map = this.state.mapRef || this.mapInstanceRef;
-            this.panToLocation(map, userLoc, nextPoint);
-        }
-
-        if (distance < maxCutoffDistance) {
-            this.setState((prevState) => ({
-                navigationIndex: Math.min(prevState.navigationIndex + 1, navigationPathway.length - 1),
-            }));
-        }
-    };
-
-    showTimeSelectorFunction = () => {
-        this.setState({ showTimeSelector: !this.state.showTimeSelector });
+    if (this.lastRouteSelectionRef === cacheKey && this.state.routeInfo) {
+        this.setState({ isLoadingRoute: false });
+        return;
     }
 
-    liveNavigateToDestination = () => {
-        console.log("Starting live navigation animation...");
-        const totalTime = 1500;
+    try {
+        const cached = this.routeCacheRef.get(cacheKey);
+        let routeData = cached;
+        const originPos = this.normalizeLatLng(origin);
+        const destPos = this.normalizeLatLng(destination);
 
-        if (!this.state.mapPolylines || this.state.mapPolylines.length === 0) {
-            console.error("Cannot start navigation: No route polyline available.");
-            return;
-        }
+        if (!routeData) {
+            this.activeRouteRequestRef?.abort?.();
+            const controller = new AbortController();
+            this.activeRouteRequestRef = controller;
 
-        const lastPolyline = this.state.mapPolylines[this.state.mapPolylines.length - 1];
-        if (!lastPolyline) return;
+            const response = await axios.post(`${base}/api/map/compute-route/`, {
+                origin: { latitude: originPos.lat, longitude: originPos.lng },
+                destination: { latitude: destPos.lat, longitude: destPos.lng },
+                startTimes: [departureTime],
+                avoidTolls: this.context.isTollRoadsOn,
+            }, {
+                signal: controller.signal,
+                timeout: 20000,
+            });
 
-        const navigationPathway = lastPolyline.getPath().getArray();
+            console.log("Route response:", response.data);
 
-        console.log("Most recent polyline:", navigationPathway);
-        const currentIndex = this.state.navigationIndex;
-        this.setState({ navigationIndex: 0 });
-
-        let currentPoint = navigationPathway[currentIndex];
-        let nextPoint = navigationPathway[currentIndex + 1];
-
-        const map = this.state.mapRef || this.mapInstanceRef;
-
-        this.transitionToNavigationScreen();
-        if (this.isAToBRef.current === false) {
-            const userLoc = { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude };
-            this.panToLocation(map, userLoc, nextPoint, totalTime);
-        } else {
-            this.panToLocation(map, currentPoint, nextPoint, totalTime);
-        }
-        this.setState({ isNavigationBegun: true });
-    };
-
-    transitionToNavigationScreen = () => {
-        this.setState({ showAll: false, showNavigationScreen: true });
-    };
-
-    panToLocation = (map, curLocation, nextlocation, totalTime = 1500) => {
-        const heading = google.maps.geometry.spherical.computeHeading(
-            new google.maps.LatLng(curLocation),
-            new google.maps.LatLng(nextlocation)
-        );
-
-        const cameraOptions = {
-            tilt: map.getTilt(),
-            heading: map.getHeading(),
-            zoom: map.getZoom(),
-            center: new google.maps.LatLng(curLocation),
-        };
-
-        const tween = new Tween(cameraOptions)
-            .to({ tilt: 40, heading: heading, zoom: 18, center: new google.maps.LatLng(curLocation) }, totalTime)
-            .easing(Easing.Quadratic.Out)
-            .onUpdate(() => { map.moveCamera(cameraOptions); })
-            .start();
-
-        function animate(time) {
-            requestAnimationFrame(animate);
-            tween.update(time);
-            if (tween.isPlaying() === false) {
-                tween.remove();
+            if (response.data && response.data.length > 0) {
+                routeData = response.data[0];
+                this.routeCacheRef.set(cacheKey, routeData);
             }
         }
-        requestAnimationFrame(animate);
-    };
 
-    showNavEndScreen = () => {
-        this.setState({ showNavigationScreen: false, showAll: false, showNavigationEndScreen: true });
-    };
+        if (routeData) {
+            const polyline = await this.drawPolyLine(map, routeData.polyline);
 
-    finishNavigation = () => {
-        this.setState({
-            showNavigationEndScreen: false,
-            showNavigationScreen: false,
-            showAll: true,
-            isNavigationBegun: false,
-            navigationIndex: 0,
+            this.setState((prevState) => ({ mapPolylines: [...prevState.mapPolylines, polyline] }));
+
+            const distanceKm = this.formatDistance(routeData.distance_meters);
+            const durationInfo = this.formatDurationInfo(routeData.duration);
+            const eta = durationInfo.text;
+            const baseDeparture = departureTime;
+            const starting_time = this.formatDate(baseDeparture);
+            const arrival_time = this.formatEtaTimeByMinutes(baseDeparture, durationInfo.totalMinutes);
+            const steps = this.formatSteps(routeData.legs);
+            console.log("Formatted steps:", steps);
+
+            this.setState({
+                routeInfo: {
+                    distanceKm,
+                    eta,
+                    starting_time,
+                    arrival_time,
+                    distance_meters: routeData.distance_meters,
+                    duration: routeData.duration,
+                    steps,
+                },
+            });
+            this.lastRouteSelectionRef = cacheKey;
+        }
+    } catch (error) {
+        if (error?.name && (error.name === "CanceledError" || error.code === "ERR_CANCELED")) {
+            return;
+        }
+        console.error("Error fetching route:", error);
+        if (error.response && error.response.data) {
+            console.error("Backend Error Details:", error.response.data);
+        }
+
+        this.setState({ routeInfo: null });
+
+        // Show error if 502 Bad Gateway or Timeout
+        if ((error.response && error.response.status === 502) || error.code === 'ECONNABORTED') {
+            this.setState({
+                errorPopup: {
+                    title: "Server unavailable",
+                    message: "We could not reach the routing service. Please try again in a moment.",
+                },
+            });
+        }
+    } finally {
+        this.setState({ isLoadingRoute: false });
+    }
+};
+
+formatSteps = (legs) => {
+    const steps = [];
+    if (legs && Array.isArray(legs)) {
+        legs.forEach((leg) => {
+            if (leg.steps && Array.isArray(leg.steps)) {
+                leg.steps.forEach((step) => {
+                    steps.push(step);
+                });
+            }
         });
-        console.log("Navigation finished, returning to map view.");
+    }
+    return steps;
+};
+
+drawPolyLine = async (map, encodedPolyline) => {
+    const maps = await google.maps.importLibrary("geometry");
+    const decodedPath = google.maps.geometry.encoding.decodePath(encodedPolyline);
+
+    const polyline = new google.maps.Polyline({
+        path: decodedPath,
+        geodesic: true,
+        strokeColor: "#2563eb",
+        strokeOpacity: 0.9,
+        strokeWeight: 5,
+        map,
+    });
+
+    return polyline;
+};
+
+getMarkerCoords = (marker) => {
+    if (!marker || !marker.position) return null;
+
+    const { lat, lng } = this.normalizeLatLng(marker.position);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+    return {
+        latitude: lat,
+        longitude: lng,
+    };
+};
+
+saveMarkerPlace = async (marker, type, rawLabel) => {
+    if (!marker?.position) {
+        return { success: false, message: "Location marker missing. Please set it again." };
+    }
+
+    const label = typeof rawLabel === "string" ? rawLabel.trim() : "";
+    if (!label) {
+        return { success: false, message: "Please enter a name before saving." };
+    }
+    if (label.length > 80) {
+        return { success: false, message: "Keep it under 80 characters." };
+    }
+
+    const pos = marker.position;
+
+    const rawLat =
+        typeof pos.lat === "function" ? pos.lat() : pos.lat;
+
+    const rawLng =
+        typeof pos.lng === "function" ? pos.lng() : pos.lng;
+
+    if (rawLat == null || rawLng == null) {
+        return { success: false, message: "Location is not ready yet. Try again in a moment." };
+    }
+
+    const latitudeValue = Number(rawLat);
+    const longitudeValue = Number(rawLng);
+    if (!Number.isFinite(latitudeValue) || !Number.isFinite(longitudeValue)) {
+        return { success: false, message: "Location is not ready yet. Try again in a moment." };
+    }
+
+    const latitude = Number(latitudeValue.toFixed(6));
+    const longitude = Number(longitudeValue.toFixed(6));
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return { success: false, message: "Location is not ready yet. Try again in a moment." };
+    }
+
+    let address = "";
+    try {
+        if (window.google?.maps?.Geocoder) {
+            const geocoder = new window.google.maps.Geocoder();
+            address = await new Promise((resolve, reject) => {
+                geocoder.geocode(
+                    { location: { lat: latitude, lng: longitude } },
+                    (results, status) => {
+                        if (status === "OK" && results?.[0]) {
+                            resolve(results[0].formatted_address);
+                        } else {
+                            reject(new Error("Reverse geocode failed"));
+                        }
+                    }
+                );
+            });
+        }
+    } catch (error) {
+        console.warn("Reverse geocoding failed, saving without address.", error);
+        address = "";
+    }
+
+    const payload = {
+        label,
+        latitude,
+        longitude,
+        address,
+    };
+
+    try {
+        await apiPost("/user/saved-destinations/", payload);
+        console.log("Saved place:", label, address);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to save place:", error);
+        const message = typeof error?.message === "string" && error.message.trim()
+            ? error.message
+            : "Failed to save place. Please try again.";
+        const normalized = message.toLowerCase();
+        if (normalized.includes("login") || normalized.includes("token")) {
+            return { success: false, message: "Please log in again to save places." };
+        }
+        if (normalized.includes("timeout")) {
+            return { success: false, message: "Request timed out. Please try again." };
+        }
+        if (normalized.includes("unique") || normalized.includes("already")) {
+            return { success: false, message: "That name already exists. Choose a different label." };
+        }
+        return { success: false, message };
+    }
+};
+
+openSavePlaceDialog = (type, marker) => {
+    if (!marker) {
+        this.setState({
+            errorPopup: {
+                title: `No ${type.toLowerCase()} set`,
+                message: `Set a ${type.toLowerCase()} on the map before saving it.`,
+            },
+        });
+        return;
+    }
+    this.setState({
+        savePlaceModalOpen: true,
+        savePlaceType: type,
+        savePlaceLabel: "",
+        savePlaceMarker: marker,
+        savePlaceError: "",
+    });
+};
+
+closeSavePlaceDialog = () => {
+    this.setState({
+        savePlaceModalOpen: false,
+        savePlaceType: "",
+        savePlaceLabel: "",
+        savePlaceMarker: null,
+        savePlaceError: "",
+        isSavingPlace: false,
+    });
+};
+
+updateSavePlaceLabel = (value) => {
+    this.setState({ savePlaceLabel: value, savePlaceError: "" });
+};
+
+confirmSavePlace = async () => {
+    const { savePlaceLabel, savePlaceMarker, savePlaceType, isSavingPlace } = this.state;
+    if (isSavingPlace) return;
+    const trimmed = typeof savePlaceLabel === "string" ? savePlaceLabel.trim() : "";
+    if (!trimmed) {
+        this.setState({ savePlaceError: "Please enter a name." });
+        return;
+    }
+    if (trimmed.length > 80) {
+        this.setState({ savePlaceError: "Keep it under 80 characters." });
+        return;
+    }
+
+    this.setState({ isSavingPlace: true, savePlaceError: "" });
+    const result = await this.saveMarkerPlace(savePlaceMarker, savePlaceType, trimmed);
+    if (result?.success) {
+        this.setState({
+            savePlaceModalOpen: false,
+            savePlaceType: "",
+            savePlaceLabel: "",
+            savePlaceMarker: null,
+            savePlaceError: "",
+            isSavingPlace: false,
+        });
+        return;
+    }
+    this.setState({
+        savePlaceError: result?.message || "Failed to save place. Please try again.",
+        isSavingPlace: false,
+    });
+};
+
+saveOriginPlace = async () => {
+    const { mapMarkers } = this.state;
+    if (!mapMarkers?.origin) {
+        this.setState({
+            errorPopup: {
+                title: "Origin missing",
+                message: "Set an origin on the map before saving it.",
+            },
+        });
+        return;
+    }
+    this.openSavePlaceDialog("Origin", mapMarkers.origin);
+};
+
+saveDestinationPlace = async () => {
+    const { mapMarkers } = this.state;
+    if (!mapMarkers?.destination) {
+        this.setState({
+            errorPopup: {
+                title: "Destination missing",
+                message: "Set a destination on the map before saving it.",
+            },
+        });
+        return;
+    }
+    this.openSavePlaceDialog("Destination", mapMarkers.destination);
+};
+
+generateStartTimes = () => {
+    const times = [];
+    const now = new Date();
+    const intervalMinutes = 5;
+    const totalSlots = 24;
+
+    for (let i = 0; i < totalSlots; i++) {
+        const offsetMinutes = i === 0 ? 0 : i * intervalMinutes;
+        const futureTime = new Date(now.getTime() + offsetMinutes * 60000);
+
+        const hours = futureTime.getHours();
+        const minutes = futureTime.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+
+        times.push({
+            label: i === 0 ? 'Now' : `+${offsetMinutes} min`,
+            displayTime: `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`,
+            offsetMinutes: offsetMinutes
+        });
+    }
+    return times;
+};
+
+parseDurationSeconds = (durationSeconds) => {
+    let duration = durationSeconds;
+    if (typeof duration === "string") {
+        duration = duration.replace("s", "");
+    }
+    duration = Number(duration);
+    return Number.isFinite(duration) ? duration : null;
+};
+
+formatDurationInfo = (durationSeconds) => {
+    const duration = this.parseDurationSeconds(durationSeconds);
+    if (duration === null) {
+        return { text: "N/A", totalMinutes: null };
+    }
+    const totalMinutes = Math.max(0, Math.round(duration / 60));
+    const hrs = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    const text = hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`;
+    return { text, totalMinutes };
+};
+
+formatDistance = (meters) => {
+    if (!meters || isNaN(meters)) return "N/A";
+    return (meters / 1000).toFixed(1);
+};
+
+parseDepartureDate = (value) => {
+    if (!value) return null;
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+
+    const text = String(value).trim();
+    const match = text.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+    if (!match) return null;
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const ampm = match[3]?.toUpperCase();
+    if (ampm) {
+        if (ampm === "PM" && hours < 12) hours += 12;
+        if (ampm === "AM" && hours === 12) hours = 0;
+    }
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+};
+
+formatDate = (dateString) => {
+    const date = this.parseDepartureDate(dateString);
+    if (!date) return "N/A";
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+formatEtaTimeByMinutes = (departureTime, totalMinutes) => {
+    const departure = this.parseDepartureDate(departureTime);
+    if (!departure || !Number.isFinite(totalMinutes)) return "N/A";
+    const arrival = new Date(departure.getTime() + totalMinutes * 60000);
+    return arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+syncReportMarkers = () => {
+    const map = this.mapInstanceRef;
+    if (!this.state.mapReady || !map) return;
+
+    this.reportMarkersRunId += 1;
+    const runId = this.reportMarkersRunId;
+
+    (async () => {
+        const g = window.google;
+        if (!g?.maps?.importLibrary) return;
+        const { AdvancedMarkerElement } = await g.maps.importLibrary("marker");
+        if (runId !== this.reportMarkersRunId) return;
+
+        const markers = this.reportMarkersRef;
+        const nextIds = new Set(this.state.reports.map((r) => r.id));
+
+        for (const [id, marker] of markers.entries()) {
+            if (!nextIds.has(id)) {
+                marker.map = null;
+                markers.delete(id);
+            }
+        }
+
+        for (const report of this.state.reports) {
+            if (markers.has(report.id)) continue;
+            const lat = Number(report.latitude);
+            const lng = Number(report.longitude);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+            const marker = new AdvancedMarkerElement({
+                map,
+                position: { lat, lng },
+                title: report.report_type,
+                content: this.createIncidentPinContent(report.report_type),
+            });
+            marker.addListener("gmp-click", () => this.setSelectedReport(report));
+            markers.set(report.id, marker);
+        }
+    })().catch((err) => console.error("Failed to render incident report markers:", err));
+};
+
+handleNavigationProgress = () => {
+    const navigationPathway = this.state.routeInfo?.steps;
+    if (this.state.isNavigationBegun === false || !navigationPathway) return;
+
+    const userLoc = { lat: this.prevLocationRef.current?.latitude, lng: this.prevLocationRef.current?.longitude };
+    let nextPoint = { lat: 0, lng: 0 };
+    let shouldCameraPan = true;
+
+    let maxCutoffDistance = 100; // meters
+    console.log("Navigation Index:", this.state.navigationIndex);
+    console.log("Navigation Pathway Length:", navigationPathway?.length);
+    if (this.state.navigationIndex >= navigationPathway?.length) {
+        console.log("Reached destination in navigation mode.");
+        this.showNavEndScreen();
+        return;
+    }
+
+    if (this.state.navigationIndex == 0 && this.isAToBRef.current === true) {
+        nextPoint = navigationPathway[0];
+        shouldCameraPan = false;
+    } else if (this.state.navigationIndex < navigationPathway.length - 1) {
+        nextPoint = navigationPathway[this.state.navigationIndex + 1];
+        shouldCameraPan = true;
+    }
+
+    let distance = google.maps.geometry.spherical.computeDistanceBetween(
+        new google.maps.LatLng(userLoc.lat, userLoc.lng),
+        new google.maps.LatLng(nextPoint.lat, nextPoint.lng)
+    );
+
+    if (shouldCameraPan === true && distance < maxCutoffDistance) {
         const map = this.state.mapRef || this.mapInstanceRef;
-        const curLocation = { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude };
-        const totalTime = 1500;
+        this.panToLocation(map, userLoc, nextPoint);
+    }
 
-        const cameraOptions = {
-            tilt: map.getTilt(),
-            heading: map.getHeading(),
-            zoom: map.getZoom(),
-            center: new google.maps.LatLng(curLocation),
-        };
+    if (distance < maxCutoffDistance) {
+        this.setState((prevState) => ({
+            navigationIndex: Math.min(prevState.navigationIndex + 1, navigationPathway.length - 1),
+        }));
+    }
+};
 
-        const tween = new Tween(cameraOptions)
-            .to({ tilt: 0, heading: 0, zoom: 8, center: new google.maps.LatLng(curLocation) }, totalTime)
-            .easing(Easing.Quadratic.Out)
-            .onUpdate(() => { map.moveCamera(cameraOptions); })
-            .start();
+showTimeSelectorFunction = () => {
+    this.setState({ showTimeSelector: !this.state.showTimeSelector });
+}
 
-        function animate(time) {
-            requestAnimationFrame(animate);
-            tween.update(time);
-        }
+liveNavigateToDestination = () => {
+    console.log("Starting live navigation animation...");
+    const totalTime = 1500;
+
+    if (!this.state.mapPolylines || this.state.mapPolylines.length === 0) {
+        console.error("Cannot start navigation: No route polyline available.");
+        return;
+    }
+
+    const lastPolyline = this.state.mapPolylines[this.state.mapPolylines.length - 1];
+    if (!lastPolyline) return;
+
+    const navigationPathway = lastPolyline.getPath().getArray();
+
+    console.log("Most recent polyline:", navigationPathway);
+    const currentIndex = this.state.navigationIndex;
+    this.setState({ navigationIndex: 0 });
+
+    let currentPoint = navigationPathway[currentIndex];
+    let nextPoint = navigationPathway[currentIndex + 1];
+
+    const map = this.state.mapRef || this.mapInstanceRef;
+
+    this.transitionToNavigationScreen();
+    if (this.isAToBRef.current === false) {
+        const userLoc = { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude };
+        this.panToLocation(map, userLoc, nextPoint, totalTime);
+    } else {
+        this.panToLocation(map, currentPoint, nextPoint, totalTime);
+    }
+    this.setState({ isNavigationBegun: true });
+};
+
+transitionToNavigationScreen = () => {
+    this.setState({ showAll: false, showNavigationScreen: true });
+};
+
+panToLocation = (map, curLocation, nextlocation, totalTime = 1500) => {
+    const heading = google.maps.geometry.spherical.computeHeading(
+        new google.maps.LatLng(curLocation),
+        new google.maps.LatLng(nextlocation)
+    );
+
+    const cameraOptions = {
+        tilt: map.getTilt(),
+        heading: map.getHeading(),
+        zoom: map.getZoom(),
+        center: new google.maps.LatLng(curLocation),
+    };
+
+    const tween = new Tween(cameraOptions)
+        .to({ tilt: 40, heading: heading, zoom: 18, center: new google.maps.LatLng(curLocation) }, totalTime)
+        .easing(Easing.Quadratic.Out)
+        .onUpdate(() => { map.moveCamera(cameraOptions); })
+        .start();
+
+    function animate(time) {
         requestAnimationFrame(animate);
-
-        this.clearMap();
-    };
-
-    setShowDropdown = (valueOrUpdater) => {
-        if (typeof valueOrUpdater === "function") {
-            this.setState((prevState) => ({ showDropdown: valueOrUpdater(prevState.showDropdown) }));
-        } else {
-            this.setState({ showDropdown: valueOrUpdater });
+        tween.update(time);
+        if (tween.isPlaying() === false) {
+            tween.remove();
         }
+    }
+    requestAnimationFrame(animate);
+};
+
+showNavEndScreen = () => {
+    this.setState({ showNavigationScreen: false, showAll: false, showNavigationEndScreen: true });
+};
+
+finishNavigation = () => {
+    this.setState({
+        showNavigationEndScreen: false,
+        showNavigationScreen: false,
+        showAll: true,
+        isNavigationBegun: false,
+        navigationIndex: 0,
+    });
+    console.log("Navigation finished, returning to map view.");
+    const map = this.state.mapRef || this.mapInstanceRef;
+    const curLocation = { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude };
+    const totalTime = 1500;
+
+    const cameraOptions = {
+        tilt: map.getTilt(),
+        heading: map.getHeading(),
+        zoom: map.getZoom(),
+        center: new google.maps.LatLng(curLocation),
     };
 
-    setShowErrorPopup = (valueOrUpdater) => {
-        if (typeof valueOrUpdater === "function") {
-            this.setState((prevState) => ({ showErrorPopup: valueOrUpdater(prevState.showErrorPopup) }));
-        } else {
-            this.setState({ showErrorPopup: valueOrUpdater });
-        }
-    };
+    const tween = new Tween(cameraOptions)
+        .to({ tilt: 0, heading: 0, zoom: 8, center: new google.maps.LatLng(curLocation) }, totalTime)
+        .easing(Easing.Quadratic.Out)
+        .onUpdate(() => { map.moveCamera(cameraOptions); })
+        .start();
 
-    setShowLogoutConfirm = (valueOrUpdater) => {
-        if (typeof valueOrUpdater === "function") {
-            this.setState((prevState) => ({ showLogoutConfirm: valueOrUpdater(prevState.showLogoutConfirm) }));
-        } else {
-            this.setState({ showLogoutConfirm: valueOrUpdater });
-        }
-    };
+    function animate(time) {
+        requestAnimationFrame(animate);
+        tween.update(time);
+    }
+    requestAnimationFrame(animate);
 
-    setSelectedReport = (valueOrUpdater) => {
-        if (typeof valueOrUpdater === "function") {
-            this.setState((prevState) => ({ selectedReport: valueOrUpdater(prevState.selectedReport) }));
-        } else {
-            this.setState({ selectedReport: valueOrUpdater });
-        }
-    };
+    this.clearMap();
+};
 
-    setReports = (valueOrUpdater) => {
-        if (typeof valueOrUpdater === "function") {
-            this.setState((prevState) => ({ reports: valueOrUpdater(prevState.reports) }));
-        } else {
-            this.setState({ reports: valueOrUpdater });
-        }
-    };
+setShowDropdown = (valueOrUpdater) => {
+    if (typeof valueOrUpdater === "function") {
+        this.setState((prevState) => ({ showDropdown: valueOrUpdater(prevState.showDropdown) }));
+    } else {
+        this.setState({ showDropdown: valueOrUpdater });
+    }
+};
 
-    setIsAToBState = (valueOrUpdater) => {
-        if (typeof valueOrUpdater === "function") {
-            this.setState((prevState) => ({ isAToBState: valueOrUpdater(prevState.isAToBState) }));
-        } else {
-            this.setState({ isAToBState: valueOrUpdater });
-        }
-    };
+setErrorPopup = (valueOrUpdater) => {
+    if (typeof valueOrUpdater === "function") {
+        this.setState((prevState) => ({ errorPopup: valueOrUpdater(prevState.errorPopup) }));
+    } else {
+        this.setState({ errorPopup: valueOrUpdater });
+    }
+};
+
+setShowLogoutConfirm = (valueOrUpdater) => {
+    if (typeof valueOrUpdater === "function") {
+        this.setState((prevState) => ({ showLogoutConfirm: valueOrUpdater(prevState.showLogoutConfirm) }));
+    } else {
+        this.setState({ showLogoutConfirm: valueOrUpdater });
+    }
+};
+
+setSelectedReport = (valueOrUpdater) => {
+    if (typeof valueOrUpdater === "function") {
+        this.setState((prevState) => ({ selectedReport: valueOrUpdater(prevState.selectedReport) }));
+    } else {
+        this.setState({ selectedReport: valueOrUpdater });
+    }
+};
+
+setReports = (valueOrUpdater) => {
+    if (typeof valueOrUpdater === "function") {
+        this.setState((prevState) => ({ reports: valueOrUpdater(prevState.reports) }));
+    } else {
+        this.setState({ reports: valueOrUpdater });
+    }
+};
+
+setIsAToBState = (valueOrUpdater) => {
+    if (typeof valueOrUpdater === "function") {
+        this.setState((prevState) => {
+            const nextValue = valueOrUpdater(prevState.isAToBState);
+            this.isAToBRef.current = nextValue;
+            return { isAToBState: nextValue };
+        });
+    } else {
+        this.isAToBRef.current = valueOrUpdater;
+        this.setState({ isAToBState: valueOrUpdater });
+    }
+};
 
     setUserLocation = (valueOrUpdater) => {
         if (typeof valueOrUpdater === "function") {
@@ -1328,56 +1606,195 @@ export default class MapController extends Component {
         }
     };
     toggleTollRoads = async () => {
-        this.setState({ isTollRoadsOn: !this.state.isTollRoadsOn });
+        this.context.setIsTollRoadsOn(prev => !prev);
     };
 
-    render() {
-        return (
-            <MapView
-                mapData={this.state.mapData}
-                setMarker={this.setMarker}
-                onPlaceSelected={this.handlePlaceSelected}
-                isAToBRef={this.isAToBRef}
-                prevLocationRef={this.prevLocationRef}
-                setUserLocation={this.setUserLocation}
-                showNavigationScreen={this.state.showNavigationScreen}
-                routeInfo={this.state.routeInfo}
-                navigationIndex={this.state.navigationIndex}
-                showNavEndScreen={this.showNavEndScreen}
-                speedKmh={this.state.speedKmh}
-                showNavigationEndScreen={this.state.showNavigationEndScreen}
-                finishNavigation={this.finishNavigation}
-                showAll={this.state.showAll}
-                selectedReport={this.state.selectedReport}
-                setSelectedReport={this.setSelectedReport}
-                userLocation={this.state.userLocation}
-                setReports={this.setReports}
-                isAToBState={this.state.isAToBState}
-                setIsAToBState={this.setIsAToBState}
-                showTimeSelector={this.state.showTimeSelector}
-                showTimeSelectorFunction={this.showTimeSelectorFunction}
-                showRouteOptions={this.state.showRouteOptions}
-                isTollRoadsOn={this.state.isTollRoadsOn}
-                toggleTollRoads={this.toggleTollRoads}
-                availableTimes={this.state.availableTimes}
-                selectedOffsetMinutes={this.state.selectedOffsetMinutes}
-                isLoadingRoute={this.state.isLoadingRoute}
-                handleTimeChange={this.handleTimeChange}
-                liveNavigateToDestination={this.liveNavigateToDestination}
-                clearMap={this.clearMap}
-                showErrorPopup={this.state.showErrorPopup}
-                setShowErrorPopup={this.setShowErrorPopup}
-                showDropdown={this.state.showDropdown}
-                setShowDropdown={this.setShowDropdown}
-                username={this.state.username}
-                points={this.state.points}
-                handleRewardsClick={this.handleRewardsClick}
-                handleSettingsClick={this.handleSettingsClick}
-                setShowLogoutConfirm={this.setShowLogoutConfirm}
-                showLogoutConfirm={this.state.showLogoutConfirm}
-                handleLogout={this.handleLogout}
-                onRecenterRequest={this.handleRecenterRequest}
-            />
-        );
-    };
+toggleSaveMenu = () => {
+    this.setState((prev) => ({ showSaveMenu: !prev.showSaveMenu }));
+};
+
+closeSaveMenu = () => {
+    this.setState({ showSaveMenu: false });
+};
+
+handleSaveOriginClick = async () => {
+    await this.saveOriginPlace();
+    this.closeSaveMenu();
+};
+
+handleSaveDestinationClick = async () => {
+    await this.saveDestinationPlace();
+    this.closeSaveMenu();
+};
+
+openSavedDestinations = async () => {
+    const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
+    this.setState((prevState) => ({
+        showSavedDestinations: true,
+        showRouteOptions: isMobile ? true : prevState.showRouteOptions,
+    }));
+
+    await this.fetchSavedDestinations();
+};
+
+closeSavedDestinations = () => {
+    this.setState({ showSavedDestinations: false });
+};
+
+fetchSavedDestinations = async () => {
+    try {
+        this.setState({ isLoadingSavedDestinations: true });
+
+        const res = await apiGet("/user/saved-destinations/");
+        const data = Array.isArray(res) ? res : (res?.data ?? []);
+        this.setState({ savedDestinations: data });
+    } catch (e) {
+        console.error("Failed to fetch saved destinations:", e);
+        this.setState({
+            errorPopup: {
+                title: "Saved destinations unavailable",
+                message: "We could not load your saved destinations. Please try again.",
+            },
+        });
+    } finally {
+        this.setState({ isLoadingSavedDestinations: false });
+    }
+};
+
+selectSavedDestination = async (dest) => {
+    const map = this.state.mapRef || this.mapInstanceRef;
+    const cur = this.getCurrentUserLatLng();
+    if (!map || !cur) {
+        this.setState({
+            errorPopup: {
+                title: "Location not ready",
+                message: "Your current location is not available yet. Please try again in a moment.",
+            },
+        });
+        return;
+    }
+
+    this.setState({ showSavedDestinations: false });
+
+    this.clearMap();
+
+    const g = window.google;
+    if (!g?.maps?.importLibrary) return;
+    const { AdvancedMarkerElement } = await g.maps.importLibrary("marker");
+
+    const originMarker = new AdvancedMarkerElement({
+        map,
+        position: { lat: cur.lat, lng: cur.lng },
+        title: "A",
+    });
+
+    const destinationMarker = new AdvancedMarkerElement({
+        map,
+        position: { lat: Number(dest.latitude), lng: Number(dest.longitude) },
+        title: "B",
+    });
+
+    this.setState({
+        mapMarkers: { origin: originMarker, destination: destinationMarker },
+        showRouteOptions: true,
+        showSaveMenu: false,
+    });
+
+    const selectedOffsetMinutes = this.state.selectedOffsetMinutes ?? 1;
+    await this.fetchRoute(originMarker.position, destinationMarker.position, selectedOffsetMinutes, map);
+};
+
+deleteSavedDestination = async (destinationId) => {
+    if (!destinationId) return;
+    this.setState({ deletingDestinationId: destinationId });
+    try {
+        await apiDelete(`/user/saved-destinations/${destinationId}/`);
+        this.setState((prevState) => ({
+            savedDestinations: prevState.savedDestinations.filter((d) => d.id !== destinationId),
+        }));
+    } catch (error) {
+        console.error("Failed to delete saved destination:", error);
+        this.setState({
+            errorPopup: {
+                title: "Unable to remove destination",
+                message: "We could not remove this saved destination. Please try again.",
+            },
+        });
+    } finally {
+        this.setState({ deletingDestinationId: null });
+    }
+};
+
+render() {
+    return (
+        <MapView
+            mapData={this.state.mapData}
+            setMarker={this.setMarker}
+            hasOrigin={this.state.hasOrigin}
+            hasDestination={this.state.hasDestination}
+            onPlaceSelected={this.handlePlaceSelected}
+            isAToBRef={this.isAToBRef}
+            prevLocationRef={this.prevLocationRef}
+            setUserLocation={this.setUserLocation}
+            showNavigationScreen={this.state.showNavigationScreen}
+            routeInfo={this.state.routeInfo}
+            navigationIndex={this.state.navigationIndex}
+            showNavEndScreen={this.showNavEndScreen}
+            speedKmh={this.state.speedKmh}
+            showNavigationEndScreen={this.state.showNavigationEndScreen}
+            finishNavigation={this.finishNavigation}
+            showAll={this.state.showAll}
+            selectedReport={this.state.selectedReport}
+            setSelectedReport={this.setSelectedReport}
+            userLocation={this.state.userLocation}
+            setReports={this.setReports}
+            isAToBState={this.state.isAToBState}
+            setIsAToBState={this.setIsAToBState}
+            showTimeSelector={this.state.showTimeSelector}
+            showTimeSelectorFunction={this.showTimeSelectorFunction}
+            showRouteOptions={this.state.showRouteOptions}
+            isTollRoadsOn={this.context.isTollRoadsOn}
+            toggleTollRoads={this.toggleTollRoads}
+            availableTimes={this.state.availableTimes}
+            selectedOffsetMinutes={this.state.selectedOffsetMinutes}
+            isLoadingRoute={this.state.isLoadingRoute}
+            handleTimeChange={this.handleTimeChange}
+            liveNavigateToDestination={this.liveNavigateToDestination}
+            clearMap={this.clearMap}
+            errorPopup={this.state.errorPopup}
+            setErrorPopup={this.setErrorPopup}
+            showDropdown={this.state.showDropdown}
+            setShowDropdown={this.setShowDropdown}
+            username={this.state.username}
+            points={this.state.points}
+            handleRewardsClick={this.handleRewardsClick}
+            handleSettingsClick={this.handleSettingsClick}
+            setShowLogoutConfirm={this.setShowLogoutConfirm}
+            showLogoutConfirm={this.state.showLogoutConfirm}
+            handleLogout={this.handleLogout}
+            showSaveMenu={this.state.showSaveMenu}
+            toggleSaveMenu={this.toggleSaveMenu}
+            closeSaveMenu={this.closeSaveMenu}
+            onSaveOriginPlace={this.handleSaveOriginClick}
+            onSaveDestinationPlace={this.handleSaveDestinationClick}
+            savePlaceModalOpen={this.state.savePlaceModalOpen}
+            savePlaceType={this.state.savePlaceType}
+            savePlaceLabel={this.state.savePlaceLabel}
+            savePlaceError={this.state.savePlaceError}
+            isSavingPlace={this.state.isSavingPlace}
+            onSavePlaceLabelChange={this.updateSavePlaceLabel}
+            onSavePlaceCancel={this.closeSavePlaceDialog}
+            onSavePlaceConfirm={this.confirmSavePlace}
+            openSavedDestinations={this.openSavedDestinations}
+            closeSavedDestinations={this.closeSavedDestinations}
+            savedDestinations={this.state.savedDestinations}
+            showSavedDestinations={this.state.showSavedDestinations}
+            isLoadingSavedDestinations={this.state.isLoadingSavedDestinations}
+            deletingDestinationId={this.state.deletingDestinationId}
+            selectSavedDestination={this.selectSavedDestination}
+            onDeleteSavedDestination={this.deleteSavedDestination}
+            onRecenterRequest={this.handleRecenterRequest}
+        />
+    );
+};
 }

@@ -107,10 +107,34 @@ body.rp-report-dragging .report-sheet-scroll {
 }
 
 @media (max-width: 768px) {
+    html.rp-report-page {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        inset: 0;
+    }
+
+    body.rp-report-page {
+        overflow: hidden;
+        overscroll-behavior: none;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        inset: 0;
+    }
+
+    body.rp-report-page #root {
+        height: 100%;
+        overflow: hidden;
+    }
+
     .report-container {
         --sidebar-width: 0px;
         --map-top-button-size: 40px;
         --map-top-row-offset: calc(12px + var(--safe-top));
+        --safe-top: calc(env(safe-area-inset-top, 0px) + var(--mobile-browser-ui-top, 12px));
+        --mobile-nav-height: calc(72px + var(--safe-bottom) + var(--mobile-browser-ui-bottom, 16px));
     }
 
     .report-toast {
@@ -119,17 +143,19 @@ body.rp-report-dragging .report-sheet-scroll {
 
     .report-map-wrapper {
         left: 0;
+        bottom: var(--mobile-nav-height);
     }
 
     .report-sidebar-container {
         left: 0;
         right: 0;
         top: auto;
-        bottom: calc(72px + var(--safe-bottom));
+        bottom: var(--mobile-nav-height);
         width: 100%;
         height: auto;
         align-items: flex-end;
         padding: 0;
+        z-index: 2000; /* Above sidebar (950) */
     }
 
     .report-sidebar-content {
@@ -191,7 +217,7 @@ body.rp-report-dragging .report-sheet-scroll {
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
         touch-action: pan-y;
-        padding-bottom: calc(72px + var(--safe-bottom) + 16px);
+        padding-bottom: calc(var(--mobile-nav-height) + 16px);
         min-height: 0;
     }
 
@@ -201,6 +227,27 @@ body.rp-report-dragging .report-sheet-scroll {
         height: 100%;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+    }
+
+    body.rp-report-input-lock .report-sheet {
+        touch-action: none;
+    }
+
+    body.rp-report-input-lock .report-sheet-scroll {
+        overflow: hidden;
+    }
+
+    body.rp-report-input-lock .report-sheet-scroll > .rp-report-card,
+    body.rp-report-input-lock .report-sheet-scroll > .incident-card {
+        overflow: hidden;
+    }
+
+    body.rp-report-input-lock .report-sheet-handle {
+        pointer-events: none;
+    }
+
+    body.rp-report-keyboard-open .report-map-wrapper {
+        pointer-events: none;
     }
 
     .report-container .gm-style .gm-style-mtc {

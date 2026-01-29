@@ -4,6 +4,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
 
 User = get_user_model()
+from .models import Contact
 
 class RegisterSerializer(serializers.ModelSerializer):
     # Allow duplicate usernames - no unique validator
@@ -39,3 +40,8 @@ class ChangePasswordSerializer(serializers.Serializer):
         validate_password(value)  # optional, uses Django’s password validators
         return value
 
+
+class ContactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Contact
+        fields = ["name", "phone_number", "relationship", "is_emergency"]

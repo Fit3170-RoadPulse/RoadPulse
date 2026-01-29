@@ -9,3 +9,5 @@ psycopg
 gunicorn
 whitenoise
 Pillow>=11.0
+cloudinary>=1.40.0
+django-cloudinary-storage>=0.3.0

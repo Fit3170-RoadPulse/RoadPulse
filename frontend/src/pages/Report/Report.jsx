@@ -31,6 +31,143 @@ export default function Report() {
     const reportDragStartYRef = useRef(0);
     const reportDragStartHeightRef = useRef(42);
     const reportDragRafRef = useRef(null);
+    const lastViewportInsetsRef = useRef(null);
+    const freezeViewportInsetsRef = useRef(false);
+    const reportInputLockActiveRef = useRef(false);
+    const viewportSyncTimeoutRef = useRef(null);
+    useEffect(() => {
+        if (typeof document === "undefined") return;
+        document.body.classList.add("rp-report-page");
+        document.documentElement.classList.add("rp-report-page");
+        if (typeof window !== "undefined") {
+            window.scrollTo(0, 0);
+        }
+        return () => {
+            document.body.classList.remove("rp-report-page");
+            document.documentElement.classList.remove("rp-report-page");
+            document.body.classList.remove("rp-report-input-lock");
+            document.body.classList.remove("rp-report-keyboard-open");
+        };
+    }, []);
+
+    const updateMobileViewportVars = useCallback(() => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
+        const body = document.body;
+        const isMobile = window.innerWidth <= 768;
+        const vv = window.visualViewport;
+
+        if (!isMobile || !vv) {
+            body.style.removeProperty("--mobile-browser-ui-top");
+            body.style.setProperty("--mobile-browser-ui-bottom", "0px");
+            lastViewportInsetsRef.current = { top: 0, bottom: 0 };
+            reportInputLockActiveRef.current = false;
+            body.classList.remove("rp-report-input-lock");
+            body.classList.remove("rp-report-keyboard-open");
+            return;
+        }
+
+        const offsetTop = Math.max(0, vv.offsetTop || 0);
+        const rawBottomInset = Math.max(0, window.innerHeight - (vv.height + offsetTop));
+        const inputFocused = freezeViewportInsetsRef.current;
+        const keyboardOpen = inputFocused && rawBottomInset > 80;
+        const bottomInset = keyboardOpen ? rawBottomInset : 0;
+        const nextInsets = { top: offsetTop, bottom: bottomInset };
+        const shouldFreeze = keyboardOpen;
+        reportInputLockActiveRef.current = shouldFreeze;
+        if (shouldFreeze) {
+            body.classList.add("rp-report-input-lock");
+        } else {
+            body.classList.remove("rp-report-input-lock");
+        }
+        if (shouldFreeze) {
+            body.classList.add("rp-report-keyboard-open");
+        } else {
+            body.classList.remove("rp-report-keyboard-open");
+        }
+
+        if (!lastViewportInsetsRef.current) {
+            lastViewportInsetsRef.current = nextInsets;
+        }
+
+        const appliedInsets = shouldFreeze ? lastViewportInsetsRef.current : nextInsets;
+        if (!shouldFreeze) {
+            lastViewportInsetsRef.current = nextInsets;
+        }
+
+        if (appliedInsets.top > 0) {
+            body.style.setProperty("--mobile-browser-ui-top", `${appliedInsets.top}px`);
+        } else {
+            body.style.removeProperty("--mobile-browser-ui-top");
+        }
+        body.style.setProperty("--mobile-browser-ui-bottom", `${appliedInsets.bottom}px`);
+    }, []);
+
+    const scheduleViewportSync = useCallback(() => {
+        if (typeof window === "undefined") return;
+        if (viewportSyncTimeoutRef.current) {
+            clearTimeout(viewportSyncTimeoutRef.current);
+        }
+        viewportSyncTimeoutRef.current = window.setTimeout(() => {
+            updateMobileViewportVars();
+        }, 150);
+    }, [updateMobileViewportVars]);
+
+    const bindViewportListeners = useCallback(() => {
+        if (typeof window === "undefined") return;
+        const vv = window.visualViewport;
+        if (vv) {
+            vv.addEventListener("resize", updateMobileViewportVars);
+            vv.addEventListener("scroll", updateMobileViewportVars);
+        }
+        window.addEventListener("resize", updateMobileViewportVars);
+        window.addEventListener("orientationchange", updateMobileViewportVars);
+    }, [updateMobileViewportVars]);
+
+    const unbindViewportListeners = useCallback(() => {
+        if (typeof window === "undefined") return;
+        const vv = window.visualViewport;
+        if (vv) {
+            vv.removeEventListener("resize", updateMobileViewportVars);
+            vv.removeEventListener("scroll", updateMobileViewportVars);
+        }
+        window.removeEventListener("resize", updateMobileViewportVars);
+        window.removeEventListener("orientationchange", updateMobileViewportVars);
+    }, [updateMobileViewportVars]);
+
+    useEffect(() => {
+        updateMobileViewportVars();
+        bindViewportListeners();
+        return () => {
+            freezeViewportInsetsRef.current = false;
+            unbindViewportListeners();
+            if (typeof document !== "undefined") {
+                document.body.style.removeProperty("--mobile-browser-ui-top");
+                document.body.style.removeProperty("--mobile-browser-ui-bottom");
+                document.body.classList.remove("rp-report-input-lock");
+                document.body.classList.remove("rp-report-keyboard-open");
+            }
+            if (viewportSyncTimeoutRef.current) {
+                clearTimeout(viewportSyncTimeoutRef.current);
+                viewportSyncTimeoutRef.current = null;
+            }
+        };
+    }, [bindViewportListeners, unbindViewportListeners, updateMobileViewportVars]);
+
+    const handleDetailsInputFocus = useCallback(() => {
+        if (typeof window === "undefined") return;
+        if (window.innerWidth > 768) return;
+        freezeViewportInsetsRef.current = true;
+        updateMobileViewportVars();
+        scheduleViewportSync();
+    }, [scheduleViewportSync, updateMobileViewportVars]);
+
+    const handleDetailsInputBlur = useCallback(() => {
+        if (typeof window === "undefined") return;
+        if (window.innerWidth > 768) return;
+        freezeViewportInsetsRef.current = false;
+        updateMobileViewportVars();
+        scheduleViewportSync();
+    }, [scheduleViewportSync, updateMobileViewportVars]);
 
     function getAccessToken() {
         const raw = (localStorage.getItem("access") || "").trim();
@@ -43,7 +180,7 @@ export default function Report() {
     }
 
     const fetchReports = useCallback(() => {
-        const base = import.meta.env.VITE_API_URL || "";
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
         return axios
             .get(`${base}/api/incident-reports/`, getAuthConfig())
             .then((r) => setReports((Array.isArray(r.data) ? r.data : []).filter((x) => x?.is_active !== false)))
@@ -58,8 +195,8 @@ export default function Report() {
 
     useEffect(() => {
         let mounted = true;
-        const base = import.meta.env.VITE_API_URL || "";
-        const isNativeApp = /Mobi|Android/i.test(navigator.userAgent);
+        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
+        // const isNativeApp = /Mobi|Android/i.test(navigator.userAgent);
 
         const startLocation = async () => {
             try {
@@ -70,9 +207,7 @@ export default function Report() {
             }
 
             if (!mounted) return;
-            const provider = isNativeApp
-                ? new NativeGeolocationProvider()
-                : new WebGeolocationProvider();
+            const provider = new WebGeolocationProvider();
             geolocationProviderRef.current = provider;
             provider.start(prevLocationRef, locationPollingDataRef, (loc) => {
                 if (!mounted) return;
@@ -127,6 +262,14 @@ export default function Report() {
         reportSheetHeightRef.current = reportSheetHeightVh;
     }, [reportSheetHeightVh]);
 
+    useEffect(() => {
+        if (!isClicked) {
+            reportInputLockActiveRef.current = false;
+            freezeViewportInsetsRef.current = false;
+            updateMobileViewportVars();
+        }
+    }, [isClicked, updateMobileViewportVars]);
+
 
     const setReportSheetHeight = useCallback((nextHeight) => {
         if (reportDragRafRef.current) cancelAnimationFrame(reportDragRafRef.current);
@@ -171,6 +314,7 @@ export default function Report() {
 
     const handleReportPointerDown = useCallback((event) => {
         if (window.innerWidth > 768) return;
+        if (reportInputLockActiveRef.current) return;
         event.preventDefault();
         event.stopPropagation();
         startReportDrag(event.clientY);
@@ -210,6 +354,7 @@ export default function Report() {
 
     const handleReportSheetTouchStart = useCallback((event) => {
         if (window.innerWidth > 768) return;
+        if (reportInputLockActiveRef.current) return;
         if (!event.currentTarget) return;
         const clientY = event.touches?.[0]?.clientY;
         if (typeof clientY !== "number") return;
@@ -501,6 +646,8 @@ export default function Report() {
                                     <ReportComponent
                                         location={selectedLocation}
                                         onClose={() => setIsClicked(false)}
+                                        onDetailsFocus={handleDetailsInputFocus}
+                                        onDetailsBlur={handleDetailsInputBlur}
                                         onSubmitted={(newReport) => {
                                             if (newReport?.id) {
                                                 setReports((prev) => [newReport, ...prev.filter((r) => r.id !== newReport.id)]);

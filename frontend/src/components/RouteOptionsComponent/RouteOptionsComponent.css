@@ -43,3 +43,19 @@
     flex-grow: 1;
     justify-content: space-between;
 }
+
+.savedDestinationsOption {
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.savedDestinationsOption:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 8px;
+}
+
+.route-option-arrow {
+  font-size: 22px;
+  color: #6366f1;
+  user-select: none;
+}

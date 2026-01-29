@@ -73,7 +73,8 @@ export default function RegisterPage({ onRegister, navigateTo }) {
         }
 
         try {
-            const res = await fetch("http://localhost:8000/api/register/", {
+            const base = import.meta.env.VITE_API_URL || "";
+            const res = await fetch(`${base}/api/register/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username, email, password }),
