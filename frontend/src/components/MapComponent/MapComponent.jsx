@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LocateFixed, Star, Maximize, Minimize } from "lucide-react";
+import { LocateFixed, Star } from "lucide-react";
 import "./MapComponent.css";
 import { ensureMapsLoaderOptions, loadMapsLibrary } from "../../lib/googleMapsLoader";
 
@@ -34,56 +34,8 @@ export default function MapComponent({
     const pendingExternalLocationRef = useRef(null);
     const lastUserLocationRef = useRef(null);
     const [hasLocation, setHasLocation] = useState(false);
-    const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
-    const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
-    const isFullscreen = isNativeFullscreen || isPseudoFullscreen;
 
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsNativeFullscreen(!!document.fullscreenElement);
-        };
-        document.addEventListener("fullscreenchange", handleFullscreenChange);
-        return () => {
-            document.removeEventListener("fullscreenchange", handleFullscreenChange);
-            // Cleanup pseudo class on unmount
-            if (typeof document !== "undefined") {
-                document.body.classList.remove("rp-pseudo-fullscreen");
-            }
-        };
-    }, []);
 
-    const handleFullscreenToggle = () => {
-        if (!mapHolderRef.current) return;
-
-        // 1. Exit if currently in either mode
-        if (document.fullscreenElement) {
-            document.exitFullscreen().catch(console.error);
-            return;
-        }
-        if (isPseudoFullscreen) {
-            setIsPseudoFullscreen(false);
-            document.body.classList.remove("rp-pseudo-fullscreen");
-            return;
-        }
-
-        // 2. Try Native Enter
-        const element = mapHolderRef.current;
-        if (element.requestFullscreen) {
-            element.requestFullscreen()
-                .then(() => {
-                    // Success: Native event listener will update state
-                })
-                .catch((err) => {
-                    console.warn("Native fullscreen not supported/allowed. Falling back to pseudo-fullscreen.", err);
-                    setIsPseudoFullscreen(true);
-                    document.body.classList.add("rp-pseudo-fullscreen");
-                });
-        } else {
-            // 3. Fallback (iOS Safari often lacks requestFullscreen on divs)
-            setIsPseudoFullscreen(true);
-            document.body.classList.add("rp-pseudo-fullscreen");
-        }
-    };
 
     useEffect(() => {
         if (typeof document === "undefined" || typeof window === "undefined") return;
@@ -370,31 +322,6 @@ export default function MapComponent({
                     </button>
                 </div>
             )}
-            <div className="map-fullscreen-container">
-                <button
-                    type="button"
-                    className="map-fullscreen-button"
-                    onClick={handleFullscreenToggle}
-                    aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                    title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                >
-                    {isFullscreen ? (
-                        <Minimize
-                            className="map-fullscreen-icon"
-                            size={26}
-                            strokeWidth={2.5}
-                            absoluteStrokeWidth
-                        />
-                    ) : (
-                        <Maximize
-                            className="map-fullscreen-icon"
-                            size={26}
-                            strokeWidth={2.5}
-                            absoluteStrokeWidth
-                        />
-                    )}
-                </button>
-            </div>
             {typeof onSavedDestinationsClick === "function" && (
                 <div className="map-saved-destinations-container">
                     <button
