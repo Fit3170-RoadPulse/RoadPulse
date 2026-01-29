@@ -82,7 +82,7 @@ export async function authenticatedFetch(endpoint, options = {}) {
     return response;
   } catch (error) {
     clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
+    if (error.name === "AbortError") {
       throw new Error("Request timed out");
     }
     throw error;
@@ -129,13 +129,13 @@ export async function apiPost(endpoint, data) {
     let errorMessage = error.detail || "Request failed";
 
     // Handle DRF field validation errors (e.g. { "stock": ["Cannot be negative"] })
-    if (!error.detail && typeof error === 'object') {
+    if (!error.detail && typeof error === "object") {
       const fieldErrors = Object.entries(error).map(([key, val]) => {
-        const msgs = Array.isArray(val) ? val.join(' ') : val;
+        const msgs = Array.isArray(val) ? val.join(" ") : val;
         return `${key}: ${msgs}`;
       });
       if (fieldErrors.length > 0) {
-        errorMessage = fieldErrors.join('\n');
+        errorMessage = fieldErrors.join("\n");
       }
     }
 
@@ -165,13 +165,13 @@ export async function apiPut(endpoint, data) {
     let errorMessage = error.detail || "Request failed";
 
     // Handle DRF field validation errors
-    if (!error.detail && typeof error === 'object') {
+    if (!error.detail && typeof error === "object") {
       const fieldErrors = Object.entries(error).map(([key, val]) => {
-        const msgs = Array.isArray(val) ? val.join(' ') : val;
+        const msgs = Array.isArray(val) ? val.join(" ") : val;
         return `${key}: ${msgs}`;
       });
       if (fieldErrors.length > 0) {
-        errorMessage = fieldErrors.join('\n');
+        errorMessage = fieldErrors.join("\n");
       }
     }
 
@@ -201,31 +201,6 @@ export async function apiDelete(endpoint) {
   // 204 No Content responses have no body
   if (response.status === 204) {
     return { success: true };
-  }
-
-  return response.json();
-}
-
-/**
- * Make an authenticated DELETE request
- * @param {string} endpoint - The API endpoint
- * @returns {Promise<any>} The parsed JSON response (if any)
- */
-export async function apiDelete(endpoint) {
-  const response = await authenticatedFetch(endpoint, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "Request failed" }));
-    throw new Error(error.detail || "Request failed");
-  }
-
-  // Some DELETE endpoints return no content (204)
-  if (response.status === 204) {
-    return null;
   }
 
   return response.json();
