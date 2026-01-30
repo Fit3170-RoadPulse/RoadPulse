@@ -173,7 +173,7 @@ export default class MapController extends Component {
             }
         }
 
-        if (prevState.prevLocationRef?.current !== this.state.prevLocationRef?.current ||
+        if (this.prevLocationRef?.current || 
             prevState.reports !== this.state.reports ||
             prevState.selectedReport !== this.state.selectedReport) {
             this.proximityReports();
@@ -181,7 +181,7 @@ export default class MapController extends Component {
 
 
         if (this.state.isNavigationBegun == true && 
-            (prevState.prevLocationRef?.current !== this.state.prevLocationRef?.current ||
+            (this.prevLocationRef?.current ||
             prevState.navigationIndex !== this.state.navigationIndex ||
             prevState.mapPolylines !== this.state.mapPolylines ||
             prevState.routeInfo !== this.state.routeInfo)
@@ -216,10 +216,10 @@ export default class MapController extends Component {
 
     proximityReports() {
 
-        if (!this.state.prevLocationRef?.current || this.state.reports.length === 0) return;
+        if (!this.prevLocationRef?.current || this.state.reports.length === 0) return;
 
-        const userLat = this.state.prevLocationRef.current.latitude;
-        const userLng = this.state.prevLocationRef.current.longitude;
+        const userLat = this.prevLocationRef.current.latitude;
+        const userLng = this.prevLocationRef.current.longitude;
         const userLatLng = new google.maps.LatLng(userLat, userLng);
 
         let closestReport = null;
@@ -1567,7 +1567,7 @@ export default class MapController extends Component {
         });
         console.log("Navigation finished, returning to map view.");
         const map = this.state.mapRef || this.mapInstanceRef;
-        const curLocation = this.prevLocationRef?.current ?
+        const curLocation = this.state.prevLocationRef?.current ?
             { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude } :
             { lat: this.mockLocation.latitude, lng: this.mockLocation.longitude };
         const totalTime = 1500;
