@@ -69,7 +69,7 @@ export default class MapController extends Component {
         this.lastRouteSelectionRef = null;
         this.prevLocationRef = { current: null };
         this.locationPollingData = { current: null };
-        this.lastUpdateTimeRef = 0;
+        this.lastUpdateTimeRef = { current: null };
         this.routeCacheRef = new globalThis.Map();
         this.activeRouteRequestRef = null;
         this.mapReadyRef = false;
@@ -334,13 +334,13 @@ export default class MapController extends Component {
         this.prevLocationRef.current = newLocation;
 
         // time delta (seconds)
-        const lastT = this.lastUpdateTimeRef?.current ?? now;
+        const lastT = this.lastUpdateTimeRef.current ?? now;
         const dtSec = Math.max(0.001, (now - lastT) / 1000);
 
         // filter jitter + jumps
         const MIN_MOVE_M = 1;
         const MAX_MOVE_M = 150;
-        // const MAX_SPEED_KMH = 200; // ignore unrealistic spikes
+        const MAX_SPEED_KMH = 200; // ignore unrealistic spikes
 
         if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
             this.setState((prevState) => ({ cumulativeDistance: prevState.cumulativeDistance + distance }));
@@ -378,7 +378,7 @@ export default class MapController extends Component {
             // }
         }
 
-        this.lastUpdateTimeRef = now;
+        this.lastUpdateTimeRef.current = now;
         console.log("Distance moved (m):", this.state.cumulativeDistance);
         console.log("Location updated:", newLocation);
     };

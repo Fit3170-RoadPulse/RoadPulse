@@ -155,7 +155,10 @@ export default function MapComponent({
 
         ensureMapsLoaderOptions(API_KEY, MAP_ID);
 
-        loadMapsLibrary("maps", API_KEY, MAP_ID).then((lib) => {
+        Promise.all([
+            loadMapsLibrary("maps", API_KEY, MAP_ID),
+            loadMapsLibrary("geometry", API_KEY, MAP_ID),
+        ]).then(([lib]) => {
             if (!isMounted || !mapRef.current || mapInstance.current) return;
             const MapCtor = lib?.Map || window.google?.maps?.Map;
             if (!MapCtor) return;
