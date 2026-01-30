@@ -1454,9 +1454,10 @@ export default class MapController extends Component {
         console.log("User location:", userLoc, "Next point:", nextPoint);
 
         let nextPointEndPoint = nextPoint?.startLocation.latLng;
+        let nextPointLatLng = new google.maps.LatLng(nextPointEndPoint.latitude, nextPointEndPoint.longitude);
         let distance = google.maps.geometry.spherical.computeDistanceBetween(
             new google.maps.LatLng(userLoc.lat, userLoc.lng),
-            new google.maps.LatLng(nextPointEndPoint.latitude, nextPointEndPoint.longitude),
+            nextPointLatLng,
         );
         
         console.log("Should camera pan", shouldCameraPan);
@@ -1465,7 +1466,7 @@ export default class MapController extends Component {
         if (shouldCameraPan === true && distance < maxCutoffDistance) {
             console.log("Panning camera to next point...");
             const map = this.state.mapRef || this.mapInstanceRef;
-            this.panToLocation(map, userLoc, nextPoint);
+            this.panToLocation(map, userLoc, nextPointLatLng);
         }
 
         if (distance < maxCutoffDistance) {
@@ -1538,7 +1539,7 @@ export default class MapController extends Component {
         };
 
         const tween = new Tween(cameraOptions)
-            .to({ tilt: 40, heading: heading, zoom: 18, center: new google.maps.LatLng(nextlocation) }, totalTime)
+            .to({ tilt: 40, heading: heading, zoom: map.getZoom(), center: new google.maps.LatLng(nextlocation) }, totalTime)
             .easing(Easing.Quadratic.Out)
             .onUpdate(() => { map.moveCamera(cameraOptions); })
             .start();
@@ -1547,9 +1548,9 @@ export default class MapController extends Component {
         function animate(time) {
             requestAnimationFrame(animate);
             tween.update(time);
-            if (tween.isPlaying() === false) {
-                tween.remove();
-            }
+            // if (tween.isPlaying() === false) {
+            //     tween.remove();
+            // }
         }
         requestAnimationFrame(animate);
         this.isInPanningAnimation = false;
