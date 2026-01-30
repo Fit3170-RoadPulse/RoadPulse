@@ -1548,11 +1548,11 @@ export default class MapController extends Component {
             requestAnimationFrame(animate);
             tween.update(time);
             if (tween.isPlaying() === false) {
-                this.isInPanningAnimation = false;
                 tween.remove();
             }
         }
         requestAnimationFrame(animate);
+        this.isInPanningAnimation = false;
     };
 
     showNavEndScreen = () => {
