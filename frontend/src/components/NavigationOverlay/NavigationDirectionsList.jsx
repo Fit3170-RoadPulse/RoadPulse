@@ -69,6 +69,7 @@ export default function NavigationDirectionsList({
 
   const currentStep = steps[currentStepIndex];
   const nextSteps = steps.slice(currentStepIndex + 1);
+  const displaySpeed = Number.isFinite(speed) ? Math.round(speed) : "--";
 
   const renderStep = (step, idx, isCurrent) => {
     return (
@@ -97,7 +98,7 @@ export default function NavigationDirectionsList({
         <div className="mobile-nav-header">
            <div className="mobile-speed-display">
               <span className="label">Speed</span>
-              <span className="value">{speed} <span className="unit">km/h</span></span>
+              <span className="value">{displaySpeed} <span className="unit">km/h</span></span>
            </div>
            <div className="mobile-eta-display">
               <span className="label">ETA</span>
