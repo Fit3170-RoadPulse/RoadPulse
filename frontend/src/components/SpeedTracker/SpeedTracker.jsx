@@ -14,6 +14,8 @@ export default function SpeedTracker({ speedKmh }) {
       ? "text-yellow-500"
       : "text-green-600";
 
+  const displaySpeed = Number.isFinite(speedKmh) ? Math.round(speedKmh) : "--";
+
   return (
     <div className="speed-card">
       <div className="speed-card-header">
@@ -21,7 +23,7 @@ export default function SpeedTracker({ speedKmh }) {
       </div>
 
       <div className={`speed-value ${speedColor}`}>
-        {typeof speedKmh === "number" ? speedKmh.toFixed(2) : "--"}
+        {displaySpeed}
         <span className="speed-unit"> km/h</span>
 
         {speedKmh != null && speedKmh > SPEED_LIMIT && (
