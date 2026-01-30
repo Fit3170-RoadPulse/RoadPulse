@@ -86,6 +86,7 @@ export default class MapController extends Component {
         this.lastEtaOriginRef = null;
         this.activeEtaRequestRef = null;
         this.lastEtaUpdateMsRef = 0;
+        this.isInPanningAnimation = false;
 
         this.reportTypeLabel = {
             ACCIDENT: "Accident",
@@ -1518,7 +1519,12 @@ export default class MapController extends Component {
     };
 
     panToLocation = (map, curLocation, nextlocation, totalTime = 1500) => {
+        if (isInPanningAnimation) { 
+            console.log("Already panning, skipping animation.");
+            return;
+        }
         console.log("Panning from", curLocation, "to", nextlocation);
+        
         const heading = google.maps.geometry.spherical.computeHeading(
             new google.maps.LatLng(curLocation),
             new google.maps.LatLng(nextlocation)
@@ -1537,10 +1543,12 @@ export default class MapController extends Component {
             .onUpdate(() => { map.moveCamera(cameraOptions); })
             .start();
 
+        isInPanningAnimation = true;
         function animate(time) {
             requestAnimationFrame(animate);
             tween.update(time);
             if (tween.isPlaying() === false) {
+                isInPanningAnimation = false;
                 tween.remove();
             }
         }
