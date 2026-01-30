@@ -39,7 +39,6 @@ export default function MapComponent({
 
     useEffect(() => {
         if (typeof document === "undefined" || typeof window === "undefined") return;
-        const mediaQuery = window.matchMedia("(max-width: 768px)");
         const isWithinMap = (target) => {
             if (!target || typeof target.closest !== "function") return false;
             return Boolean(target.closest(".map-div"));
@@ -69,6 +68,7 @@ export default function MapComponent({
             event.preventDefault();
         };
 
+        const mediaQuery = window.matchMedia("(max-width: 768px)");
         let listenersAttached = false;
         const attachListeners = () => {
             if (listenersAttached) return;

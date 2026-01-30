@@ -70,6 +70,28 @@ function RewardsPage() {
     const [showQRModal, setShowQRModal] = useState(false);
     const [redeemedVoucher, setRedeemedVoucher] = useState(null);
 
+    useEffect(() => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
+        const mediaQuery = window.matchMedia("(max-width: 768px)");
+        const applyBodyLock = () => {
+            document.body.classList.toggle("rewards-no-scroll", mediaQuery.matches);
+        };
+        applyBodyLock();
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener("change", applyBodyLock);
+        } else if (mediaQuery.addListener) {
+            mediaQuery.addListener(applyBodyLock);
+        }
+        return () => {
+            document.body.classList.remove("rewards-no-scroll");
+            if (mediaQuery.removeEventListener) {
+                mediaQuery.removeEventListener("change", applyBodyLock);
+            } else if (mediaQuery.removeListener) {
+                mediaQuery.removeListener(applyBodyLock);
+            }
+        };
+    }, []);
+
     // Fetch user reward account data on component mount
     useEffect(() => {
         async function loadUserData() {

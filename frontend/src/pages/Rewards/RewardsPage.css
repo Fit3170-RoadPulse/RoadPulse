@@ -245,6 +245,23 @@
 
 }
 
+@media (max-width: 768px) {
+    body.rewards-no-scroll {
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
+
+    .rewards-page {
+        overscroll-behavior: none;
+    }
+
+    .rewards-content {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+}
+
 .rewards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
