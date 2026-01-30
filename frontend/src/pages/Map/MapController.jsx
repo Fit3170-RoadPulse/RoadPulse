@@ -1069,6 +1069,8 @@ export default class MapController extends Component {
         })().catch((err) => console.error("Failed to render incident report markers:", err));
     };
 
+    // NAVIGATION FUNCTIONS ------------------------------------------------------------
+
     handleNavigationProgress = () => {
         const navigationPathway = this.state.routeInfo?.steps;
         if (this.state.isNavigationBegun === false || !navigationPathway) return;
@@ -1077,7 +1079,7 @@ export default class MapController extends Component {
         let nextPoint = { lat: 0, lng: 0 };
         let shouldCameraPan = true;
 
-        let maxCutoffDistance = 100; // meters
+        let maxCutoffDistance = this.isMobileDevice ? 10 : 50; // meters
         console.log("Navigation Index:", this.state.navigationIndex);
         console.log("Navigation Pathway Length:", navigationPathway?.length);
         if (this.state.navigationIndex >= navigationPathway?.length) {
@@ -1087,18 +1089,19 @@ export default class MapController extends Component {
         }
 
         if (this.state.navigationIndex == 0 && this.isAToBRef.current === true) {
-            nextPoint = navigationPathway[0]?.endLocation.latLng;
+            nextPoint = navigationPathway[0]
             shouldCameraPan = false;
         } else if (this.state.navigationIndex < navigationPathway.length - 1) {
-            nextPoint = navigationPathway[this.state.navigationIndex + 1]?.endLocation.latLng;
+            nextPoint = navigationPathway[this.state.navigationIndex + 1];
             shouldCameraPan = true;
         }
         
         console.log("User location:", userLoc, "Next point:", nextPoint);
 
+        let nextPointEndPoint = nextPoint?.endLocation.latLng;
         let distance = google.maps.geometry.spherical.computeDistanceBetween(
             new google.maps.LatLng(userLoc.lat, userLoc.lng),
-            new google.maps.LatLng(nextPoint.latitude, nextPoint.longitude),
+            new google.maps.LatLng(nextPointEndPoint.latitude, nextPointEndPoint.longitude),
         );
         
         console.log("Should camera pan", shouldCameraPan);
@@ -1220,6 +1223,8 @@ export default class MapController extends Component {
 
         this.clearMap();
     };
+
+    // --------------------------------------------------------------------
 
     setShowDropdown = (valueOrUpdater) => {
         if (typeof valueOrUpdater === "function") {
