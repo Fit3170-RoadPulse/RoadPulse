@@ -1446,7 +1446,7 @@ export default class MapController extends Component {
             nextPoint = navigationPathway[0]
             shouldCameraPan = false;
         } else if (this.state.navigationIndex < navigationPathway.length - 1) {
-            nextPoint = navigationPathway[this.state.navigationIndex + 1];
+            nextPoint = navigationPathway[this.state.navigationIndex];
             shouldCameraPan = true;
         }
         
