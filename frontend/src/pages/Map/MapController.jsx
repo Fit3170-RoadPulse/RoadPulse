@@ -1495,6 +1495,7 @@ export default class MapController extends Component {
     };
 
     panToLocation = (map, curLocation, nextlocation, totalTime = 1500) => {
+        console.log("Panning from", curLocation, "to", nextlocation);
         const heading = google.maps.geometry.spherical.computeHeading(
             new google.maps.LatLng(curLocation),
             new google.maps.LatLng(nextlocation)
