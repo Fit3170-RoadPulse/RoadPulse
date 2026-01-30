@@ -328,23 +328,22 @@ export default class MapController extends Component {
         this.prevLocationRef.current = newLocation;
 
         // time delta (seconds)
-        const lastT = this.lastUpdateTimeRef || now;
+        const lastT = this.lastUpdateTimeRef?.current ?? now;
         const dtSec = Math.max(0.001, (now - lastT) / 1000);
 
         // filter jitter + jumps
-        const MIN_MOVE_M = 10;
-        const MAX_MOVE_M = 500;
-        const MAX_SPEED_KMH = 200; // ignore unrealistic spikes
+        const MIN_MOVE_M = 5;
+        const MAX_MOVE_M = 150;
+        // const MAX_SPEED_KMH = 200; // ignore unrealistic spikes
 
         if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
-            this.setState((prevState) => ({ cumulativeDistance: prevState.cumulativeDistance + distance }));
+            // this.setState((prevState) => ({ cumulativeDistance: prevState.cumulativeDistance + distance }));
 
-            this.totalMoveDistMRef += distance;
-            this.totalMoveTimeSecRef += dtSec;
+            // this.totalMoveDistMRef += distance;
+            // this.totalMoveTimeSecRef += dtSec;
 
             // Instant speed
-            const speedMps = distance / dtSec;
-            const instKmh = speedMps * 3.6;
+            const speedKmh = (distance / dtSec) * 3.6;
 
             if (isAuthenticated()) {
                 apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
@@ -352,25 +351,25 @@ export default class MapController extends Component {
                 );
             }
 
-            if (Number.isFinite(instKmh) && instKmh <= MAX_SPEED_KMH) {
+            if (Number.isFinite(speedKmh) && speedKmh <= MAX_SPEED_KMH) {
                 // Smooth with EMA for stable UI
                 const alpha = 0.25;
-                const ema = this.speedEmaRef
-                    ? alpha * instKmh + (1 - alpha) * this.speedEmaRef
-                    : instKmh;
+                this.speedEmaRef =
+                    this.speedEmaRef != null
+                        ? alpha * speedKmh + (1 - alpha) * this.speedEmaRef
+                        : speedKmh;
 
-                this.speedEmaRef = ema;
-                this.setState({ speedKmh: ema });
+                this.setState({ speedKmh: this.speedEmaRef });
             }
         } else {
             const decay = 0.85;
             this.speedEmaRef *= decay;
             this.setState({ speedKmh: this.speedEmaRef });
 
-            if (this.speedEmaRef < 0.5) {
-                this.speedEmaRef = 0;
-                this.setState({ speedKmh: 0 });
-            }
+            // if (this.speedEmaRef < 0.5) {
+            //     this.speedEmaRef = 0;
+            //     this.setState({ speedKmh: 0 });
+            // }
         }
 
         this.lastUpdateTimeRef = now;
