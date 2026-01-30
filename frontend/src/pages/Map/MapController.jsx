@@ -1437,7 +1437,7 @@ export default class MapController extends Component {
         let maxCutoffDistance = this.isMobileDevice ? 50 : 100; // meters
         console.log("Navigation Index:", this.state.navigationIndex);
         console.log("Navigation Pathway Length:", navigationPathway?.length);
-        if (this.state.navigationIndex >= navigationPathway?.length) {
+        if (this.state.navigationIndex >= navigationPathway?.length - 1) {
             console.log("Reached destination in navigation mode.");
             this.showNavEndScreen();
             return;
