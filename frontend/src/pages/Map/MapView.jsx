@@ -495,6 +495,7 @@ export default class MapView extends Component {
             selectedOffsetMinutes,
             isLoadingRoute,
             handleTimeChange,
+            isValidPathway,
             liveNavigateToDestination,
             clearMap,
             errorPopup,
@@ -1100,7 +1101,7 @@ export default class MapView extends Component {
 
                                                 <div className="route-info-items">
                                                     {/* Directions - MOVED TOP FOR MOBILE */}
-                                                    <button className="route-info-directions-item" onClick={liveNavigateToDestination}>
+                                                    <button className="route-info-directions-item" onClick={liveNavigateToDestination} disabled={!isValidPathway}>
                                                         <div className="route-info-icon">
                                                             <span>🗺️</span>
                                                         </div>

@@ -1450,7 +1450,7 @@ export default class MapController extends Component {
         console.log("Should camera pan", shouldCameraPan);
         console.log("Distance to next point:", distance, "meters");
 
-        if (shouldCameraPan === true && distance < maxCutoffDistance) {
+        if (shouldCameraPan === true && distance < maxCutoffDistance && this.state.navigationIndex < navigationPathway.length - 1) {
             console.log("Panning camera to next point...");
             const map = this.state.mapRef || this.mapInstanceRef;
             let nextPointEndPoint = nextPoint?.endLocation.latLng;
@@ -1790,6 +1790,7 @@ export default class MapController extends Component {
                 selectedReport={this.state.selectedReport}
                 setSelectedReport={this.setSelectedReport}
                 userLocation={this.state.userLocation}
+                isValidPathway={this.state.mapPolylines && this.state.mapPolylines.length > 0}
                 setReports={this.setReports}
                 isAToBState={this.state.isAToBState}
                 setIsAToBState={this.setIsAToBState}
