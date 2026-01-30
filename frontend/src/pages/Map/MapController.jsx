@@ -51,7 +51,11 @@ export default class MapController extends Component {
             savedDestinations: [],
             isLoadingSavedDestinations: false,
         };
-        this.prevtoll
+        this.prevtoll = null,
+        this.mockLocation = {
+            latitude: 37.8124,
+            longitude: 144.9623,
+        }
         this.lastRouteSelectionRef = null;
         this.prevLocationRef = { current: null };
         this.locationPollingData = { current: null };
@@ -167,6 +171,7 @@ export default class MapController extends Component {
 
 
         if (
+            prevState.prevLocationRef?.current !== this.state.prevLocationRef?.current ||
             prevState.navigationIndex !== this.state.navigationIndex ||
             prevState.isNavigationBegun !== this.state.isNavigationBegun ||
             prevState.mapPolylines !== this.state.mapPolylines ||
@@ -1100,6 +1105,7 @@ export default class MapController extends Component {
         console.log("Distance to next point:", distance, "meters");
 
         if (shouldCameraPan === true && distance < maxCutoffDistance) {
+            console.log("Panning camera to next point...");
             const map = this.state.mapRef || this.mapInstanceRef;
             this.panToLocation(map, userLoc, nextPoint);
         }
@@ -1188,7 +1194,9 @@ export default class MapController extends Component {
         });
         console.log("Navigation finished, returning to map view.");
         const map = this.state.mapRef || this.mapInstanceRef;
-        const curLocation = { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude };
+        const curLocation = this.prevLocationRef?.current ?
+            { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude } :
+            { lat: this.mockLocation.latitude, lng: this.mockLocation.longitude };
         const totalTime = 1500;
 
         const cameraOptions = {
@@ -1199,7 +1207,7 @@ export default class MapController extends Component {
         };
 
         const tween = new Tween(cameraOptions)
-            .to({ tilt: 0, heading: 0, zoom: 8, center: new google.maps.LatLng(curLocation) }, totalTime)
+            .to({ tilt: 0, heading: 0, zoom: 10, center: new google.maps.LatLng(curLocation) }, totalTime)
             .easing(Easing.Quadratic.Out)
             .onUpdate(() => { map.moveCamera(cameraOptions); })
             .start();
