@@ -1434,10 +1434,10 @@ export default class MapController extends Component {
         let nextPoint = { lat: 0, lng: 0 };
         let shouldCameraPan = true;
 
-        let maxCutoffDistance = this.isMobileDevice ? 50 : 100; // meters
+        let maxCutoffDistance = this.isMobileDevice ? 10 : 50; // meters
         console.log("Navigation Index:", this.state.navigationIndex);
         console.log("Navigation Pathway Length:", navigationPathway?.length);
-        if (this.state.navigationIndex >= navigationPathway?.length - 1) {
+        if (this.state.navigationIndex >= navigationPathway?.length) {
             console.log("Reached destination in navigation mode.");
             this.showNavEndScreen();
             return;
@@ -1446,6 +1446,8 @@ export default class MapController extends Component {
         if (this.state.navigationIndex == 0 && this.isAToBRef.current === true) {
             nextPoint = navigationPathway[0]
             shouldCameraPan = false;
+        } else if (this.state.navigationIndex == navigationPathway.length - 1) {
+            nextPoint = navigationPathway[navigationPathway.length - 1];
         } else if (this.state.navigationIndex < navigationPathway.length - 1) {
             nextPoint = navigationPathway[this.state.navigationIndex + 1];
             shouldCameraPan = true;
