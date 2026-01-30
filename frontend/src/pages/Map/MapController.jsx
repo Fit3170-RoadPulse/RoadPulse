@@ -1437,7 +1437,7 @@ export default class MapController extends Component {
         let maxCutoffDistance = this.isMobileDevice ? 50 : 100; // meters
         console.log("Navigation Index:", this.state.navigationIndex);
         console.log("Navigation Pathway Length:", navigationPathway?.length);
-        if (this.state.navigationIndex >= navigationPathway?.length) {
+        if (this.state.navigationIndex >= navigationPathway?.length - 1) {
             console.log("Reached destination in navigation mode.");
             this.showNavEndScreen();
             return;
@@ -1446,7 +1446,7 @@ export default class MapController extends Component {
         if (this.state.navigationIndex == 0 && this.isAToBRef.current === true) {
             nextPoint = navigationPathway[0]
             shouldCameraPan = false;
-        } else if (this.state.navigationIndex < navigationPathway.length) {
+        } else if (this.state.navigationIndex < navigationPathway.length - 1) {
             nextPoint = navigationPathway[this.state.navigationIndex + 1];
             shouldCameraPan = true;
         }
