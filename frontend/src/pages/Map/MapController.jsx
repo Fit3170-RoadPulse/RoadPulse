@@ -1460,7 +1460,7 @@ export default class MapController extends Component {
 
         if (distance < maxCutoffDistance) {
             this.setState((prevState) => ({
-                navigationIndex: Math.min(prevState.navigationIndex + 1, navigationPathway.length - 1),
+                navigationIndex: Math.min(prevState.navigationIndex + 1, navigationPathway.length),
             }));
         }
     };
