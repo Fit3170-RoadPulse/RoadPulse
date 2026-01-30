@@ -1455,7 +1455,9 @@ export default class MapController extends Component {
         
         console.log("User location:", userLoc, "Next point:", nextPoint);
 
-        let nextPointStartPoint = nextPoint?.startLocation.latLng;
+        let nextPointStartPoint = this.state.navigationIndex == navigationPathway.length - 1 ?
+            (nextPoint?.endLocation.latLng) : 
+            (nextPoint?.startLocation.latLng);
         let nextStartPointLatLng = new google.maps.LatLng(nextPointStartPoint.latitude, nextPointStartPoint.longitude);
         let userLocLatLng = new google.maps.LatLng(userLoc.lat, userLoc.lng);
         let distance = google.maps.geometry.spherical.computeDistanceBetween(
