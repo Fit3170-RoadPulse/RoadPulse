@@ -1569,7 +1569,7 @@ export default class MapController extends Component {
         });
         console.log("Navigation finished, returning to map view.");
         const map = this.state.mapRef || this.mapInstanceRef;
-        const curLocation = this.state.prevLocationRef?.current ?
+        const curLocation = this.prevLocationRef?.current ?
             { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude } :
             { lat: this.mockLocation.latitude, lng: this.mockLocation.longitude };
         const totalTime = 1500;
