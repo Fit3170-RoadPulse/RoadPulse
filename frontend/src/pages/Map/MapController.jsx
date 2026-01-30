@@ -1455,8 +1455,9 @@ export default class MapController extends Component {
 
         let nextPointEndPoint = nextPoint?.startLocation.latLng;
         let nextPointLatLng = new google.maps.LatLng(nextPointEndPoint.latitude, nextPointEndPoint.longitude);
+        let userLocLatLng = new google.maps.LatLng(userLoc.lat, userLoc.lng);
         let distance = google.maps.geometry.spherical.computeDistanceBetween(
-            new google.maps.LatLng(userLoc.lat, userLoc.lng),
+            userLocLatLng,
             nextPointLatLng,
         );
         
@@ -1466,7 +1467,7 @@ export default class MapController extends Component {
         if (shouldCameraPan === true && distance < maxCutoffDistance) {
             console.log("Panning camera to next point...");
             const map = this.state.mapRef || this.mapInstanceRef;
-            this.panToLocation(map, userLoc, nextPointLatLng);
+            this.panToLocation(map, userLocLatLng, nextPointLatLng);
         }
 
         if (distance < maxCutoffDistance) {
