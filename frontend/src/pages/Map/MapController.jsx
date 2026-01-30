@@ -60,7 +60,11 @@ export default class MapController extends Component {
             savePlaceError: "",
             isSavingPlace: false,
         };
-        this.prevtoll = false;
+        this.prevtoll = null,
+        this.mockLocation = {
+            latitude: 37.8124,
+            longitude: 144.9623,
+        }
         this.lastRouteSelectionRef = null;
         this.prevLocationRef = { current: null };
         this.locationPollingData = { current: null };
@@ -176,6 +180,7 @@ export default class MapController extends Component {
 
 
         if (
+            prevState.prevLocationRef?.current !== this.state.prevLocationRef?.current ||
             prevState.navigationIndex !== this.state.navigationIndex ||
             prevState.isNavigationBegun !== this.state.isNavigationBegun ||
             prevState.mapPolylines !== this.state.mapPolylines ||
@@ -1397,6 +1402,8 @@ export default class MapController extends Component {
         })().catch((err) => console.error("Failed to render incident report markers:", err));
     };
 
+    // NAVIGATION FUNCTIONS ------------------------------------------------------------
+
     handleNavigationProgress = () => {
         const navigationPathway = this.state.routeInfo?.steps;
         if (this.state.isNavigationBegun === false || !navigationPathway) return;
@@ -1405,7 +1412,7 @@ export default class MapController extends Component {
         let nextPoint = { lat: 0, lng: 0 };
         let shouldCameraPan = true;
 
-        let maxCutoffDistance = 100; // meters
+        let maxCutoffDistance = this.isMobileDevice ? 10 : 50; // meters
         console.log("Navigation Index:", this.state.navigationIndex);
         console.log("Navigation Pathway Length:", navigationPathway?.length);
         if (this.state.navigationIndex >= navigationPathway?.length) {
@@ -1415,24 +1422,26 @@ export default class MapController extends Component {
         }
 
         if (this.state.navigationIndex == 0 && this.isAToBRef.current === true) {
-            nextPoint = navigationPathway[0]?.endLocation.latLng;
+            nextPoint = navigationPathway[0]
             shouldCameraPan = false;
         } else if (this.state.navigationIndex < navigationPathway.length - 1) {
-            nextPoint = navigationPathway[this.state.navigationIndex + 1]?.endLocation.latLng;
+            nextPoint = navigationPathway[this.state.navigationIndex + 1];
             shouldCameraPan = true;
         }
         
         console.log("User location:", userLoc, "Next point:", nextPoint);
 
+        let nextPointEndPoint = nextPoint?.endLocation.latLng;
         let distance = google.maps.geometry.spherical.computeDistanceBetween(
             new google.maps.LatLng(userLoc.lat, userLoc.lng),
-            new google.maps.LatLng(nextPoint.latitude, nextPoint.longitude),
+            new google.maps.LatLng(nextPointEndPoint.latitude, nextPointEndPoint.longitude),
         );
         
         console.log("Should camera pan", shouldCameraPan);
         console.log("Distance to next point:", distance, "meters");
 
         if (shouldCameraPan === true && distance < maxCutoffDistance) {
+            console.log("Panning camera to next point...");
             const map = this.state.mapRef || this.mapInstanceRef;
             this.panToLocation(map, userLoc, nextPoint);
         }
@@ -1528,7 +1537,9 @@ export default class MapController extends Component {
         });
         console.log("Navigation finished, returning to map view.");
         const map = this.state.mapRef || this.mapInstanceRef;
-        const curLocation = { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude };
+        const curLocation = this.prevLocationRef?.current ?
+            { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude } :
+            { lat: this.mockLocation.latitude, lng: this.mockLocation.longitude };
         const totalTime = 1500;
 
         const cameraOptions = {
@@ -1539,7 +1550,7 @@ export default class MapController extends Component {
         };
 
         const tween = new Tween(cameraOptions)
-            .to({ tilt: 0, heading: 0, zoom: 8, center: new google.maps.LatLng(curLocation) }, totalTime)
+            .to({ tilt: 0, heading: 0, zoom: 10, center: new google.maps.LatLng(curLocation) }, totalTime)
             .easing(Easing.Quadratic.Out)
             .onUpdate(() => { map.moveCamera(cameraOptions); })
             .start();
@@ -1552,6 +1563,8 @@ export default class MapController extends Component {
 
         this.clearMap();
     };
+
+    // --------------------------------------------------------------------
 
     setShowDropdown = (valueOrUpdater) => {
         if (typeof valueOrUpdater === "function") {
