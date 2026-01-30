@@ -328,10 +328,7 @@ export default class MapController extends Component {
             );
         }
 
-        console.log(
-            "Δlat", prev ? newLocation.latitude - prev.latitude : 0,
-            "Δlng", prev ? newLocation.longitude - prev.longitude : 0
-        );
+        console.log("distance delta", distance);
 
         // update "previous" immediately
         this.prevLocationRef.current = newLocation;
