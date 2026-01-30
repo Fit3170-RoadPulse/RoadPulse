@@ -62,7 +62,7 @@ export default class MapController extends Component {
         };
         this.prevtoll = null,
         this.mockLocation = {
-            latitude: 37.8124,
+            latitude: -37.8124,
             longitude: 144.9623,
         }
         this.lastRouteSelectionRef = null;
