@@ -1425,7 +1425,7 @@ export default class MapController extends Component {
 
     handleNavigationProgress = () => {
         const navigationPathway = this.state.routeInfo?.steps;
-        if (!navigationPathway) {
+        if (!navigationPathway || showNavigationEndScreen) {
             console.log("No navigation pathway available.");
             return
         };
