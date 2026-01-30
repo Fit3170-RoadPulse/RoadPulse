@@ -179,12 +179,11 @@ export default class MapController extends Component {
         }
 
 
-        if (
-            prevState.prevLocationRef?.current !== this.state.prevLocationRef?.current ||
+        if (prevState.isNavigationBegun !== this.state.isNavigationBegun && 
+            (prevState.prevLocationRef?.current !== this.state.prevLocationRef?.current ||
             prevState.navigationIndex !== this.state.navigationIndex ||
-            prevState.isNavigationBegun !== this.state.isNavigationBegun ||
             prevState.mapPolylines !== this.state.mapPolylines ||
-            prevState.routeInfo !== this.state.routeInfo
+            prevState.routeInfo !== this.state.routeInfo)
         ) {
             this.handleNavigationProgress();
         }
