@@ -1,0 +1,1 @@
+export const BACKEND_API_URL = 'https://roadpulse-backend-h36g.onrender.com/'

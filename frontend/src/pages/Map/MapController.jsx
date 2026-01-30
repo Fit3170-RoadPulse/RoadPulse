@@ -6,6 +6,7 @@ import { NativeGeolocationProvider, WebGeolocationProvider } from "../../lib/geo
 import MapView from "./MapView";
 import { RoutePreferencesContext } from "@/components/RoutePreferencesContext";
 import { fetchMapConfig } from "../../lib/mapConfig";
+import { BACKEND_API_URL } from "../../lib/constants.js";
 
 
 export default class MapController extends Component {
@@ -273,7 +274,7 @@ export default class MapController extends Component {
     };
 
     fetchReports = () => {
-        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
+        const base = import.meta.env.VITE_API_URL || BACKEND_API_URL;
         return axios
             .get(`${base}/api/incident-reports/`, { timeout: 10000 })
             .then((r) => {
@@ -290,7 +291,7 @@ export default class MapController extends Component {
     };
 
     startLocationPolling = () => {
-        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
+        const base = import.meta.env.VITE_API_URL || BACKEND_API_URL;
         axios.get(`${base}/api/map/location/`).then((r) => {
             this.isMountedRef = true;
             let provider = null;
@@ -450,7 +451,7 @@ export default class MapController extends Component {
             this.activeEtaRequestRef = controller;
 
             try {
-                const base = import.meta.env.VITE_API_URL;
+                const base = import.meta.env.VITE_API_URL || BACKEND_API_URL;
                 const departureTime = this.getDepartureTimeISO(0);
 
                 const res = await axios.post(
@@ -976,7 +977,7 @@ export default class MapController extends Component {
 
     fetchRoute = async (origin, destination, selectedOffset, map) => {
         this.setState({ isLoadingRoute: true });
-        const base = import.meta.env.VITE_API_URL || "https://roadpulsebackend.onrender.com";
+        const base = import.meta.env.VITE_API_URL || BACKEND_API_URL;
         const departureTime = this.getDepartureTimeISO(selectedOffset);
         const cacheKey = this.buildRouteCacheKey(origin, destination, departureTime);
 
