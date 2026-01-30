@@ -180,7 +180,7 @@ export default class MapController extends Component {
         }
 
 
-        if (prevState.isNavigationBegun !== this.state.isNavigationBegun && 
+        if (this.state.isNavigationBegun == true && 
             (prevState.prevLocationRef?.current !== this.state.prevLocationRef?.current ||
             prevState.navigationIndex !== this.state.navigationIndex ||
             prevState.mapPolylines !== this.state.mapPolylines ||
@@ -1426,7 +1426,10 @@ export default class MapController extends Component {
 
     handleNavigationProgress = () => {
         const navigationPathway = this.state.routeInfo?.steps;
-        if (this.state.isNavigationBegun === false || !navigationPathway) return;
+        if (!navigationPathway) {
+            console.log("No navigation pathway available.");
+            return
+        };
 
         const userLoc = { lat: this.prevLocationRef.current?.latitude, lng: this.prevLocationRef.current?.longitude };
         let nextPoint = { lat: 0, lng: 0 };
@@ -1540,6 +1543,7 @@ export default class MapController extends Component {
             requestAnimationFrame(animate);
             tween.update(time);
             if (tween.isPlaying() === false) {
+                console.log("Completed panning to next location.");
                 tween.remove();
             }
         }
