@@ -1519,7 +1519,7 @@ export default class MapController extends Component {
     };
 
     panToLocation = (map, curLocation, nextlocation, totalTime = 1500) => {
-        if (isInPanningAnimation) { 
+        if (this.isInPanningAnimation) { 
             console.log("Already panning, skipping animation.");
             return;
         }
@@ -1543,12 +1543,12 @@ export default class MapController extends Component {
             .onUpdate(() => { map.moveCamera(cameraOptions); })
             .start();
 
-        isInPanningAnimation = true;
+        this.isInPanningAnimation = true;
         function animate(time) {
             requestAnimationFrame(animate);
             tween.update(time);
             if (tween.isPlaying() === false) {
-                isInPanningAnimation = false;
+                this.isInPanningAnimation = false;
                 tween.remove();
             }
         }
