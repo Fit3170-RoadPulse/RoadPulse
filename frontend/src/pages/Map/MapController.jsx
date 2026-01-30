@@ -119,6 +119,7 @@ export default class MapController extends Component {
         this.timeSelectorRunId = 0;
         this.etaRefreshRunId = 0;
         this.reportMarkersRunId = 0;
+        this.speedDecayIntervalId = null;
         this.searchMarkerRef = null;
     }
 
@@ -134,6 +135,7 @@ export default class MapController extends Component {
         this.loadUserData();
         this.startReportsPolling();
         this.startLocationPolling();
+        this.startSpeedDecayMonitor();
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -207,12 +209,33 @@ export default class MapController extends Component {
             clearInterval(this.etaIntervalId);
             this.etaIntervalId = null;
         }
+        if (this.speedDecayIntervalId) {
+            clearInterval(this.speedDecayIntervalId);
+            this.speedDecayIntervalId = null;
+        }
 
         this.activeEtaRequestRef?.abort?.();
         this.etaRefreshRunId += 1;
         this.timeSelectorRunId += 1;
         this.reportMarkersRunId += 1;
     }
+
+    startSpeedDecayMonitor = () => {
+        if (this.speedDecayIntervalId) {
+            clearInterval(this.speedDecayIntervalId);
+        }
+        this.speedDecayIntervalId = setInterval(() => {
+            const lastUpdate = this.lastUpdateTimeRef.current;
+            if (!lastUpdate) return;
+            const ageMs = Date.now() - lastUpdate;
+            if (ageMs < 4000) return;
+            if (!Number.isFinite(this.speedEmaRef) || this.speedEmaRef <= 0) return;
+            const decay = 0.6;
+            this.speedEmaRef *= decay;
+            if (this.speedEmaRef < 0.5) this.speedEmaRef = 0;
+            this.setState({ speedKmh: this.speedEmaRef });
+        }, 1000);
+    };
 
 
     proximityReports() {
