@@ -322,7 +322,16 @@ export default class MapController extends Component {
             if (!this.state.mapData?.GMAPS_KEY || !this.state.mapData?.GMAPS_ID) return () => { this.isMountedRef = false; };
 
             if (navigator?.geolocation && this.isMountedRef) {
-                this.locationPollingData.current = r.data;
+                const isMobile = !!this.state.isMobileDevice;
+                const baseOptions = r.data || {};
+                const mobileOverrides = isMobile
+                    ? {
+                        enableHighAccuracy: true,
+                        maximumAge: 0,
+                        timeout: Math.min(Number(baseOptions.timeout ?? 10000), 6000),
+                    }
+                    : {};
+                this.locationPollingData.current = { ...baseOptions, ...mobileOverrides };
                 console.log("Location Polling Data Ref:", this.locationPollingData);
 
                 provider = new WebGeolocationProvider();
@@ -341,6 +350,7 @@ export default class MapController extends Component {
     onLocationUpdate = (newLocation, now) => {
         console.log("Location update received:", newLocation);
         const prev = this.prevLocationRef.current;
+        const isMobile = !!this.state.isMobileDevice;
         let distance = 0;
 
         const hasGeometry = !!(globalThis.google?.maps?.geometry?.spherical);
@@ -361,12 +371,12 @@ export default class MapController extends Component {
         const dtSec = Math.max(0.001, (now - lastT) / 1000);
 
         // filter jitter + jumps
-        const MIN_MOVE_M = 0.5;
+        const MIN_MOVE_M = isMobile ? 0.3 : 0.5;
         const MAX_MOVE_M = 150;
         const MAX_SPEED_KMH = 200; // ignore unrealistic spikes
         const accuracyM = Number(newLocation?.accuracy);
         const jitterFloorM = Number.isFinite(accuracyM)
-            ? Math.max(MIN_MOVE_M, Math.min(accuracyM * 0.2, 4))
+            ? Math.max(MIN_MOVE_M, Math.min(accuracyM * (isMobile ? 0.15 : 0.2), isMobile ? 3 : 4))
             : MIN_MOVE_M;
         const reportedSpeedMs = Number(newLocation?.speed);
         const hasReportedSpeed = Number.isFinite(reportedSpeedMs) && reportedSpeedMs >= 0.5;
@@ -389,7 +399,7 @@ export default class MapController extends Component {
 
             if (Number.isFinite(speedKmh) && speedKmh <= MAX_SPEED_KMH) {
                 // Smooth with EMA for stable UI
-                const alpha = 0.25;
+                const alpha = isMobile ? 0.45 : 0.25;
                 this.speedEmaRef =
                     this.speedEmaRef != null
                         ? alpha * speedKmh + (1 - alpha) * this.speedEmaRef
@@ -400,7 +410,7 @@ export default class MapController extends Component {
         } else if (hasReportedSpeed) {
             const speedKmh = reportedSpeedMs * 3.6;
             if (Number.isFinite(speedKmh) && speedKmh <= MAX_SPEED_KMH) {
-                const alpha = 0.25;
+                const alpha = isMobile ? 0.45 : 0.25;
                 this.speedEmaRef =
                     this.speedEmaRef != null
                         ? alpha * speedKmh + (1 - alpha) * this.speedEmaRef
