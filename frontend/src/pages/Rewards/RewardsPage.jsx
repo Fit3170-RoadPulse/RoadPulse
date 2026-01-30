@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Filter, Plus, Edit2, Trash2, X, AlertCircle, Upload, Save, Award } from 'lucide-react';
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import Barcode from "react-barcode";
 import "./RewardsPage.css";
@@ -70,7 +70,7 @@ function RewardsPage() {
     const [showQRModal, setShowQRModal] = useState(false);
     const [redeemedVoucher, setRedeemedVoucher] = useState(null);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (typeof window === "undefined" || typeof document === "undefined") return;
         const mediaQuery = window.matchMedia("(max-width: 768px)");
         const applyBodyLock = () => {
