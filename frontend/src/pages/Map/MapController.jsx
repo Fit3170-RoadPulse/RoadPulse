@@ -1494,6 +1494,7 @@ export default class MapController extends Component {
         const currentIndex = this.state.navigationIndex;
         this.setState({ navigationIndex: 0 });
 
+        console.log("Navigation pathway length:", navigationPathway.length);
         let currentPoint = navigationPathway[currentIndex];
         let nextPoint = navigationPathway[currentIndex + 1];
 
