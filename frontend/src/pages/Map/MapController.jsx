@@ -1093,6 +1093,9 @@ export default class MapController extends Component {
             new google.maps.LatLng(userLoc.lat, userLoc.lng),
             new google.maps.LatLng(nextPoint.lat, nextPoint.lng)
         );
+        
+        console.log("Should camera pan", shouldCameraPan);
+        console.log("Distance to next point:", distance, "meters");
 
         if (shouldCameraPan === true && distance < maxCutoffDistance) {
             const map = this.state.mapRef || this.mapInstanceRef;
