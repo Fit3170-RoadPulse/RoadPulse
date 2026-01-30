@@ -328,6 +328,26 @@ export default class MapController extends Component {
             );
         }
 
+        console.log(
+            "Δlat", prev ? newLocation.latitude - prev.latitude : 0,
+            "Δlng", prev ? newLocation.longitude - prev.longitude : 0
+        );
+
+        if (!hasGeometry && prev) {
+            const toRad = (v) => (v * Math.PI) / 180;
+            const R = 6371000;
+            const dLat = toRad(newLocation.latitude - prev.latitude);
+            const dLng = toRad(newLocation.longitude - prev.longitude);
+
+            const a =
+                Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(prev.latitude)) *
+                    Math.cos(toRad(newLocation.latitude)) *
+                    Math.sin(dLng / 2) ** 2;
+
+            distance = 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
         // update "previous" immediately
         this.prevLocationRef.current = newLocation;
 
@@ -336,12 +356,12 @@ export default class MapController extends Component {
         const dtSec = Math.max(0.001, (now - lastT) / 1000);
 
         // filter jitter + jumps
-        const MIN_MOVE_M = 5;
+        const MIN_MOVE_M = 1;
         const MAX_MOVE_M = 150;
         // const MAX_SPEED_KMH = 200; // ignore unrealistic spikes
 
         if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
-            // this.setState((prevState) => ({ cumulativeDistance: prevState.cumulativeDistance + distance }));
+            this.setState((prevState) => ({ cumulativeDistance: prevState.cumulativeDistance + distance }));
 
             // this.totalMoveDistMRef += distance;
             // this.totalMoveTimeSecRef += dtSec;

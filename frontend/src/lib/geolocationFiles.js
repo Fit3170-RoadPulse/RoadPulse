@@ -63,7 +63,7 @@ export class WebGeolocationProvider {
                 timestamp: position?.timestamp,
             };
             console.log("Location updated:", newLocation);
-            prevLocationRef.current = newLocation;
+            // prevLocationRef.current = newLocation;
 
             if (typeof cb === "function") {
                 cb(newLocation, now);
