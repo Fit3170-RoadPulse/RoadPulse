@@ -1095,6 +1095,7 @@ export default class MapController extends Component {
         );
         
         console.log("Should camera pan", shouldCameraPan);
+        console.log("User location:", userLoc, "Next point:", nextPoint);
         console.log("Distance to next point:", distance, "meters");
 
         if (shouldCameraPan === true && distance < maxCutoffDistance) {
