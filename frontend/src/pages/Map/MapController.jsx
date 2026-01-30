@@ -1507,7 +1507,9 @@ export default class MapController extends Component {
 
         this.transitionToNavigationScreen();
         if (this.isAToBRef.current === false) {
+            console.log("prevlocationref:", this.prevLocationRef.current);
             const userLoc = { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude };
+            console.log("User location:", userLoc);
             this.panToLocation(map, userLoc, nextPoint, totalTime);
         } else {
             this.panToLocation(map, currentPoint, nextPoint, totalTime);
