@@ -341,8 +341,12 @@ export default class MapController extends Component {
         const MIN_MOVE_M = 1;
         const MAX_MOVE_M = 150;
         const MAX_SPEED_KMH = 200; // ignore unrealistic spikes
+        const accuracyM = Number(newLocation?.accuracy);
+        const jitterFloorM = Number.isFinite(accuracyM)
+            ? Math.max(MIN_MOVE_M, Math.min(accuracyM * 0.6, 12))
+            : MIN_MOVE_M;
 
-        if (distance >= MIN_MOVE_M && distance <= MAX_MOVE_M) {
+        if (distance >= jitterFloorM && distance <= MAX_MOVE_M) {
             this.setState((prevState) => ({ cumulativeDistance: prevState.cumulativeDistance + distance }));
 
             // this.totalMoveDistMRef += distance;
@@ -368,14 +372,10 @@ export default class MapController extends Component {
                 this.setState({ speedKmh: this.speedEmaRef });
             }
         } else {
-            const decay = 0.85;
+            const decay = distance < jitterFloorM ? 0.7 : 0.85;
             this.speedEmaRef *= decay;
+            if (this.speedEmaRef < 1) this.speedEmaRef = 0;
             this.setState({ speedKmh: this.speedEmaRef });
-
-            // if (this.speedEmaRef < 0.5) {
-            //     this.speedEmaRef = 0;
-            //     this.setState({ speedKmh: 0 });
-            // }
         }
 
         this.lastUpdateTimeRef.current = now;
