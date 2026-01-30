@@ -1502,13 +1502,10 @@ export default class MapController extends Component {
         console.log("Current point:", currentPoint, "Next point:", nextPoint);
 
         const map = this.state.mapRef || this.mapInstanceRef;
-        console.log("Map instance:", map);
 
         this.transitionToNavigationScreen();
         if (this.isAToBRef.current == false) {
-            console.log("prevlocationref:", this.prevLocationRef.current);
             const userLoc = { lat: this.prevLocationRef.current.latitude, lng: this.prevLocationRef.current.longitude };
-            console.log("User location:", userLoc);
             this.panToLocation(map, userLoc, nextPoint, totalTime);
         } else {
             this.panToLocation(map, currentPoint, nextPoint, totalTime);
@@ -1544,7 +1541,6 @@ export default class MapController extends Component {
             requestAnimationFrame(animate);
             tween.update(time);
             if (tween.isPlaying() === false) {
-                console.log("Completed panning to next location.");
                 tween.remove();
             }
         }

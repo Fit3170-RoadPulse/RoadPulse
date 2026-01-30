@@ -23,7 +23,6 @@ export class NativeGeolocationProvider {
         this.watchId = await Geolocation.watchPosition(
         { enableHighAccuracy: true },
         (pos) => {
-            console.log(pos);
             if (!pos) return;
             const now = Date.now();
             const newLocation = {
