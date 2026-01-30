@@ -1434,7 +1434,7 @@ export default class MapController extends Component {
         let nextPoint = { lat: 0, lng: 0 };
         let shouldCameraPan = true;
 
-        let maxCutoffDistance = this.isMobileDevice ? 10 : 50; // meters
+        let maxCutoffDistance = this.isMobileDevice ? 50 : 100; // meters
         console.log("Navigation Index:", this.state.navigationIndex);
         console.log("Navigation Pathway Length:", navigationPathway?.length);
         if (this.state.navigationIndex >= navigationPathway?.length) {
