@@ -301,9 +301,7 @@ export default class MapController extends Component {
                 this.locationPollingData.current = r.data;
                 console.log("Location Polling Data Ref:", this.locationPollingData);
 
-                provider = this.state.isMobileDevice
-                    ? new NativeGeolocationProvider()
-                    : new WebGeolocationProvider();
+                provider = new WebGeolocationProvider();
 
                 console.log("provider", provider);
                 provider?.start(this.prevLocationRef, this.locationPollingData, this.onLocationUpdate);
