@@ -1532,7 +1532,7 @@ export default class MapController extends Component {
         };
 
         const tween = new Tween(cameraOptions)
-            .to({ tilt: 40, heading: heading, zoom: 18, center: new google.maps.LatLng(curLocation) }, totalTime)
+            .to({ tilt: 40, heading: heading, zoom: 18, center: new google.maps.LatLng(nextlocation) }, totalTime)
             .easing(Easing.Quadratic.Out)
             .onUpdate(() => { map.moveCamera(cameraOptions); })
             .start();
