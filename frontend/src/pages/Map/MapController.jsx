@@ -1452,7 +1452,7 @@ export default class MapController extends Component {
         
         console.log("User location:", userLoc, "Next point:", nextPoint);
 
-        let nextPointEndPoint = nextPoint?.endLocation.latLng;
+        let nextPointEndPoint = nextPoint?.startLocation.latLng;
         let distance = google.maps.geometry.spherical.computeDistanceBetween(
             new google.maps.LatLng(userLoc.lat, userLoc.lng),
             new google.maps.LatLng(nextPointEndPoint.latitude, nextPointEndPoint.longitude),
