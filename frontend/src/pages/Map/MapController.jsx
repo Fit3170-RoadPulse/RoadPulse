@@ -1082,20 +1082,21 @@ export default class MapController extends Component {
         }
 
         if (this.state.navigationIndex == 0 && this.isAToBRef.current === true) {
-            nextPoint = navigationPathway[0];
+            nextPoint = navigationPathway[0]?.endLocation.latLng;
             shouldCameraPan = false;
         } else if (this.state.navigationIndex < navigationPathway.length - 1) {
-            nextPoint = navigationPathway[this.state.navigationIndex + 1];
+            nextPoint = navigationPathway[this.state.navigationIndex + 1]?.endLocation.latLng;
             shouldCameraPan = true;
         }
+        
+        console.log("User location:", userLoc, "Next point:", nextPoint);
 
         let distance = google.maps.geometry.spherical.computeDistanceBetween(
             new google.maps.LatLng(userLoc.lat, userLoc.lng),
-            new google.maps.LatLng(nextPoint.lat, nextPoint.lng)
+            new google.maps.LatLng(nextPoint.latitude, nextPoint.longitude),
         );
         
         console.log("Should camera pan", shouldCameraPan);
-        console.log("User location:", userLoc, "Next point:", nextPoint);
         console.log("Distance to next point:", distance, "meters");
 
         if (shouldCameraPan === true && distance < maxCutoffDistance) {
