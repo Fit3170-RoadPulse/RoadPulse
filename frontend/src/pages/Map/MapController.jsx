@@ -338,22 +338,25 @@ export default class MapController extends Component {
         const dtSec = Math.max(0.001, (now - lastT) / 1000);
 
         // filter jitter + jumps
-        const MIN_MOVE_M = 1;
+        const MIN_MOVE_M = 0.5;
         const MAX_MOVE_M = 150;
         const MAX_SPEED_KMH = 200; // ignore unrealistic spikes
         const accuracyM = Number(newLocation?.accuracy);
         const jitterFloorM = Number.isFinite(accuracyM)
-            ? Math.max(MIN_MOVE_M, Math.min(accuracyM * 0.6, 12))
+            ? Math.max(MIN_MOVE_M, Math.min(accuracyM * 0.2, 4))
             : MIN_MOVE_M;
+        const reportedSpeedMs = Number(newLocation?.speed);
+        const hasReportedSpeed = Number.isFinite(reportedSpeedMs) && reportedSpeedMs >= 0.5;
+        const hasValidDistance = distance >= jitterFloorM && distance <= MAX_MOVE_M;
 
-        if (distance >= jitterFloorM && distance <= MAX_MOVE_M) {
+        if (hasValidDistance) {
             this.setState((prevState) => ({ cumulativeDistance: prevState.cumulativeDistance + distance }));
 
             // this.totalMoveDistMRef += distance;
             // this.totalMoveTimeSecRef += dtSec;
 
-            // Instant speed
-            const speedKmh = (distance / dtSec) * 3.6;
+            // Instant speed (prefer device-reported speed if available)
+            const speedKmh = hasReportedSpeed ? reportedSpeedMs * 3.6 : (distance / dtSec) * 3.6;
 
             if (isAuthenticated()) {
                 apiPost("/user/distance/", { distance_m: distance }).catch((err) =>
@@ -371,10 +374,20 @@ export default class MapController extends Component {
 
                 this.setState({ speedKmh: this.speedEmaRef });
             }
+        } else if (hasReportedSpeed) {
+            const speedKmh = reportedSpeedMs * 3.6;
+            if (Number.isFinite(speedKmh) && speedKmh <= MAX_SPEED_KMH) {
+                const alpha = 0.25;
+                this.speedEmaRef =
+                    this.speedEmaRef != null
+                        ? alpha * speedKmh + (1 - alpha) * this.speedEmaRef
+                        : speedKmh;
+                this.setState({ speedKmh: this.speedEmaRef });
+            }
         } else {
-            const decay = distance < jitterFloorM ? 0.7 : 0.85;
+            const decay = distance < jitterFloorM ? 0.6 : 0.85;
             this.speedEmaRef *= decay;
-            if (this.speedEmaRef < 1) this.speedEmaRef = 0;
+            if (this.speedEmaRef < 0.5) this.speedEmaRef = 0;
             this.setState({ speedKmh: this.speedEmaRef });
         }
 

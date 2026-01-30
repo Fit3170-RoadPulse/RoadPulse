@@ -29,6 +29,7 @@ export class NativeGeolocationProvider {
                 latitude: pos?.coords?.latitude,
                 longitude: pos?.coords?.longitude,
                 accuracy: pos?.coords?.accuracy,
+                speed: pos?.coords?.speed,
                 timestamp: pos?.timestamp,
             };
             if (typeof cb === "function") {
@@ -60,6 +61,7 @@ export class WebGeolocationProvider {
                 latitude: position?.coords?.latitude,
                 longitude: position?.coords?.longitude,
                 accuracy: position?.coords?.accuracy,
+                speed: position?.coords?.speed,
                 timestamp: position?.timestamp,
             };
             console.log("Location updated:", newLocation);
